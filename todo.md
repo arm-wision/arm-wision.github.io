@@ -1,6 +1,6 @@
 # PlantCLEF 2026 - Master TODO & Roadmap
 
-## 🚀 Phase 1: Foundations & "Atlas" Training (Current)
+## Phase 1: Foundations & "Atlas" Training (Current)
 - [x] **Modular Architecture:** Organized `src/` into `models/` and `data/` subdirectories.
 - [x] **Model Components:** Created `bioclip.py`, `dinov2.py`, and `ensemble.py`.
 - [x] **Feature Fusion Ensemble:** Created a dual-backbone head (BioCLIP + DINOv2).
@@ -13,7 +13,7 @@
 - [ ] **Baseline Training:** Run `python3 src/train.py` with the BioCLIP+DINOv2 ensemble.
     - *Goal:* Establish a world-class single-plant classifier using biological foundation models.
 
-## 🧪 Phase 2: Synthetic Complexity & The Long-Tail
+## Phase 2: Synthetic Complexity & The Long-Tail
 - [ ] **"Plant Sticker" Factory (SAM):**
     - Use SAM (Segment Anything Model) to automate the extraction of plants from the 1.4M images.
     - [ ] Create `src/data/sam_extractor.py`.
@@ -26,7 +26,7 @@
     - [ ] Integrate **Asymmetric Loss (ASL)** to handle multi-label imbalance (implemented in `train.py`, needs verification on collages).
     - [ ] Explore **Label Propagation** to ensure ground truth accuracy in crowded collages.
 
-## 🌉 Phase 3: Domain Adaptation & High-Res Tiling
+## Phase 3: Domain Adaptation & High-Res Tiling
 - [ ] **Pseudo-Labeling:**
     - Run Phase 2 model on unlabeled LUCAS quadrats.
     - Add top 20% high-confidence predictions back into the training set.
@@ -36,7 +36,7 @@
 - [ ] **Quality/Blur Filtering:**
     - Use Laplacian Variance to score and remove out-of-focus images from the expanded dataset.
 
-## 🎯 Phase 4: Metric Optimization & Ecological Guardrails
+## Phase 4: Metric Optimization & Ecological Guardrails
 - [ ] **Per-Class Thresholding:**
     - Use **Brent's Method** on the validation set to find optimal thresholds for all 7,800 species.
 - [ ] **Ecological/Botanical Filtering:**
