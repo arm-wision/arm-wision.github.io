@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from ensemble_model import PlantEnsemble
+from models.ensemble import PlantEnsemble
 from PIL import Image
 import numpy as np
 import os

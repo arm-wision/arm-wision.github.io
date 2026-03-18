@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from bioclip_model import PlantBioCLIP
-from dinov2_model import PlantDINOv2
+from .bioclip import PlantBioCLIP
+from .dinov2 import PlantDINOv2
 
 class PlantEnsemble(nn.Module):
     def __init__(self, num_classes=7800, input_res=448):

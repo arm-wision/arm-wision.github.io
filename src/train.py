@@ -6,8 +6,8 @@ from torch.amp import GradScaler, autocast
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import wandb
 import os
-from ensemble_model import PlantEnsemble
-from dataloader import get_dali_loaders 
+from models.ensemble import PlantEnsemble
+from data.dataloader import get_dali_loaders 
 
 # Enable CuDNN benchmark for RTX 4090 speed
 torch.backends.cudnn.benchmark = True
