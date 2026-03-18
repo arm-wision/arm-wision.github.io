@@ -6,34 +6,49 @@ from nvidia.dali.pipeline import Pipeline
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 
 class PlantDALIPipeline(Pipeline):
-    def __init__(self, batch_size, num_threads, device_id, img_dir, csv_file, training=True):
-        super(PlantDALIPipeline, self).__init__(batch_size, num_threads, device_id, seed=42)
+    def __init__(self, batch_size, num_threads, device_id, file_paths, labels, training=True):
+        # Increase prefetch_queue_depth to keep the GPU fed
+        super(PlantDALIPipeline, self).__init__(
+            batch_size, 
+            num_threads, 
+            device_id, 
+            seed=42, 
+            prefetch_queue_depth=4 # Prefetch 4 batches ahead
+        )
         
-        # 1. Load metadata using cuDF (GPU accelerated)
-        df = cudf.read_csv(csv_file)
-        self.file_paths = [os.path.join(img_dir, f) for f in df.iloc[:, 0].to_arrow().to_pylist()]
-        self.labels = df.iloc[:, 1].to_arrow().to_pylist()
+        self.file_paths = file_paths
+        self.labels = labels
         
-        # 2. DALI Readers and Decoders
+        # 1. DALI Readers and Decoders
         self.input = ops.readers.File(
             files=self.file_paths, 
             labels=self.labels, 
             random_shuffle=training, 
-            name="Reader"
+            name="Reader",
+            # Parallelize file reading
+            num_shards=1,
+            shard_id=0,
+            pad_last_batch=True
         )
         
-        # Decode on GPU (using mixed device: CPU for reading, GPU for decoding)
-        self.decode = ops.decoders.Image(device="mixed", output_type=types.RGB)
-        
-        # 3. GPU Augmentations (448px for BioCLIP)
-        self.resizer = ops.RandomResizedCrop(
-            device="gpu", 
-            size=448, 
-            random_area=[0.08, 1.0]
+        # Mixed device: CPU reads/decodes headers, GPU decodes pixels
+        # Use device_memory_padding to avoid reallocations for different image sizes
+        self.decode = ops.decoders.Image(
+            device="mixed", 
+            output_type=types.RGB,
+            device_memory_padding=21102592, # ~20MB padding for 4090
+            host_memory_padding=8388608     # ~8MB padding
         )
-        self.cpoint_flip = ops.Flip(device="gpu", vertical=0, horizontal=ops.random.CoinFlip(probability=0.5))
         
-        # 4. Normalization (BioCLIP specific means/stds)
+        # 2. GPU Augmentations
+        if training:
+            self.resizer = ops.RandomResizedCrop(device="gpu", size=448, random_area=[0.08, 1.0])
+        else:
+            self.resizer = ops.Resize(device="gpu", resize_shorter=448)
+            
+        self.cpoint_flip = ops.Flip(device="gpu", vertical=0, horizontal=ops.random.CoinFlip(probability=0.5) if training else 0)
+        
+        # 3. Normalization (Fully on GPU)
         self.normalize = ops.CropMirrorNormalize(
             device="gpu",
             dtype=types.FLOAT,
@@ -50,20 +65,58 @@ class PlantDALIPipeline(Pipeline):
         output = self.normalize(images)
         return output, labels.gpu()
 
-def get_dali_loader(csv_path, img_dir, batch_size=128, num_threads=4, device_id=0):
-    pipe = PlantDALIPipeline(
-        batch_size=batch_size, 
-        num_threads=num_threads, 
-        device_id=device_id, 
-        img_dir=img_dir, 
-        csv_file=csv_path
-    )
-    pipe.build()
+def get_dali_loaders(csv_path, img_dir, batch_size=128, val_split=0.1, num_threads=8, device_id=0):
+    # ... (rest of the metadata loading logic remains the same)
+
+    def define_graph(self):
+        jpegs, labels = self.input(name="Reader")
+        images = self.decode(jpegs)
+        images = self.resizer(images)
+        images = self.cpoint_flip(images)
+        output = self.normalize(images)
+        return output, labels.gpu()
+
+def get_dali_loaders(csv_path, img_dir, batch_size=128, val_split=0.1, num_threads=4, device_id=0):
+    # 1. Load and Process Metadata
+    df = cudf.read_csv(csv_path, sep=';')
     
-    # DALIGenericIterator wraps the pipeline for PyTorch
-    return DALIGenericIterator(
-        [pipe], 
-        ['data', 'label'], 
-        size=pipe.epoch_size("Reader"),
-        auto_reset=True
-    )
+    img_names = df.iloc[:, 0].to_arrow().to_pylist()
+    species_ids = df.iloc[:, 2].to_arrow().to_pylist()
+    
+    # Consistent Label Encoding
+    unique_species = sorted(list(set(species_ids)))
+    species_to_idx = {s: i for i, s in enumerate(unique_species)}
+    all_labels = [species_to_idx[s] for s in species_ids]
+    
+    all_paths = [
+        os.path.join(img_dir, str(sid), fname) 
+        for fname, sid in zip(img_names, species_ids)
+    ]
+    
+    # 2. Split Data
+    import numpy as np
+    indices = np.arange(len(all_paths))
+    np.random.seed(42)
+    np.random.shuffle(indices)
+    
+    val_size = int(len(all_paths) * val_split)
+    train_indices = indices[val_size:]
+    val_indices = indices[:val_size]
+    
+    train_paths = [all_paths[i] for i in train_indices]
+    train_labels = [all_labels[i] for i in train_indices]
+    
+    val_paths = [all_paths[i] for i in val_indices]
+    val_labels = [all_labels[i] for i in val_indices]
+    
+    # 3. Build Pipelines
+    train_pipe = PlantDALIPipeline(batch_size, num_threads, device_id, train_paths, train_labels, training=True)
+    val_pipe = PlantDALIPipeline(batch_size, num_threads, device_id, val_paths, val_labels, training=False)
+    
+    train_pipe.build()
+    val_pipe.build()
+    
+    train_loader = DALIGenericIterator([train_pipe], ['data', 'label'], size=len(train_paths), auto_reset=True)
+    val_loader = DALIGenericIterator([val_pipe], ['data', 'label'], size=len(val_paths), auto_reset=True)
+    
+    return train_loader, val_loader, len(unique_species)
