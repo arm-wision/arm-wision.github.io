@@ -26,10 +26,19 @@ Two major bottlenecks hinder current botanical AI:
 ## 6. Research Design & Methodology
 Our methodology follows a four-phase pipeline designed for the PlantCLEF 2026 challenge:
 
-### A. Feature Extraction & Foundations
-We employ a **Feature Fusion Ensemble** consisting of two state-of-the-art backbones:
-- **BioCLIP (ViT-L/14):** A foundation model pre-aligned with the "Tree of Life," providing intrinsic understanding of taxonomic hierarchies.
-- **DINOv2 (ViT-L/14):** A self-supervised model that captures robust geometric and structural features (textures, serrations) essential for fine-grained discrimination.
+### A. Feature Fusion Ensemble
+To achieve state-of-the-art accuracy, we employ a multi-modal feature fusion ensemble that leverages three distinct architectural inductive biases:
+
+1. **BioCLIP (ViT-L/14 - The Taxonomic Expert):** 
+   - **Rationale:** Unlike standard vision models, BioCLIP is pre-trained on the "Tree of Life" (10M+ biological images). It provides the ensemble with an intrinsic understanding of taxonomic hierarchies and botanical relationships, which is critical for identifying rare species with limited training data.
+   
+2. **DINOv2 (ViT-G/14 - The Geometric Expert):** 
+   - **Rationale:** A self-supervised transformer that excels at extracting high-resolution structural features. It is world-class at identifying fine-grained textures (leaf venation, serrations) and provides robust "objectness" that helps the model separate individual plants from messy, high-entropy backgrounds.
+
+3. **ConvNeXt-V2 (Huge - The Local Context Expert):** 
+   - **Rationale:** While Transformers excel at global context, Convolutional Neural Networks (CNNs) possess superior local translation invariance. ConvNeXt-V2 provides a "local" perspective that is highly robust to variations in leaf orientation, scale, and lighting, acting as a stabilizer for the Transformer-based backbones.
+
+**Synergy:** By fusing these three perspectives—Taxonomic, Structural, and Local—the ensemble compensates for the individual weaknesses of each architecture, leading to a more generalized and reliable predictor for complex vegetation plots.
 
 ### B. Synthetic Scene Generation
 To bridge the gap between single-plant training data and multi-label quadrats, we implement a "Quadrat Factory":

@@ -9,7 +9,7 @@ import os
 from models.ensemble import PlantEnsemble
 from data.dataloader import get_dali_loaders 
 
-# Enable CuDNN benchmark for RTX 4090 speed
+# Enable CuDNN benchmark for speed
 torch.backends.cudnn.benchmark = True
 
 class AsymmetricLoss(nn.Module):
@@ -83,20 +83,38 @@ def validate(model, loader, criterion, num_classes, device):
     return val_loss / (i + 1), 100. * correct / total
 
 def train():
+    # --- Configurable Section ---
+    # Change these for 4090 vs A100
+    MODE = "A100" # or "4090"
+    
+    if MODE == "4090":
+        batch_size = 48
+        bioclip_name = 'hf-hub:imageomics/bioclip' # ViT-B/16
+        dinov2_name = 'vit_large_patch14_dinov2'
+        convnext_name = 'convnextv2_large.fcmae_ft_in22k_in1k_384'
+    else: # A100 / High-VRAM Mode
+        batch_size = 128
+        bioclip_name = 'hf-hub:imageomics/bioclip' # Still base, or search for ViT-L if available
+        dinov2_name = 'vit_giant_patch14_dinov2.lvd142m'
+        convnext_name = 'convnextv2_huge.fcmae_ft_in22k_in1k_384'
+
     wandb.init(
         project="plantclef-2026",
-        name="ensemble-bioclip-dinov2-4090",
+        name=f"ensemble-triple-threat-{MODE.lower()}",
         config={
             "lr": 5e-5,
-            "architecture": "Ensemble(BioCLIP+DINOv2)",
+            "architecture": "Triple-Threat(Bio+Dino+Conv)",
             "resolution": 448,
-            "batch_size": 128, # Reduced for ensemble VRAM
+            "batch_size": batch_size,
             "num_threads": 16,
             "val_split": 0.1,
             "asl_gamma_neg": 4,
             "asl_gamma_pos": 1,
             "epochs": 50,
             "patience": 5,
+            "bioclip_backbone": bioclip_name,
+            "dinov2_backbone": dinov2_name,
+            "convnext_backbone": convnext_name,
         }
     )
     config = wandb.config
@@ -114,11 +132,14 @@ def train():
         num_threads=config.num_threads
     )
     
-    print(f"Initializing Ensemble for {num_classes} classes...")
-    model = PlantEnsemble(num_classes=num_classes, input_res=config.resolution).to(DEVICE)
-    
-    # Optional: Freeze backbones for the first 2 epochs to stabilize the head
-    # model.freeze_backbones() 
+    print(f"Initializing Triple Threat Ensemble for {num_classes} classes...")
+    model = PlantEnsemble(
+        num_classes=num_classes, 
+        input_res=config.resolution,
+        bioclip_name=config.bioclip_backbone,
+        dinov2_name=config.dinov2_backbone,
+        convnext_name=config.convnext_backbone
+    ).to(DEVICE)
     
     criterion = AsymmetricLoss(gamma_neg=config.asl_gamma_neg, gamma_pos=config.asl_gamma_pos)
     optimizer = optim.AdamW(model.parameters(), lr=config.lr, weight_decay=0.05)

@@ -1,9 +1,9 @@
 # PlantCLEF 2026 - Master TODO & Roadmap
 
-## Phase 1: Foundations & "Atlas" Training (Current)
+## Phase 1: Foundations & Training
+- [x] **Triple Ensemble:** Integrated BioCLIP, DINOv2, and ConvNeXt-V2 backbones.
+- [x] **Configurable Backbones:** Added "4090" and stronger GPU hardware modes to `train.py`.
 - [x] **Modular Architecture:** Organized `src/` into `models/` and `data/` subdirectories.
-- [x] **Model Components:** Created `bioclip.py`, `dinov2.py`, and `ensemble.py`.
-- [x] **Feature Fusion Ensemble:** Created a dual-backbone head (BioCLIP + DINOv2).
 - [x] **Mixed Precision (AMP):** Optimized training loop for RTX 4090 using `torch.amp`.
 - [x] **High-Res Support:** Implemented positional embedding interpolation for 448px resolution.
 - [x] **Modular Training Loop:** Integrated DALI, WandB, and Early Stopping.

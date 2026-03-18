@@ -8,6 +8,7 @@ class PlantBioCLIP(nn.Module):
         super(PlantBioCLIP, self).__init__()
 
         # Load BioCLIP
+        print(f"[BioCLIP] Loading checkpoint: {checkpoint}")
         self.model, _, _ = open_clip.create_model_and_transforms(checkpoint)
         self.backbone = self.model.visual 
         
