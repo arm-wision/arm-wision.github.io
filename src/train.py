@@ -63,6 +63,10 @@ def validate(model, loader, criterion, num_classes, device):
     val_loss = 0
     correct = 0
     total = 0
+    
+    # DALI iterator reset is handled by auto_reset=True, but let's be safe
+    # Actually for DALI iterators, we just loop.
+    
     with torch.no_grad():
         for i, data in enumerate(loader):
             images = data[0]['data']
@@ -77,6 +81,9 @@ def validate(model, loader, criterion, num_classes, device):
             _, predicted = outputs.max(1)
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
+    
+    # Reset loader for next validation
+    loader.reset()
             
     return val_loss / (i + 1), 100. * correct / total
 
@@ -86,7 +93,7 @@ def train():
         name="bioclip-asl-4090-final",
         config={
             "lr": 3e-5,
-            "architecture": "BioCLIP-ViT-L/14",
+            "architecture": "BioCLIP-ViT-B/16", # Corrected architecture name
             "resolution": 448,
             "batch_size": 192,
             "num_threads": 16,
@@ -101,8 +108,14 @@ def train():
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Loaders with Optimized Settings and Cleaned Metadata
+    # Make sure the paths exist or handle it
+    csv_path = "data/train_metadata_cleaned.csv"
+    if not os.path.exists(csv_path):
+        # Fallback to raw if cleaned doesn't exist yet
+        csv_path = "data/PlantCLEF2024_single_plant_training_metadata.csv"
+
     train_loader, val_loader, num_classes = get_dali_loaders(
-        "data/train_metadata_cleaned.csv", 
+        csv_path, 
         "data/train/", 
         batch_size=config.batch_size,
         val_split=config.val_split,
@@ -114,7 +127,6 @@ def train():
     criterion = AsymmetricLoss(gamma_neg=config.asl_gamma_neg, gamma_pos=config.asl_gamma_pos)
     optimizer = optim.AdamW(model.parameters(), lr=config.lr, weight_decay=0.05)
     
-    # Add Cosine Annealing Scheduler for Phase 1 stability
     scheduler = CosineAnnealingLR(optimizer, T_max=config.epochs)
     
     scaler = GradScaler()
@@ -127,7 +139,7 @@ def train():
     for epoch in range(config.epochs): 
         model.train()
         train_loss = correct = total = 0
-        num_batches = (train_loader._size + config.batch_size - 1) // config.batch_size
+        num_batches = len(train_loader)
 
         for i, data in enumerate(train_loader):
             images = data[0]['data']
@@ -152,6 +164,9 @@ def train():
                 acc = 100. * correct / total
                 wandb.log({"batch/loss": loss.item() / labels.size(0), "batch/accuracy": acc})
                 print(f"Epoch {epoch} | Batch {i}/{num_batches} | Loss: {loss.item():.4f} | Acc: {acc:.2f}%")
+
+        # Reset train loader
+        train_loader.reset()
 
         val_loss, val_acc = validate(model, val_loader, criterion, num_classes, DEVICE)
         print(f"Epoch {epoch} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}% | LR: {scheduler.get_last_lr()[0]:.6f}")
