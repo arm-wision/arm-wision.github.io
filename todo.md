@@ -20,7 +20,8 @@
     - Focus features strictly on botanical structures.
 
 ## ✅ Completed Tasks
-- [x] **Modular Architecture:** Split models into `bioclip_model.py`, `dinov2_model.py`, and `ensemble_model.py`.
+- [x] **Modular Architecture:** Organized `src/` into `models/` and `data/` subdirectories.
+- [x] **Model Components:** Created `bioclip.py`, `dinov2.py`, and `ensemble.py`.
 - [x] **Feature Fusion Ensemble:** Created a dual-backbone head (BioCLIP + DINOv2).
 - [x] **Mixed Precision (AMP):** Optimized training loop for RTX 4090 using `torch.amp`.
 - [x] **High-Res Support:** Implemented positional embedding interpolation for 448px resolution.
