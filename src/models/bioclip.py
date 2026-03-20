@@ -26,6 +26,18 @@ class PlantBioCLIP(nn.Module):
         self._interpolate_pos_embeddings(input_res)
 
     def _interpolate_pos_embeddings(self, input_res):
+        """
+        Interpolates the positional embeddings of the Vision Transformer (ViT) backbone 
+        to match a new input resolution.
+
+        This allows the model to process images at a resolution different from its 
+        pre-trained resolution (typically 224x224) by scaling the patch-based 
+        positional embeddings using bicubic interpolation while preserving the 
+        class token embedding.
+
+        Args:
+            input_res (int): The target input resolution (e.g., 448).
+        """
         pos_embed = self.backbone.positional_embedding
         if pos_embed.dim() == 3:
             pos_embed = pos_embed.squeeze(0)

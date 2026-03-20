@@ -10,14 +10,14 @@ class PlantEnsemble(nn.Module):
                  dinov2_name='vit_giant_patch14_dinov2.lvd142m', 
                  convnext_name='convnextv2_huge.fcmae_ft_in22k_in1k_384'):
         """
-        Triple Threat Ensemble for PlantCLEF 2026.
+        Triple Ensemble for PlantCLEF 2026.
         1. BioCLIP (Taxonomic Foundation)
         2. DINOv2 (Geometric/Structural Features)
         3. ConvNeXt-V2 (Convolutional/Local Context)
         """
         super(PlantEnsemble, self).__init__()
         
-        print(f"Initializing Triple Threat Ensemble ({input_res}px)...")
+        print(f"Initializing Triple Ensemble ({input_res}px)...")
         
         # 1. Backbones
         self.bioclip = PlantBioCLIP(checkpoint=bioclip_name, input_res=input_res)
@@ -34,8 +34,8 @@ class PlantEnsemble(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(self.fusion_dim, 2048),
             nn.LayerNorm(2048), # LayerNorm often more stable than BatchNorm for ViT outputs
-            nn.GELU(),
-            nn.Dropout(0.3),
+            nn.GELU(), # GELU for smoother gradients
+            nn.Dropout(0.3), # play around with regularization nums
             nn.Linear(2048, 1024),
             nn.LayerNorm(1024),
             nn.GELU(),
@@ -55,9 +55,11 @@ class PlantEnsemble(nn.Module):
         # Final classification
         logits = self.classifier(combined)
         return logits
-
+    
+    # utility methods for transfer learning 
     def freeze_backbones(self):
-        """Freeze all three backbones."""
+        """Freeze the weights of all three backbones.
+        to 'warm up' the fusion head w/o destroying pre-trained features"""
         for param in self.bioclip.parameters():
             param.requires_grad = False
         for param in self.dinov2.parameters():
@@ -67,7 +69,7 @@ class PlantEnsemble(nn.Module):
         print("All 3 backbones frozen.")
 
     def unfreeze_backbones(self):
-        """Unfreeze all three backbones."""
+        """Unfreeze all three backbones. FIne-tune all params together"""
         for param in self.bioclip.parameters():
             param.requires_grad = True
         for param in self.dinov2.parameters():
