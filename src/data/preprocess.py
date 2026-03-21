@@ -8,27 +8,29 @@ from tqdm import tqdm
 
 # NVIDIA DALI imports for GPU-accelerated image loading
 from nvidia.dali import pipeline_def, fn
-from nvidia.dali.plugin.pytorch import DALIGenericIterator
+from nvidia.dali.plugin.pytorch import DALIGenericIterator, LastBatchPolicy
 import nvidia.dali.types as types
 
 
 # ---------------------------------------------------------------------------
 # DALI Pipeline: decodes, resizes, and grayscales images entirely on the GPU
+# Note: device_id is a reserved @pipeline_def constructor arg, so it must NOT
+# appear as a function parameter -- pass it only via blur_pipeline(..., device_id=)
 # ---------------------------------------------------------------------------
 
 @pipeline_def
-def blur_pipeline(paths, device_id=0):
+def blur_pipeline(paths):
     jpegs, _ = fn.readers.file(files=paths, random_shuffle=False, name="Reader")
     # 'mixed' = decode on GPU
     images = fn.decoders.image(jpegs, device='mixed', output_type=types.GRAY)
     images = fn.resize(images, resize_x=512, resize_y=512, device='gpu')
-    # Cast to float and normalise to [0, 1]
+    # Cast to float, keep values in [0, 255]
     images = fn.cast(images, dtype=types.FLOAT, device='gpu')
-    images = images / 255.0
+    # No normalisation -- keep values in [0, 255] so blur threshold is intuitive
     return images
 
 
-def gpu_blur_audit(paths, batch_size=512, device_id=0):
+def gpu_blur_audit(paths, batch_size=512, gpu_id=0):
     """
     GPU-Accelerated Blur Detection using NVIDIA DALI.
 
@@ -36,26 +38,28 @@ def gpu_blur_audit(paths, batch_size=512, device_id=0):
     eliminating the CPU bottleneck that starved the GPU with the old
     PIL + torchvision approach.
     """
-    device = torch.device('cuda', device_id)
+    device = torch.device('cuda', gpu_id)
 
-    # Build the DALI pipeline
+    # Build the DALI pipeline.
+    # device_id is passed as a @pipeline_def constructor kwarg, not a function param.
     pipe = blur_pipeline(
         paths=paths,
-        device_id=device_id,
+        device_id=gpu_id,
         batch_size=batch_size,
-        num_threads=4,       # DALI threads for prefetch / host-side work
+        num_threads=4,
         exec_async=True,
         exec_pipelined=True,
     )
     pipe.build()
 
-    # Wrap in a PyTorch iterator -- outputs land directly on the GPU
+    # Wrap in a PyTorch iterator -- outputs land directly on the GPU.
+    # last_batch_policy must be the LastBatchPolicy enum, not a plain string.
     loader = DALIGenericIterator(
         pipe,
         output_map=["images"],
         size=len(paths),
         auto_reset=True,
-        last_batch_policy='PARTIAL',
+        last_batch_policy=LastBatchPolicy.PARTIAL,
     )
 
     # 3x3 Laplacian + Sobel kernels -- stacked for a single batched conv.
@@ -139,8 +143,9 @@ def audit_data(csv_path, img_dir, output_path, max_images_per_species=500, blur_
     # 5. Long-Tail Balancing -- shuffle first to avoid collection-order bias
     if max_images_per_species > 0:
         print(f"Capping species at {max_images_per_species} images...")
-        df = df.sample(frac=1, random_state=42)  # random shuffle before capping
-        df = df.groupby('species_id').head(max_images_per_species)
+        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+        df['_rank'] = df.groupby('species_id').cumcount()
+        df = df[df['_rank'] < max_images_per_species].drop(columns=['_rank'])
         print(f"Final records after balancing: {len(df):,}")
 
     # 6. Cleanup and Save

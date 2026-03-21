@@ -5,7 +5,7 @@ DATASET_MODE = "plantclef" # or "plantclef"
 
 # --- Common Config ---
 RESOLUTION = 448
-BATCH_SIZE = 256 # Optimized for RTX 4090 (24GB VRAM)
+BATCH_SIZE = 16 # Optimized for RTX 4090 (24GB VRAM)
 
 # --- Dataset Paths ---
 DATASETS = {
