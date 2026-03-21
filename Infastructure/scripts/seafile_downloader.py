@@ -7,11 +7,11 @@ Supports resume, parallel downloads, and progress tracking.
 Usage:
     python3 scripts/seafile_downloader.py \
         --url https://lab.plantnet.org/seafile/d/303fec50b1a544c6a2ed \
-        --output /workspace/data/plantclef/raw/train
+        --output /workspace/plantclef/raw/train
 
     python3 scripts/seafile_downloader.py \
         --url https://lab.plantnet.org/seafile/d/f3a63defc5f44220b194 \
-        --output /workspace/data/plantclef/raw/pseudo_quadrats
+        --output /workspace/plantclef/raw/pseudo_quadrats
 """
 
 import argparse

@@ -25,7 +25,7 @@ cd /workspace/data
 # If using git:
 git clone <your-repo-url> plantclef && cd plantclef
 # Otherwise, upload the scripts folder via SCP:
-scp -P <port> -r scripts/ root@<pod-ip>:/workspace/data/plantclef/scripts/
+scp -P <port> -r scripts/ root@<pod-ip>:/workspace/plantclef/scripts/
 ```
 
 ### 4. Run Environment Setup
@@ -60,19 +60,19 @@ Or download individually:
 
 ```bash
 # Kaggle test data only (~8.3 GB)
-kaggle competitions download -c plantclef-2026 -p /workspace/data/plantclef/raw/test/
-unzip /workspace/data/plantclef/raw/test/*.zip -d /workspace/data/plantclef/raw/test/
+kaggle competitions download -c plantclef-2026 -p /workspace/plantclef/raw/test/
+unzip /workspace/plantclef/raw/test/*.zip -d /workspace/plantclef/raw/test/
 
 # Training data via Seafile helper (~160 GB, takes several hours)
 python3 scripts/seafile_downloader.py \
     --url https://lab.plantnet.org/seafile/d/303fec50b1a544c6a2ed \
-    --output /workspace/data/plantclef/raw/train \
+    --output /workspace/plantclef/raw/train \
     --workers 4
 
 # Pseudo-quadrat data (~170 GB)
 python3 scripts/seafile_downloader.py \
     --url https://lab.plantnet.org/seafile/d/f3a63defc5f44220b194 \
-    --output /workspace/data/plantclef/raw/pseudo_quadrats \
+    --output /workspace/plantclef/raw/pseudo_quadrats \
     --workers 4
 
 # Pre-trained models (small, fast)
@@ -125,7 +125,7 @@ RunPod typically provides 1-5 Gbps bandwidth, so actual times may vary.
 
 **Pod ran out of disk:**
 - Check usage: `df -h /workspace/data`
-- Delete archives after extraction: `rm /workspace/data/plantclef/raw/**/*.tar`
+- Delete archives after extraction: `rm /workspace/plantclef/raw/**/*.tar`
 - Consider downloading only `max-side-800px` (160GB vs 281GB)
 
 **SSH disconnected during download:**

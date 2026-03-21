@@ -9,7 +9,7 @@ set -e
 #    bash scripts/download_datasets.sh
 # ══════════════════════════════════════════════════════
 
-BASE_DIR="/workspace/data/plantclef/raw"
+BASE_DIR="/workspace/plantclef/raw"
 COMPETITION="plantclef-2026"
 
 # Change this if you want both resolutions of training data

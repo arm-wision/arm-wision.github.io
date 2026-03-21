@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-BASE_DIR = Path("/workspace/data/plantclef/raw")
+BASE_DIR = Path("/workspace/plantclef/raw")
 KAGGLE_USERNAME = None  # Auto-detected from kaggle.json
 
 

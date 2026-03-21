@@ -119,7 +119,7 @@ if __name__ == "__main__":
     wrapper = EnsembleClassifierWrapper(MODEL_PATH)
     
     # Example path - can be updated to point to any test image
-    TEST_IMAGE = "data/kaggle_test/split_ttv_dataset_type_of_plants/Test_Set_Folder/aloevera/aloevera1.jpg"
+    TEST_IMAGE = "/workspace/plantclef/raw/test/data/PlantCLEF/PlantCLEF2025/DataOut/test/package/images/GUARDEN-CBNMed-44-7-12-03-20240629.jpg"
     
     if os.path.exists(TEST_IMAGE):
         results = run_sahi_inference(TEST_IMAGE, wrapper)

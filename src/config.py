@@ -1,23 +1,23 @@
 import os
 
 # --- Toggle Dataset ---
-DATASET_MODE = "kaggle_test" # or "plantclef"
+DATASET_MODE = "plantclef" # or "plantclef"
 
 # --- Common Config ---
 RESOLUTION = 448
-BATCH_SIZE = 48 # Optimized for RTX 4090 (24GB VRAM)
+BATCH_SIZE = 256 # Optimized for RTX 4090 (24GB VRAM)
 
 # --- Dataset Paths ---
 DATASETS = {
     "plantclef": {
-        "raw_csv": "data/plantclef-2026/PlantCLEF2024_single_plant_training_metadata.csv",
-        "img_dir": "data/train/", # Assuming unzipped to data/train/
-        "cleaned_csv": "data/train_metadata_cleaned.csv"
+        "raw_csv": "/workspace/plantclef/raw/PlantCLEF2024_single_plant_training_metadata.csv",
+        "img_dir": "/workspace/plantclef/raw/train/images_max_side_800/", # Assuming unzipped to data/train/
+        "cleaned_csv": "/workspace/plantclef/processed/train_metadata_cleaned.csv"
     },
     "kaggle_test": {
-        "raw_csv": "data/kaggle_test_metadata.csv",
-        "img_dir": "data/kaggle_test/split_ttv_dataset_type_of_plants/Train_Set_Folder/",
-        "cleaned_csv": "data/kaggle_test_metadata_cleaned.csv"
+        "raw_csv": "/workspace/plantclef/processed/kaggle_test_metadata.csv",
+        "img_dir": "/workspace/plantclef/raw/test/data/PlantCLEF/PlantCLEF2025/DataOut/test/package/images/",
+        "cleaned_csv": "/workspace/plantclef/processed/kaggle_test_metadata_cleaned.csv"
     }
 }
 

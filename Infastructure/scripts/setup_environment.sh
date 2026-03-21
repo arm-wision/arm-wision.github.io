@@ -60,7 +60,7 @@ fi
 
 # ── 4. Directory structure ───────────────────────────
 echo "[4/5] Creating directory structure..."
-BASE_DIR="/workspace/data/plantclef"
+BASE_DIR="/workspace/plantclef"
 mkdir -p "$BASE_DIR"/{raw/{train,pseudo_quadrats,test,models},processed,submissions}
 echo "  Directory structure:"
 echo "    $BASE_DIR/"
