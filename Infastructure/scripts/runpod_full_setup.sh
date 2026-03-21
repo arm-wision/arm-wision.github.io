@@ -31,7 +31,7 @@ print("  PyTorch:", torch.__version__)
 print("  CUDA:", torch.cuda.is_available())
 if torch.cuda.is_available():
     print("  GPU:", torch.cuda.get_device_name(0))
-    vram = torch.cuda.get_device_properties(0).total_mem / 1e9
+    vram = torch.cuda.get_device_properties(0).total_memory / 1e9
     print("  VRAM: %.1f GB" % vram)
 print("  timm:", timm.__version__)
 print("  sklearn:", sklearn.__version__)
