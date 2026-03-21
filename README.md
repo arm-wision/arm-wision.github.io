@@ -47,3 +47,8 @@ Identifying tiny plants in large quadrat images requires maintaining high resolu
 ## Key Performance Indicators (KPIs)
 *   **Micro-F1 Score:** Evaluated across 7,800 species.
 *   **Rare Species Recall:** Monitored to ensure the model doesn't just guess common species.
+# PlantCLEF 2026 Project
+
+## Report
+- [Course Report](https://www.overleaf.com/project/69bdfbb96387d38e48604120)
+- [Competition Working Notes](https://www.overleaf.com/project/69be00b57b35c09ee8357334)
