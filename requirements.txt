@@ -1,0 +1,38 @@
+# --- Core Deep Learning & Hardware Acceleration ---
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio
+# Helps with Mixed Precision and distributed training on Pro 6000
+accelerate>=0.27.0 
+
+# --- Foundation Model (BioCLIP) ---
+# BioCLIP is accessed via the OpenCLIP interface
+open_clip_torch>=2.24.0
+
+# --- Data Processing & Augmentation ---
+opencv-python
+pandas>=2.1.0
+numpy>=1.26.0
+Pillow>=10.0.0
+--extra-index-url https://pypi.nvidia.com
+cudf-cu12 
+cupy-cuda12x
+nvidia-dali-cuda120
+# For advanced botanical augmentations later
+albumentations>=1.4.0 
+
+# --- Optimization & Metrics (Brent's Method & F1) ---
+scipy>=1.11.0
+scikit-learn>=1.4.0
+
+# --- Utilities & Experiment Tracking ---
+tqdm
+python-dotenv
+# Highly recommended for tracking 1.4M image training runs
+wandb>=0.16.0 
+
+# --- Phase 2 & 3 Dependencies (SAM & Tiling) ---
+# Segment Anything for the "Plant Sticker" factory
+git+https://github.com/facebookresearch/segment-anything.git
+# Slicing Aided Hyper Inference for high-res tiling
+sahi>=0.11.15
