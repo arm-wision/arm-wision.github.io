@@ -3,80 +3,104 @@ import subprocess
 import cudf
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
-from PIL import Image
-from tqdm import tqdm
 import numpy as np
+from tqdm import tqdm
+
+# NVIDIA DALI imports for GPU-accelerated image loading
+from nvidia.dali import pipeline_def, fn
+from nvidia.dali.plugin.pytorch import DALIGenericIterator
+import nvidia.dali.types as types
 
 
-class BlurDataset(Dataset):
+# ---------------------------------------------------------------------------
+# DALI Pipeline: decodes, resizes, and grayscales images entirely on the GPU
+# ---------------------------------------------------------------------------
+
+@pipeline_def
+def blur_pipeline(paths, device_id=0):
+    jpegs, _ = fn.readers.file(files=paths, random_shuffle=False, name="Reader")
+    # 'mixed' = decode on GPU
+    images = fn.decoders.image(jpegs, device='mixed', output_type=types.GRAY)
+    images = fn.resize(images, resize_x=512, resize_y=512, device='gpu')
+    # Cast to float and normalise to [0, 1]
+    images = fn.cast(images, dtype=types.FLOAT, device='gpu')
+    images = images / 255.0
+    return images
+
+
+def gpu_blur_audit(paths, batch_size=512, device_id=0):
     """
-    Optimized Dataset for high-speed image loading.
-    Uses PIL + Torchvision transforms which are generally faster for
-    high-throughput pipelines when paired with multiple workers.
+    GPU-Accelerated Blur Detection using NVIDIA DALI.
+
+    DALI keeps the entire pipeline (decode -> resize -> grayscale) on the GPU,
+    eliminating the CPU bottleneck that starved the GPU with the old
+    PIL + torchvision approach.
     """
-    def __init__(self, paths, target_size=512):
-        self.paths = paths
-        self.transform = transforms.Compose([
-            transforms.Resize((target_size, target_size)),
-            transforms.Grayscale(),
-            transforms.ToTensor(),
-        ])
+    device = torch.device('cuda', device_id)
 
-    def __len__(self):
-        return len(self.paths)
-
-    def __getitem__(self, idx):
-        try:
-            # Loading via PIL + Transform is highly optimized for DataLoader workers
-            img = Image.open(self.paths[idx])
-            return self.transform(img), idx
-        except Exception:
-            # Return zero tensor for corrupted images to keep batch size consistent
-            return torch.zeros((1, 512, 512)), idx
-
-
-def gpu_blur_audit(paths, batch_size=512, threshold=100):
-    """
-    Optimized GPU Blur Detection.
-    Uses a massive batch size to saturate high-VRAM GPUs (RTX 5090).
-    """
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dataset = BlurDataset(paths)
-
-    # Increase num_workers and use pin_memory to feed the GPU faster
-    loader = DataLoader(
-        dataset,
+    # Build the DALI pipeline
+    pipe = blur_pipeline(
+        paths=paths,
+        device_id=device_id,
         batch_size=batch_size,
-        num_workers=12,
-        pin_memory=True,
-        prefetch_factor=4
+        num_threads=4,       # DALI threads for prefetch / host-side work
+        exec_async=True,
+        exec_pipelined=True,
+    )
+    pipe.build()
+
+    # Wrap in a PyTorch iterator -- outputs land directly on the GPU
+    loader = DALIGenericIterator(
+        pipe,
+        output_map=["images"],
+        size=len(paths),
+        auto_reset=True,
+        last_batch_policy='PARTIAL',
     )
 
-    # 3x3 Laplacian Kernel for edge detection
-    kernel = torch.tensor([[0, 1, 0], [1, -4, 1], [0, 1, 0]],
-                          dtype=torch.float32, device=device).view(1, 1, 3, 3)
+    # 3x3 Laplacian + Sobel kernels -- stacked for a single batched conv.
+    # This gives the GPU more work per batch and keeps it utilised longer.
+    kernel_lap = torch.tensor([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=torch.float32)
+    kernel_sx  = torch.tensor([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=torch.float32)
+    kernel_sy  = torch.tensor([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=torch.float32)
+    # Shape: (3, 1, 3, 3)
+    kernels = torch.stack([kernel_lap, kernel_sx, kernel_sy]).unsqueeze(1).to(device)
 
-    scores = np.zeros(len(paths))
+    scores = np.zeros(len(paths), dtype=np.float32)
+    offset = 0
+
     print(f"[Blur Audit] Running on {device} ({len(paths):,} images)...")
 
     with torch.no_grad():
-        for imgs, indices in tqdm(loader, desc="GPU Processing", unit="batch"):
-            imgs = imgs.to(device, non_blocking=True)
-            # Batch convolution: Edge detection
-            laplacian = F.conv2d(imgs, kernel, padding=1)
-            # Focus Score = Variance (Higher is sharper)
-            batch_scores = torch.var(laplacian, dim=(2, 3)).squeeze()
-            scores[indices.numpy()] = batch_scores.cpu().numpy()
+        for batch in tqdm(loader, desc="GPU Processing", unit="batch"):
+            # imgs shape from DALI: (B, H, W, 1) -- rearrange to (B, 1, H, W)
+            imgs = batch[0]["images"].permute(0, 3, 1, 2)
+            B = imgs.shape[0]
+
+            # Single batched conv across all kernels
+            responses = F.conv2d(imgs, kernels, padding=1)  # (B, 3, H, W)
+
+            # Use Laplacian variance as the primary focus score.
+            # squeeze(1) only removes the channel dim, never collapses the batch dim.
+            lap_var = torch.var(responses[:, 0:1, :, :], dim=(2, 3)).squeeze(1)  # (B,)
+
+            scores[offset:offset + B] = lap_var.cpu().numpy()
+            offset += B
 
     return scores
 
+
+# ---------------------------------------------------------------------------
+# Main pipeline
+# ---------------------------------------------------------------------------
 
 def audit_data(csv_path, img_dir, output_path, max_images_per_species=500, blur_threshold=100):
     """
     Full GPU-Accelerated Preprocessing Pipeline.
     """
+    # Normalise img_dir so path joins are always correct
+    img_dir = img_dir.rstrip('/') + '/'
+
     print(f"[Audit] Loading metadata from {csv_path}...")
     if not os.path.exists(csv_path):
         print(f"Error: {csv_path} not found.")
@@ -89,8 +113,8 @@ def audit_data(csv_path, img_dir, output_path, max_images_per_species=500, blur_
     # 2. Fast File Discovery (Shell-assisted)
     # Python's os.walk is too slow for 1.4M files.
     print(f"Scanning {img_dir} for existing images (using shell find)...")
-    # This command finds all files in the directory and returns 'species_id/image_name'
-    find_cmd = f"find {img_dir} -maxdepth 2 -type f -name '*.jpg' | sed 's|{img_dir}||'"
+    # Quote img_dir to handle spaces / special characters safely
+    find_cmd = f"find '{img_dir}' -maxdepth 2 -type f -name '*.jpg' | sed 's|{img_dir}||'"
     try:
         existing_files_str = subprocess.check_output(find_cmd, shell=True).decode('utf-8')
         existing_files = cudf.Series(existing_files_str.splitlines()).str.lstrip('/')
@@ -98,34 +122,28 @@ def audit_data(csv_path, img_dir, output_path, max_images_per_species=500, blur_
         print(f"Error scanning files: {e}")
         return
 
-    # 3. GPU-Accelerated Join/Filter
-    # Create the relative path column in cuDF (STAYS ON GPU)
+    # 3. GPU-Accelerated Join / Filter
     df['relative_path'] = df['species_id'].astype(str) + "/" + df['image_name']
-
-    # Filter metadata to only include files that physically exist
     df = df[df['relative_path'].isin(existing_files)]
     print(f"After physical file verification: {len(df):,}")
 
-    # 4. GPU Blur Audit
+    # 4. GPU Blur Audit via DALI
     if blur_threshold > 0:
-        # Construct full paths for the loader
         full_paths = (img_dir + df['relative_path']).to_arrow().to_pylist()
-        blur_scores = gpu_blur_audit(full_paths, threshold=blur_threshold)
+        blur_scores = gpu_blur_audit(full_paths)
 
-        # Add scores back to cuDF and filter
         df['blur_score'] = cudf.Series(blur_scores)
         df = df[df['blur_score'] >= blur_threshold]
         print(f"After removing blurry images: {len(df):,}")
 
-    # 5. Long-Tail Balancing (GPU-Accelerated)
+    # 5. Long-Tail Balancing -- shuffle first to avoid collection-order bias
     if max_images_per_species > 0:
         print(f"Capping species at {max_images_per_species} images...")
-        # cuDF groupby.head() is significantly faster than Pandas
+        df = df.sample(frac=1, random_state=42)  # random shuffle before capping
         df = df.groupby('species_id').head(max_images_per_species)
         print(f"Final records after balancing: {len(df):,}")
 
     # 6. Cleanup and Save
-    # Drop temp columns and save to CSV
     cols_to_drop = [c for c in ['relative_path', 'blur_score'] if c in df.columns]
     df = df.drop(columns=cols_to_drop)
     df.to_csv(output_path, sep=';', index=False)
