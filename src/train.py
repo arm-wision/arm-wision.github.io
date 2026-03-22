@@ -471,8 +471,20 @@ def train():
         convnext_name=config.convnext_backbone
     ).to(DEVICE).to(memory_format=torch.channels_last)
 
-    # Compile each backbone individually -- safer than compiling the full model.
-    # First epoch takes ~10 min for warmup then ~20% faster every epoch after.
+    model.set_grad_checkpointing(True)
+    model.freeze_backbones()
+
+    if os.path.exists(FEATURE_CACHE_PATH):
+        print(f"[Feature Cache] Loading from {FEATURE_CACHE_PATH}...")
+        with tqdm(total=1, desc="Loading feature cache", unit="file") as pbar:
+            cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
+            pbar.update(1)
+    else:
+        cache = extract_and_cache_features(model, train_loader, DEVICE, FEATURE_CACHE_PATH)
+
+    # Compile AFTER cache load and checkpoint resume so state_dict keys are
+    # consistent -- torch.compile adds '_orig_mod.' prefix which breaks loading
+    # checkpoints saved before compilation was applied.
     print("Compiling backbones with torch.compile (one-time warmup on first batch)...")
     try:
         model.bioclip  = torch.compile(model.bioclip,  mode='reduce-overhead')
@@ -481,15 +493,6 @@ def train():
         print("Backbones compiled successfully.")
     except Exception as e:
         print(f"torch.compile failed ({e}) -- falling back to eager mode.")
-
-    model.set_grad_checkpointing(True)
-    model.freeze_backbones()
-
-    if os.path.exists(FEATURE_CACHE_PATH):
-        print(f"[Feature Cache] Loading from {FEATURE_CACHE_PATH}...")
-        cache = torch.load(FEATURE_CACHE_PATH)
-    else:
-        cache = extract_and_cache_features(model, train_loader, DEVICE, FEATURE_CACHE_PATH)
 
     # Phase 1: only head params -- ZeRO Stage 1 for optimizer state offload
     phase1_params = (
