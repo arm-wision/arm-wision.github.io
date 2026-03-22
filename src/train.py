@@ -531,7 +531,27 @@ def train():
     start_epoch_p1 = 0
     if os.path.exists(P1_CKPT_PATH):
         p1_ckpt = torch.load(P1_CKPT_PATH, map_location=DEVICE)
-        model_engine_p1.module.load_state_dict(p1_ckpt['model_state'])
+        # Remap checkpoint keys: saved before torch.compile so keys use
+        # 'bioclip.model.*' but compiled model expects 'bioclip._orig_mod.model.*'
+        # Strip '_orig_mod.' if present in model keys, or add it if missing.
+        saved_state  = p1_ckpt['model_state']
+        model_state  = model_engine_p1.module.state_dict()
+        needs_prefix = any('_orig_mod.' in k for k in model_state.keys())
+        has_prefix   = any('_orig_mod.' in k for k in saved_state.keys())
+        if needs_prefix and not has_prefix:
+            # Checkpoint saved pre-compile: add _orig_mod. to backbone keys
+            remapped = {}
+            for k, v in saved_state.items():
+                for backbone in ('bioclip.', 'dinov2.', 'convnext.'):
+                    if k.startswith(backbone):
+                        k = backbone + '_orig_mod.' + k[len(backbone):]
+                        break
+                remapped[k] = v
+            saved_state = remapped
+        elif has_prefix and not needs_prefix:
+            # Checkpoint saved post-compile: strip _orig_mod. prefix
+            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
+        model_engine_p1.module.load_state_dict(saved_state)
         start_epoch_p1 = p1_ckpt['epoch'] + 1
         best_val_acc   = p1_ckpt.get('best_val_acc', 0.0)
         print(f"[Phase1] Resuming from epoch {start_epoch_p1} "
