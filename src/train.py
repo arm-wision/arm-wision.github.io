@@ -496,7 +496,18 @@ def train():
 
     best_val_acc = 0.0
 
-    for epoch in range(config.epochs_phase1):
+    # Resume Phase 1 from checkpoint if one exists
+    P1_CKPT_PATH = "models/phase1_checkpoint.pth"
+    start_epoch_p1 = 0
+    if os.path.exists(P1_CKPT_PATH):
+        p1_ckpt = torch.load(P1_CKPT_PATH, map_location=DEVICE)
+        model_engine_p1.module.load_state_dict(p1_ckpt['model_state'])
+        start_epoch_p1 = p1_ckpt['epoch'] + 1
+        best_val_acc   = p1_ckpt.get('best_val_acc', 0.0)
+        print(f"[Phase1] Resuming from epoch {start_epoch_p1} "
+              f"(best val acc so far: {best_val_acc:.2f}%)")
+
+    for epoch in range(start_epoch_p1, config.epochs_phase1):
         train_acc = run_phase1_cached(
             model_engine_p1, cache, optimizer_p1, scheduler_p1,
             criterion, epoch, num_classes, DEVICE
@@ -507,6 +518,16 @@ def train():
               f"Val Acc: {metrics['acc']:.2f}%  F1: {metrics['f1']:.4f}")
         wandb.log({"epoch": epoch, "train_acc": train_acc,
                    **{f"val_{k}": v for k, v in metrics.items()}})
+
+        # Save Phase 1 checkpoint after every epoch
+        if metrics['acc'] > best_val_acc:
+            best_val_acc = metrics['acc']
+        torch.save({
+            'epoch':        epoch,
+            'model_state':  model_engine_p1.module.state_dict(),
+            'best_val_acc': best_val_acc,
+        }, P1_CKPT_PATH)
+        print(f"[Phase1] Checkpoint saved (epoch {epoch})")
 
     # -----------------------------------------------------------------------
     # PHASE 2: Full Fine-Tuning with Differential LR + Chunked Forward
@@ -557,10 +578,23 @@ def train():
 
     early_stopping = EarlyStopping(patience=5, min_delta=0.001)
 
-    start_epoch = config.epochs_phase1
-    final_epoch = start_epoch + config.epochs_phase2 - 1
+    # Resume Phase 2 from DeepSpeed checkpoint if one exists.
+    # DeepSpeed saves model + optimizer + scheduler states together so
+    # training resumes exactly where it left off including LR schedule.
+    P2_CKPT_DIR  = "models/phase2_checkpoint"
+    start_epoch  = config.epochs_phase1
+    final_epoch  = start_epoch + config.epochs_phase2 - 1
 
-    for epoch in range(start_epoch, start_epoch + config.epochs_phase2):
+    if os.path.exists(P2_CKPT_DIR):
+        # DeepSpeed load_checkpoint returns the client state we saved
+        _, client_state = model_engine_p2.load_checkpoint(P2_CKPT_DIR)
+        if client_state is not None:
+            start_epoch  = client_state['epoch'] + 1
+            best_val_acc = client_state.get('best_val_acc', 0.0)
+            print(f"[Phase2] Resuming from epoch {start_epoch} "
+                  f"(best val acc so far: {best_val_acc:.2f}%)")
+
+    for epoch in range(start_epoch, config.epochs_phase1 + config.epochs_phase2):
         run_epoch(
             model_engine_p2, train_loader,
             criterion, epoch, num_classes, DEVICE
@@ -591,8 +625,19 @@ def train():
 
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                model_engine_p2.save_checkpoint("models/", tag="best_calibrated")
+                model_engine_p2.save_checkpoint(
+                    "models/", tag="best_calibrated",
+                    client_state={'epoch': epoch, 'best_val_acc': best_val_acc}
+                )
                 print(f"--> Saved New Best Ensemble (Acc: {val_acc:.2f}%)")
+
+            # Save per-epoch checkpoint for resumption -- overwrites previous
+            # so only one checkpoint is kept on disk at a time (saves storage)
+            model_engine_p2.save_checkpoint(
+                P2_CKPT_DIR,
+                client_state={'epoch': epoch, 'best_val_acc': best_val_acc}
+            )
+            print(f"[Phase2] Checkpoint saved (epoch {epoch})")
 
             early_stopping(val_acc)
             if early_stopping.early_stop:
@@ -600,7 +645,10 @@ def train():
                       f"Best val acc: {best_val_acc:.2f}%")
                 break
 
-    model_engine_p2.save_checkpoint("models/", tag="final")
+    model_engine_p2.save_checkpoint(
+        "models/", tag="final",
+        client_state={'epoch': epoch, 'best_val_acc': best_val_acc}
+    )
     wandb.finish()
 
 
