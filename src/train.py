@@ -12,7 +12,6 @@ os.environ.setdefault(
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 from torch.amp import autocast
 from torch.optim.lr_scheduler import OneCycleLR
 from torchmetrics.classification import MulticlassF1Score, MulticlassPrecision, MulticlassRecall, MulticlassAccuracy
@@ -22,6 +21,7 @@ import wandb
 import cudf
 from dotenv import load_dotenv
 from tqdm import tqdm
+import gc
 
 load_dotenv()
 
@@ -231,6 +231,7 @@ def validate(model, loader, criterion, num_classes, device, use_cache=False):
 
     # no_grad means no activation graph -- safe to use 2x chunk size vs training
     VAL_CHUNK_SIZE = CHUNK_SIZE * 2
+    i = 0  # guard against empty loader in val_loss/(i+1)
 
     with torch.no_grad():
         for i, data in enumerate(tqdm(loader, desc="Validating", unit="batch", leave=False)):
@@ -526,28 +527,8 @@ def train():
     P1_CKPT_PATH = "models/phase1_checkpoint.pth"
     start_epoch_p1 = 0
     if os.path.exists(P1_CKPT_PATH):
-        p1_ckpt = torch.load(P1_CKPT_PATH, map_location=DEVICE)
-        # Remap checkpoint keys: saved before torch.compile so keys use
-        # 'bioclip.model.*' but compiled model expects 'bioclip._orig_mod.model.*'
-        # Strip '_orig_mod.' if present in model keys, or add it if missing.
-        saved_state  = p1_ckpt['model_state']
-        model_state  = model_engine_p1.module.state_dict()
-        needs_prefix = any('_orig_mod.' in k for k in model_state.keys())
-        has_prefix   = any('_orig_mod.' in k for k in saved_state.keys())
-        if needs_prefix and not has_prefix:
-            # Checkpoint saved pre-compile: add _orig_mod. to backbone keys
-            remapped = {}
-            for k, v in saved_state.items():
-                for backbone in ('bioclip.', 'dinov2.', 'convnext.'):
-                    if k.startswith(backbone):
-                        k = backbone + '_orig_mod.' + k[len(backbone):]
-                        break
-                remapped[k] = v
-            saved_state = remapped
-        elif has_prefix and not needs_prefix:
-            # Checkpoint saved post-compile: strip _orig_mod. prefix
-            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
-        model_engine_p1.module.load_state_dict(saved_state)
+        p1_ckpt = torch.load(P1_CKPT_PATH, map_location=DEVICE, weights_only=False)
+        model_engine_p1.module.load_state_dict(p1_ckpt['model_state'])
         start_epoch_p1 = p1_ckpt['epoch'] + 1
         best_val_acc   = p1_ckpt.get('best_val_acc', 0.0)
         print(f"[Phase1] Resuming from epoch {start_epoch_p1} "
@@ -581,10 +562,12 @@ def train():
     print("\n--- PHASE 2: Full Fine-Tuning (Long-Tail Calibration) ---")
 
     # Free Phase 1 resources before Phase 2 allocates new ones.
-    # cache is ~15GB CPU RAM, train_loader holds DALI GPU buffers.
+    # cache_dataset holds tensor refs into cache so must be deleted first.
+    del cache_dataset
     del cache
     del train_loader
-    import gc; gc.collect()
+    del val_loader
+    gc.collect()
     torch.cuda.empty_cache()
 
     train_loader, val_loader, _ = get_dali_loaders(
@@ -600,22 +583,7 @@ def train():
     if os.path.exists(P1_CKPT_PATH):
         print("[Phase2] Loading best Phase 1 weights before fine-tuning...")
         p1_best = torch.load(P1_CKPT_PATH, map_location=DEVICE, weights_only=False)
-        saved_state  = p1_best['model_state']
-        model_state  = raw_model.state_dict()
-        needs_prefix = any('_orig_mod.' in k for k in model_state.keys())
-        has_prefix   = any('_orig_mod.' in k for k in saved_state.keys())
-        if needs_prefix and not has_prefix:
-            remapped = {}
-            for k, v in saved_state.items():
-                for backbone in ('bioclip.', 'dinov2.', 'convnext.'):
-                    if k.startswith(backbone):
-                        k = backbone + '_orig_mod.' + k[len(backbone):]
-                        break
-                remapped[k] = v
-            saved_state = remapped
-        elif has_prefix and not needs_prefix:
-            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
-        raw_model.load_state_dict(saved_state)
+        raw_model.load_state_dict(p1_best['model_state'])
         print(f"[Phase2] Loaded Phase 1 best (epoch {p1_best['epoch']}, "
               f"val acc: {p1_best.get('best_val_acc', 0.0):.2f}%)")
 
@@ -637,7 +605,9 @@ def train():
     ], weight_decay=0.01)
 
     steps_per_epoch_p2 = len(train_loader)
-    total_steps_p2     = steps_per_epoch_p2 * config.epochs_phase2
+    # +5 buffer per epoch -- same fix as Phase 1, prevents OneCycleLR ValueError
+    # when DeepSpeed steps the scheduler one extra time beyond total_steps
+    total_steps_p2     = (steps_per_epoch_p2 + 5) * config.epochs_phase2
 
     scheduler_p2 = OneCycleLR(
         optimizer_p2,
@@ -655,16 +625,16 @@ def train():
     )
 
     # Validate every N epochs rather than every epoch.
-    # Each val pass runs all 1.4M images through the full model -- skipping
-    # 2 out of every 3 saves ~2-3 hours across a 30-epoch run.
-    VAL_EVERY_N_EPOCHS = 5  # increased from 3 -- saves ~2hrs total over 20 epochs
+    VAL_EVERY_N_EPOCHS = 5
+    early_stopping = EarlyStopping(patience=3, min_delta=0.001)
 
-    early_stopping = EarlyStopping(patience=3, min_delta=0.001)  # tighter -- stops sooner if plateaued
+    # Checkpoint paths -- defined here so resume logic below can reference them
+    P2_CKPT_DIR   = "models/phase2_checkpoint"
+    P2_EPOCH_CKPT = "models/phase2_epoch_checkpoint.pth"
 
     # Resume Phase 2 from DeepSpeed checkpoint if one exists.
     # DeepSpeed saves model + optimizer + scheduler states together so
     # training resumes exactly where it left off including LR schedule.
-    P2_CKPT_DIR  = "models/phase2_checkpoint"
     start_epoch  = config.epochs_phase1
     final_epoch  = start_epoch + config.epochs_phase2 - 1
 
@@ -685,10 +655,6 @@ def train():
         best_val_acc = p2_ckpt.get('best_val_acc', 0.0)
         print(f"[Phase2] Resuming from epoch checkpoint {start_epoch} "
               f"(optimizer state reset, best val acc: {best_val_acc:.2f}%)")
-
-    # Lightweight per-epoch checkpoint path -- saves model weights only (no
-    # optimizer states) so crash recovery loses at most 1 epoch of work.
-    P2_EPOCH_CKPT = "models/phase2_epoch_checkpoint.pth"
 
     for epoch in range(start_epoch, config.epochs_phase1 + config.epochs_phase2):
         run_epoch(
