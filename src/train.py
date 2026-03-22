@@ -528,7 +528,11 @@ def train():
     start_epoch_p1 = 0
     if os.path.exists(P1_CKPT_PATH):
         p1_ckpt = torch.load(P1_CKPT_PATH, map_location=DEVICE, weights_only=False)
-        model_engine_p1.module.load_state_dict(p1_ckpt['model_state'])
+        # Strip _orig_mod. prefix if checkpoint was saved while torch.compile was active
+        saved_state = p1_ckpt['model_state']
+        if any('_orig_mod.' in k for k in saved_state.keys()):
+            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
+        model_engine_p1.module.load_state_dict(saved_state)
         start_epoch_p1 = p1_ckpt['epoch'] + 1
         best_val_acc   = p1_ckpt.get('best_val_acc', 0.0)
         print(f"[Phase1] Resuming from epoch {start_epoch_p1} "
@@ -583,7 +587,11 @@ def train():
     if os.path.exists(P1_CKPT_PATH):
         print("[Phase2] Loading best Phase 1 weights before fine-tuning...")
         p1_best = torch.load(P1_CKPT_PATH, map_location=DEVICE, weights_only=False)
-        raw_model.load_state_dict(p1_best['model_state'])
+        # Strip _orig_mod. prefix if checkpoint was saved while torch.compile was active
+        saved_state = p1_best['model_state']
+        if any('_orig_mod.' in k for k in saved_state.keys()):
+            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
+        raw_model.load_state_dict(saved_state)
         print(f"[Phase2] Loaded Phase 1 best (epoch {p1_best['epoch']}, "
               f"val acc: {p1_best.get('best_val_acc', 0.0):.2f}%)")
 
