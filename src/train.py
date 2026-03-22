@@ -17,6 +17,7 @@ from torch.amp import autocast
 from torch.optim.lr_scheduler import OneCycleLR
 from torchmetrics.classification import MulticlassF1Score, MulticlassPrecision, MulticlassRecall, MulticlassAccuracy
 import deepspeed
+from deepspeed.ops.adam import DeepSpeedCPUAdam
 import wandb
 import cudf
 from dotenv import load_dotenv
@@ -62,6 +63,7 @@ DS_CONFIG = {
     "train_micro_batch_size_per_gpu": BATCH_SIZE,
     "steps_per_print": 50,
     "wall_clock_breakdown": False,
+    "distributed_backend": "nccl",  # skip MPI entirely -- not needed on single GPU
 }
 
 FEATURE_CACHE_PATH = "models/phase1_feature_cache.pt"
@@ -464,8 +466,10 @@ def train():
         list(model.proj_conv.parameters()) +
         list(model.classifier.parameters())
     )
-    optimizer_p1 = optim.AdamW(phase1_params, lr=config.lr_phase1,
-                                weight_decay=0.05, fused=True)
+    # DeepSpeedCPUAdam is required for ZeRO offload -- it runs the optimizer
+    # step directly on CPU RAM where the states live, avoiding PCIe round-trips.
+    optimizer_p1 = DeepSpeedCPUAdam(phase1_params, lr=config.lr_phase1,
+                                    weight_decay=0.05)
 
     cache_dataset      = CachedFeatureDataset(cache)
     steps_per_epoch_p1 = len(cache_dataset) // (BATCH_SIZE * 4 * ACCUMULATION_STEPS)
@@ -511,7 +515,7 @@ def train():
     raw_model.unfreeze_backbones()
 
     # Differential LR: backbones at 5e-6, heads at 2e-4
-    optimizer_p2 = optim.AdamW([
+    optimizer_p2 = DeepSpeedCPUAdam([
         {'params': raw_model.bioclip.parameters(),    'lr': config.lr_phase2_backbone},
         {'params': raw_model.dinov2.parameters(),     'lr': config.lr_phase2_backbone},
         {'params': raw_model.convnext.parameters(),   'lr': config.lr_phase2_backbone},
@@ -519,7 +523,7 @@ def train():
         {'params': raw_model.proj_dino.parameters(),  'lr': config.lr_phase2_head},
         {'params': raw_model.proj_conv.parameters(),  'lr': config.lr_phase2_head},
         {'params': raw_model.classifier.parameters(), 'lr': config.lr_phase2_head},
-    ], weight_decay=0.01, fused=True)
+    ], weight_decay=0.01)
 
     steps_per_epoch_p2 = len(train_loader)
     total_steps_p2     = steps_per_epoch_p2 * config.epochs_phase2
