@@ -24,3 +24,4 @@ data/
 datasets/
 models/*.pt
 models/*.pth
+models/phase2_checkpoint/
