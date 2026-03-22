@@ -46,7 +46,8 @@ ACCUMULATION_STEPS = 1  # reduced -- batch=384 is large enough without accumulat
 # Chunked forward: each backbone processes CHUNK_SIZE images at a time,
 # keeping peak activation memory low while the logical batch stays large.
 # Increase BATCH_SIZE and tune CHUNK_SIZE to find the best GPU utilisation.
-CHUNK_SIZE = 32  # increased from 8 -- halves loop iterations per batch on 5090
+CHUNK_SIZE = 32    # used for extraction and Phase 1 (no_grad, lower memory)
+P2_CHUNK_SIZE = 8  # Phase 2 has unfrozen backbones + gradients -- needs smaller chunks
 
 # Maximum batches to evaluate during validation.
 # At batch=256, 100 batches = ~25,600 images -- statistically representative
@@ -361,10 +362,11 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
         labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
 
         with autocast(device_type='cuda', dtype=torch.bfloat16):
-            # Chunked forward: only CHUNK_SIZE activations live in VRAM at once
-            feat_bio  = chunked_backbone_forward(model.module.bioclip,  images)
-            feat_dino = chunked_backbone_forward(model.module.dinov2,   images)
-            feat_conv = chunked_backbone_forward(model.module.convnext, images)
+            # P2_CHUNK_SIZE is smaller than CHUNK_SIZE -- unfrozen backbones
+            # store gradients so activation memory is ~2x higher than extraction
+            feat_bio  = chunked_backbone_forward(model.module.bioclip,  images, P2_CHUNK_SIZE)
+            feat_dino = chunked_backbone_forward(model.module.dinov2,   images, P2_CHUNK_SIZE)
+            feat_conv = chunked_backbone_forward(model.module.convnext, images, P2_CHUNK_SIZE)
 
             feat_bio  = F.normalize(model.module.proj_bio(feat_bio),   dim=1)
             feat_dino = F.normalize(model.module.proj_dino(feat_dino), dim=1)
@@ -423,6 +425,7 @@ def train():
             "resolution":            RESOLUTION,
             "batch_size":            BATCH_SIZE,
             "chunk_size":            CHUNK_SIZE,
+            "p2_chunk_size":         P2_CHUNK_SIZE,
             "accumulation_steps":    ACCUMULATION_STEPS,
             "effective_batch_size":  BATCH_SIZE * ACCUMULATION_STEPS,
             "epochs_phase1":         10,
@@ -577,6 +580,13 @@ def train():
     # -----------------------------------------------------------------------
     print("\n--- PHASE 2: Full Fine-Tuning (Long-Tail Calibration) ---")
 
+    # Free Phase 1 resources before Phase 2 allocates new ones.
+    # cache is ~15GB CPU RAM, train_loader holds DALI GPU buffers.
+    del cache
+    del train_loader
+    import gc; gc.collect()
+    torch.cuda.empty_cache()
+
     train_loader, val_loader, _ = get_dali_loaders(
         csv_path, IMG_DIR, batch_size=config.batch_size, sampling_mode='sqrt'
     )
@@ -609,6 +619,10 @@ def train():
         print(f"[Phase2] Loaded Phase 1 best (epoch {p1_best['epoch']}, "
               f"val acc: {p1_best.get('best_val_acc', 0.0):.2f}%)")
 
+    # Reset best_val_acc so Phase 2 tracks its own best independently.
+    # Without this, early stopping could fire after 3 validations if Phase 2
+    # never beats Phase 1's val acc -- and no best checkpoint would be saved.
+    best_val_acc = 0.0
     raw_model.unfreeze_backbones()
 
     # Differential LR: backbones at 5e-6, heads at 2e-4
@@ -655,19 +669,40 @@ def train():
     final_epoch  = start_epoch + config.epochs_phase2 - 1
 
     if os.path.exists(P2_CKPT_DIR):
-        # DeepSpeed load_checkpoint returns the client state we saved
+        # Full DeepSpeed checkpoint -- includes optimizer + scheduler states
         _, client_state = model_engine_p2.load_checkpoint(P2_CKPT_DIR)
         if client_state is not None:
             start_epoch  = client_state['epoch'] + 1
             best_val_acc = client_state.get('best_val_acc', 0.0)
-            print(f"[Phase2] Resuming from epoch {start_epoch} "
-                  f"(best val acc so far: {best_val_acc:.2f}%)")
+            print(f"[Phase2] Resuming from DeepSpeed checkpoint epoch {start_epoch} "
+                  f"(best val acc: {best_val_acc:.2f}%)")
+    elif os.path.exists(P2_EPOCH_CKPT):
+        # Lightweight per-epoch checkpoint -- model weights only, no optimizer state.
+        # LR schedule restarts but at least no epochs are lost.
+        p2_ckpt = torch.load(P2_EPOCH_CKPT, map_location=DEVICE, weights_only=False)
+        model_engine_p2.module.load_state_dict(p2_ckpt['model_state'])
+        start_epoch  = p2_ckpt['epoch'] + 1
+        best_val_acc = p2_ckpt.get('best_val_acc', 0.0)
+        print(f"[Phase2] Resuming from epoch checkpoint {start_epoch} "
+              f"(optimizer state reset, best val acc: {best_val_acc:.2f}%)")
+
+    # Lightweight per-epoch checkpoint path -- saves model weights only (no
+    # optimizer states) so crash recovery loses at most 1 epoch of work.
+    P2_EPOCH_CKPT = "models/phase2_epoch_checkpoint.pth"
 
     for epoch in range(start_epoch, config.epochs_phase1 + config.epochs_phase2):
         run_epoch(
             model_engine_p2, train_loader,
             criterion, epoch, num_classes, DEVICE
         )
+
+        # Save lightweight per-epoch checkpoint after every epoch.
+        # Faster than full DeepSpeed checkpoint -- just model weights + epoch.
+        torch.save({
+            'epoch':     epoch,
+            'model_state': model_engine_p2.module.state_dict(),
+            'best_val_acc': best_val_acc,
+        }, P2_EPOCH_CKPT)
 
         # Validate on scheduled epochs and always on the final epoch
         if epoch % VAL_EVERY_N_EPOCHS == 0 or epoch == final_epoch:
