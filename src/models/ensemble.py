@@ -18,10 +18,8 @@ class PlantEnsemble(nn.Module):
         3. ConvNeXt-V2 (Convolutional/Local)      -- feature_dim: 1536
 
         Optimisations:
-        - CUDA streams: all three backbones run concurrently (~40-60% faster forward)
         - Projection heads include LayerNorm to stabilise features before L2 fusion
         - Frozen state cached as a flag to avoid per-forward parameter inspection
-        - Classifier compiled with torch.compile for kernel fusion on the MLP
         """
         super(PlantEnsemble, self).__init__()
 
@@ -60,7 +58,9 @@ class PlantEnsemble(nn.Module):
         # Compiled with torch.compile for kernel fusion across the MLP ops.
         # The classifier is a simple static graph -- ideal for compile.
         # LayerNorm > BatchNorm for ViT outputs (batch stats unreliable at small B)
-        _classifier = nn.Sequential(
+        # torch.compile removed -- it can cause mid-training recompilation hangs
+        # with gradient checkpointing + autocast. Re-evaluate after training is stable.
+        self.classifier = nn.Sequential(
             nn.Linear(self.fusion_dim, 2048),
             nn.LayerNorm(2048),
             nn.GELU(),
@@ -71,48 +71,28 @@ class PlantEnsemble(nn.Module):
             nn.Dropout(0.2),
             nn.Linear(1024, num_classes)
         )
-        try:
-            self.classifier = torch.compile(_classifier)
-            print("Classifier compiled with torch.compile.")
-        except Exception:
-            # torch.compile requires PyTorch 2.0+ -- fall back gracefully
-            self.classifier = _classifier
-            print("torch.compile unavailable -- using eager classifier.")
 
         # Cached frozen state flag -- avoids calling next(backbone.parameters())
         # on every forward pass, which adds overhead at scale.
         self._backbones_frozen = False
 
-        # Dedicated CUDA streams for concurrent backbone execution
-        self._stream_bio  = torch.cuda.Stream()
-        self._stream_dino = torch.cuda.Stream()
-        self._stream_conv = torch.cuda.Stream()
+        # Note: CUDA streams removed -- they deadlock with autocast + gradient
+        # checkpointing in certain PyTorch versions. Sequential execution is safe.
 
     def forward(self, x):
         """
-        Forward pass with parallel backbone execution via CUDA streams.
+        Forward pass with sequential backbone execution.
 
-        All three backbones dispatch their work concurrently to the GPU rather
-        than running sequentially. torch.cuda.synchronize() waits for all three
-        to complete before the projection + fusion steps.
+        CUDA streams were removed as they deadlock with autocast +
+        gradient checkpointing in certain PyTorch versions. Sequential
+        execution is stable and still fully GPU-utilised.
         """
         ctx = torch.no_grad() if self._backbones_frozen else torch.enable_grad()
 
-        # Dispatch all three backbones to separate CUDA streams concurrently
-        with torch.cuda.stream(self._stream_bio):
-            with ctx:
-                feat_bio = self.bioclip(x)
-
-        with torch.cuda.stream(self._stream_dino):
-            with ctx:
-                feat_dino = self.dinov2(x)
-
-        with torch.cuda.stream(self._stream_conv):
-            with ctx:
-                feat_conv = self.convnext(x)
-
-        # Block until all three streams have finished
-        torch.cuda.synchronize()
+        with ctx:
+            feat_bio  = self.bioclip(x)
+            feat_dino = self.dinov2(x)
+            feat_conv = self.convnext(x)
 
         # Project each backbone to a common 512-d space with LayerNorm
         feat_bio  = self.proj_bio(feat_bio)

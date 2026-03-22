@@ -2,8 +2,13 @@
 torch>=2.2.0
 torchvision>=0.17.0
 torchaudio
-# Helps with Mixed Precision and distributed training on Pro 6000
+# Mixed precision, distributed training helpers
 accelerate>=0.27.0
+
+# --- Memory & Batch Size Optimisation ---
+# ZeRO Stage 1: offloads optimizer states to CPU RAM, freeing ~4-8GB VRAM
+# enabling larger batch sizes on a single GPU
+deepspeed>=0.14.0
 
 # --- Foundation Model (BioCLIP) ---
 # BioCLIP is accessed via the OpenCLIP interface

@@ -5,7 +5,7 @@ DATASET_MODE = "plantclef" # or "plantclef"
 
 # --- Common Config ---
 RESOLUTION = 448
-BATCH_SIZE = 16 # Optimized for RTX 4090 (24GB VRAM)
+BATCH_SIZE = 256 # Optimized for RTX 5090 (32GB VRAM)
 
 # --- Dataset Paths ---
 DATASETS = {
@@ -27,8 +27,8 @@ IMG_DIR = DATASETS[DATASET_MODE]["img_dir"]
 CLEANED_CSV = DATASETS[DATASET_MODE]["cleaned_csv"]
 
 # --- Hardware Config ---
-MODE = "4090" # Optimized for RTX 4090
-if MODE == "4090":
+MODE = "5090" # Optimized for RTX 5090
+if MODE == "5090":
     BIOCLIP_NAME = "hf-hub:imageomics/bioclip"
     DINOV2_NAME = "vit_large_patch14_dinov2"
     CONVNEXT_NAME = "convnextv2_large.fcmae_ft_in22k_in1k_384"
