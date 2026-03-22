@@ -47,7 +47,8 @@ ACCUMULATION_STEPS = 1  # reduced -- batch=384 is large enough without accumulat
 # keeping peak activation memory low while the logical batch stays large.
 # Increase BATCH_SIZE and tune CHUNK_SIZE to find the best GPU utilisation.
 CHUNK_SIZE = 32    # used for extraction and Phase 1 (no_grad, lower memory)
-P2_CHUNK_SIZE = 8  # Phase 2 has unfrozen backbones + gradients -- needs smaller chunks
+P2_CHUNK_SIZE = 4   # Phase 2: unfrozen backbones store full gradient graphs
+P2_BATCH_SIZE = 32  # Phase 2: smaller batch than Phase 1 to fit gradient memory
 
 # Maximum batches to evaluate during validation.
 # At batch=256, 100 batches = ~25,600 images -- statistically representative
@@ -427,6 +428,7 @@ def train():
             "batch_size":            BATCH_SIZE,
             "chunk_size":            CHUNK_SIZE,
             "p2_chunk_size":         P2_CHUNK_SIZE,
+            "p2_batch_size":         P2_BATCH_SIZE,
             "accumulation_steps":    ACCUMULATION_STEPS,
             "effective_batch_size":  BATCH_SIZE * ACCUMULATION_STEPS,
             "epochs_phase1":         10,
@@ -575,7 +577,7 @@ def train():
     torch.cuda.empty_cache()
 
     train_loader, val_loader, _ = get_dali_loaders(
-        csv_path, IMG_DIR, batch_size=config.batch_size, sampling_mode='sqrt'
+        csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE, sampling_mode='sqrt'
     )
 
     # Unwrap from Phase 1 DeepSpeed engine before re-wrapping for Phase 2
