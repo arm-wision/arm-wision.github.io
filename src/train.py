@@ -487,9 +487,11 @@ def train():
     # checkpoints saved before compilation was applied.
     print("Compiling backbones with torch.compile (one-time warmup on first batch)...")
     try:
-        model.bioclip  = torch.compile(model.bioclip,  mode='reduce-overhead')
-        model.dinov2   = torch.compile(model.dinov2,   mode='reduce-overhead')
-        model.convnext = torch.compile(model.convnext, mode='reduce-overhead')
+        # default mode -- reduce-overhead uses CUDAGraphs which breaks the
+        # chunked forward loop (multiple calls per batch overwrite the output buffer)
+        model.bioclip  = torch.compile(model.bioclip,  mode='default')
+        model.dinov2   = torch.compile(model.dinov2,   mode='default')
+        model.convnext = torch.compile(model.convnext, mode='default')
         print("Backbones compiled successfully.")
     except Exception as e:
         print(f"torch.compile failed ({e}) -- falling back to eager mode.")
