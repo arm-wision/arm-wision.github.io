@@ -239,8 +239,15 @@ def validate(model, loader, criterion, num_classes, device, use_cache=False):
                 labels = data[0]['label'].squeeze().long()
                 labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
                 with autocast(device_type='cuda', dtype=torch.bfloat16):
-                    outputs = model(images)
-                    loss    = criterion(outputs, labels_one_hot)
+                    # Use chunked forward in validation too -- same OOM risk as training
+                    feat_bio  = chunked_backbone_forward(model.bioclip,  images)
+                    feat_dino = chunked_backbone_forward(model.dinov2,   images)
+                    feat_conv = chunked_backbone_forward(model.convnext, images)
+                    feat_bio  = F.normalize(model.proj_bio(feat_bio),   dim=1)
+                    feat_dino = F.normalize(model.proj_dino(feat_dino), dim=1)
+                    feat_conv = F.normalize(model.proj_conv(feat_conv), dim=1)
+                    outputs   = model.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
+                    loss      = criterion(outputs, labels_one_hot)
 
             val_loss += loss.item()
             _, predicted = outputs.max(1)
