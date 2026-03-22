@@ -482,19 +482,10 @@ def train():
     else:
         cache = extract_and_cache_features(model, train_loader, DEVICE, FEATURE_CACHE_PATH)
 
-    # Compile AFTER cache load and checkpoint resume so state_dict keys are
-    # consistent -- torch.compile adds '_orig_mod.' prefix which breaks loading
-    # checkpoints saved before compilation was applied.
-    print("Compiling backbones with torch.compile (one-time warmup on first batch)...")
-    try:
-        # default mode -- reduce-overhead uses CUDAGraphs which breaks the
-        # chunked forward loop (multiple calls per batch overwrite the output buffer)
-        model.bioclip  = torch.compile(model.bioclip,  mode='default')
-        model.dinov2   = torch.compile(model.dinov2,   mode='default')
-        model.convnext = torch.compile(model.convnext, mode='default')
-        print("Backbones compiled successfully.")
-    except Exception as e:
-        print(f"torch.compile failed ({e}) -- falling back to eager mode.")
+    # torch.compile removed -- incompatible with chunked forward + gradient
+    # checkpointing + DeepSpeed. Caused CUDAGraph overwrites, key prefix
+    # mismatches on checkpoint load, and inductor OOM in Phase 2.
+    # Re-evaluate only after training is confirmed stable end-to-end.
 
     # Phase 1: only head params -- ZeRO Stage 1 for optimizer state offload
     phase1_params = (
@@ -592,6 +583,32 @@ def train():
 
     # Unwrap from Phase 1 DeepSpeed engine before re-wrapping for Phase 2
     raw_model = model_engine_p1.module
+
+    # Reload best Phase 1 checkpoint before Phase 2 -- the final Phase 1 epoch
+    # trains at near-zero LR (end of OneCycleLR) so may be slightly worse than
+    # the best epoch. Always start Phase 2 from the best Phase 1 weights.
+    if os.path.exists(P1_CKPT_PATH):
+        print("[Phase2] Loading best Phase 1 weights before fine-tuning...")
+        p1_best = torch.load(P1_CKPT_PATH, map_location=DEVICE, weights_only=False)
+        saved_state  = p1_best['model_state']
+        model_state  = raw_model.state_dict()
+        needs_prefix = any('_orig_mod.' in k for k in model_state.keys())
+        has_prefix   = any('_orig_mod.' in k for k in saved_state.keys())
+        if needs_prefix and not has_prefix:
+            remapped = {}
+            for k, v in saved_state.items():
+                for backbone in ('bioclip.', 'dinov2.', 'convnext.'):
+                    if k.startswith(backbone):
+                        k = backbone + '_orig_mod.' + k[len(backbone):]
+                        break
+                remapped[k] = v
+            saved_state = remapped
+        elif has_prefix and not needs_prefix:
+            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
+        raw_model.load_state_dict(saved_state)
+        print(f"[Phase2] Loaded Phase 1 best (epoch {p1_best['epoch']}, "
+              f"val acc: {p1_best.get('best_val_acc', 0.0):.2f}%)")
+
     raw_model.unfreeze_backbones()
 
     # Differential LR: backbones at 5e-6, heads at 2e-4
