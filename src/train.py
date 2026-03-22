@@ -45,7 +45,7 @@ ACCUMULATION_STEPS = 2
 # Chunked forward: each backbone processes CHUNK_SIZE images at a time,
 # keeping peak activation memory low while the logical batch stays large.
 # Increase BATCH_SIZE and tune CHUNK_SIZE to find the best GPU utilisation.
-CHUNK_SIZE = 8
+CHUNK_SIZE = 32  # increased from 8 -- halves loop iterations per batch on 5090
 
 # DeepSpeed config: ZeRO Stage 1 offloads optimizer states to CPU RAM,
 # freeing ~4-8GB of VRAM that would otherwise hold Adam moment tensors.
@@ -318,14 +318,12 @@ def run_phase1_cached(model, cache, optimizer, scheduler, criterion,
 # Phase 2: full fine-tuning
 # ---------------------------------------------------------------------------
 
-def run_epoch(model, train_loader, val_loader, criterion,
-              epoch, num_classes, device):
+def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
     """
     Phase 2 full fine-tuning with chunked backbone forward passes.
 
-    Chunked forward: each backbone processes CHUNK_SIZE images at a time,
-    capping peak VRAM regardless of logical batch size. DeepSpeed handles
-    ZeRO optimizer offload, gradient accumulation, and BF16 scaling.
+    Validation is handled by the caller every VAL_EVERY_N_EPOCHS epochs
+    rather than every epoch, saving ~2-3 hours across a 30-epoch run.
     """
     model.train()
     train_acc_metric = MulticlassAccuracy(num_classes=num_classes, average='micro').to(device)
@@ -365,31 +363,14 @@ def run_epoch(model, train_loader, val_loader, criterion,
             acc = train_acc_metric.compute().item() * 100.0
             pbar.set_postfix({"Loss": f"{running_loss/(i+1):.4f}", "Acc": f"{acc:.2f}%"})
 
-    train_acc = train_acc_metric.compute().item() * 100.0
-    train_acc_metric.reset()
     train_loader.reset()
 
-    metrics = validate(model.module, val_loader, criterion, num_classes, device)
+    train_acc_final = train_acc_metric.compute().item() * 100.0
+    train_acc_metric.reset()
 
-    print(f"\n[Epoch {epoch}] Final Results:")
-    print(f" - Train Accuracy:       {train_acc:.2f}%")
-    print(f" - Validation Loss:      {metrics['loss']:.4f}")
-    print(f" - Validation Accuracy:  {metrics['acc']:.2f}%")
-    print(f" - Macro-F1 Score:       {metrics['f1']:.4f}")
-    print(f" - Macro-Precision:      {metrics['precision']:.4f}")
-    print(f" - Macro-Recall:         {metrics['recall']:.4f}")
-
-    wandb.log({
-        "epoch":          epoch,
-        "train_acc":      train_acc,
-        "val_acc":        metrics['acc'],
-        "val_loss":       metrics['loss'],
-        "val_f1":         metrics['f1'],
-        "val_precision":  metrics['precision'],
-        "val_recall":     metrics['recall'],
-        "lr":             model.get_lr()[0],
-    })
-    return metrics['acc']
+    wandb.log({"epoch": epoch, "train_acc": train_acc_final, "lr": model.get_lr()[0]})
+    print(f"[Epoch {epoch}] Train Acc: {train_acc_final:.2f}%")
+    return train_acc_final
 
 
 # ---------------------------------------------------------------------------
@@ -558,16 +539,55 @@ def train():
         config=DS_CONFIG,
     )
 
+    # Validate every N epochs rather than every epoch.
+    # Each val pass runs all 1.4M images through the full model -- skipping
+    # 2 out of every 3 saves ~2-3 hours across a 30-epoch run.
+    VAL_EVERY_N_EPOCHS = 3
+
+    early_stopping = EarlyStopping(patience=5, min_delta=0.001)
+
     start_epoch = config.epochs_phase1
+    final_epoch = start_epoch + config.epochs_phase2 - 1
+
     for epoch in range(start_epoch, start_epoch + config.epochs_phase2):
-        val_acc = run_epoch(
-            model_engine_p2, train_loader, val_loader,
+        run_epoch(
+            model_engine_p2, train_loader,
             criterion, epoch, num_classes, DEVICE
         )
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            model_engine_p2.save_checkpoint("models/", tag="best_calibrated")
-            print(f"--> Saved New Best Ensemble (Acc: {val_acc:.2f}%)")
+
+        # Validate on scheduled epochs and always on the final epoch
+        if epoch % VAL_EVERY_N_EPOCHS == 0 or epoch == final_epoch:
+            metrics = validate(
+                model_engine_p2.module, val_loader, criterion, num_classes, DEVICE
+            )
+            val_acc = metrics['acc']
+
+            print(f"\n[Epoch {epoch}] Validation Results:")
+            print(f" - Validation Loss:      {metrics['loss']:.4f}")
+            print(f" - Validation Accuracy:  {metrics['acc']:.2f}%")
+            print(f" - Macro-F1 Score:       {metrics['f1']:.4f}")
+            print(f" - Macro-Precision:      {metrics['precision']:.4f}")
+            print(f" - Macro-Recall:         {metrics['recall']:.4f}")
+
+            wandb.log({
+                "epoch":         epoch,
+                "val_acc":       metrics['acc'],
+                "val_loss":      metrics['loss'],
+                "val_f1":        metrics['f1'],
+                "val_precision": metrics['precision'],
+                "val_recall":    metrics['recall'],
+            })
+
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                model_engine_p2.save_checkpoint("models/", tag="best_calibrated")
+                print(f"--> Saved New Best Ensemble (Acc: {val_acc:.2f}%)")
+
+            early_stopping(val_acc)
+            if early_stopping.early_stop:
+                print(f"Early stopping triggered at epoch {epoch}. "
+                      f"Best val acc: {best_val_acc:.2f}%")
+                break
 
     model_engine_p2.save_checkpoint("models/", tag="final")
     wandb.finish()
