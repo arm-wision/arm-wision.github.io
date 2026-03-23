@@ -1,4 +1,9 @@
 import os
+import sys
+# Ensure src/ is on the path so local packages (training/, models/, data/)
+# take precedence over any same-named packages installed globally
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 os.environ.setdefault(
     "PYTORCH_CUDA_ALLOC_CONF",
     "expandable_segments:True,max_split_size_mb:256"
