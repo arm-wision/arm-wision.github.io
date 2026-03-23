@@ -7,11 +7,11 @@ from tqdm import tqdm
 import wandb
 
 import config as _cfg
-BATCH_SIZE    = _cfg.BATCH_SIZE
-CHUNK_SIZE    = _cfg.CHUNK_SIZE
-P2_CHUNK_SIZE = _cfg.P2_CHUNK_SIZE
-MAX_VAL_BATCHES = _cfg.MAX_VAL_BATCHES
-PCA_COMPONENTS  = _cfg.PCA_COMPONENTS
+BATCH_SIZE      = getattr(_cfg, "BATCH_SIZE",      384)
+CHUNK_SIZE      = getattr(_cfg, "CHUNK_SIZE",      32)
+P2_CHUNK_SIZE   = getattr(_cfg, "P2_CHUNK_SIZE",   16)
+MAX_VAL_BATCHES = getattr(_cfg, "MAX_VAL_BATCHES", 100)
+PCA_COMPONENTS  = getattr(_cfg, "PCA_COMPONENTS",  512)
 from .cache import chunked_backbone_forward, CachedFeatureDataset, CachedPCADataset
 
 

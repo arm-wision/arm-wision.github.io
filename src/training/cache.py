@@ -6,8 +6,8 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
 import config as _cfg
-EXTRACT_CHUNK_SIZE  = _cfg.EXTRACT_CHUNK_SIZE
-USE_REGION_FEATURES = _cfg.USE_REGION_FEATURES
+EXTRACT_CHUNK_SIZE  = getattr(_cfg, 'EXTRACT_CHUNK_SIZE',  64)
+USE_REGION_FEATURES = getattr(_cfg, 'USE_REGION_FEATURES', False)
 
 
 def chunked_backbone_forward(backbone, x, chunk_size):

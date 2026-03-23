@@ -19,9 +19,9 @@ import numpy as np
 from tqdm import tqdm
 
 import config as _cfg
-PCA_COMPONENTS      = _cfg.PCA_COMPONENTS
-PCA_TRANSFORM_PATH  = _cfg.PCA_TRANSFORM_PATH
-USE_REGION_FEATURES = _cfg.USE_REGION_FEATURES
+PCA_COMPONENTS      = getattr(_cfg, "PCA_COMPONENTS",     512)
+PCA_TRANSFORM_PATH  = getattr(_cfg, "PCA_TRANSFORM_PATH",  "models/pca_transform.pkl")
+USE_REGION_FEATURES = getattr(_cfg, "USE_REGION_FEATURES", False)
 
 
 def _build_feature_matrix(cache):

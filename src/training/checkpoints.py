@@ -1,10 +1,10 @@
 import os
 import torch
 import config as _cfg
-P1_CKPT_PATH  = _cfg.P1_CKPT_PATH
-P2_CKPT_DIR   = _cfg.P2_CKPT_DIR
-P2_EPOCH_CKPT = _cfg.P2_EPOCH_CKPT
-EPOCHS_PHASE1 = _cfg.EPOCHS_PHASE1
+P1_CKPT_PATH  = getattr(_cfg, "P1_CKPT_PATH",  "models/phase1_checkpoint.pth")
+P2_CKPT_DIR   = getattr(_cfg, "P2_CKPT_DIR",   "models/phase2_checkpoint")
+P2_EPOCH_CKPT = getattr(_cfg, "P2_EPOCH_CKPT", "models/phase2_epoch_checkpoint.pth")
+EPOCHS_PHASE1 = getattr(_cfg, "EPOCHS_PHASE1", 10)
 
 
 def phase1_is_complete():
