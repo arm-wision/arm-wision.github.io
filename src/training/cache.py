@@ -105,12 +105,15 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
             pending_future.result()
         pending_future = executor.submit(_write, shard_data, path, progress)
 
+    total_batches = len(loader)  # DALI iterator exposes __len__
+
     with torch.no_grad():
-        for idx, data in enumerate(tqdm(loader, desc="Extracting features",
-                                        initial=resume_from,
-                                        total=resume_from + sum(1 for _ in loader) if resume_from == 0 else None)):
+        pbar = tqdm(total=total_batches, desc="Extracting features",
+                    initial=resume_from, unit="batch")
+        for idx, data in enumerate(loader):
             # Skip batches already processed in a previous run
             if idx < resume_from:
+                pbar.update(1)
                 continue
             images = data[0]['data'].to(memory_format=torch.channels_last)
             labels = data[0]['label'].squeeze().long()
@@ -137,8 +140,12 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
                 buf['dino_crop'].append(feat_dino_c.cpu())
                 buf['conv_crop'].append(feat_conv_c.cpu())
 
+            pbar.update(1)
+
             if (idx + 1) % shard_size == 0:
                 flush_async()
+
+        pbar.close()
 
     if any(buf.values()):
         flush_async()
