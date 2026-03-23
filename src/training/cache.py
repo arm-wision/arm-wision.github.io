@@ -118,13 +118,18 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
     with torch.no_grad():
         pbar = tqdm(total=total_batches, desc="Extracting features",
                     initial=resume_from, unit="batch")
-        for idx, data in enumerate(loader):
+        for idx_in_this_run, data in enumerate(loader):
+            # idx is the absolute batch index across all runs
+            idx = idx_in_this_run + resume_from
+            
             # Stop if we reached total_batches (safety for infinite iterators)
             if total_batches and idx >= total_batches:
                 break
 
             # Skip batches already processed in a previous run
-            if idx < resume_from:
+            # In DALI, loader starts from 0 each time it's created,
+            # so the first batch from loader is absolute batch 0.
+            if idx_in_this_run < resume_from:
                 pbar.update(1)
                 continue
             images = data[0]['data'].to(memory_format=torch.channels_last)
