@@ -54,8 +54,26 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
     model.eval()
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
 
-    shard_dir = cache_path + "_shards"
+    shard_dir  = cache_path + "_shards"
+    ckpt_file  = cache_path + "_progress.json"
     os.makedirs(shard_dir, exist_ok=True)
+
+    # Resume from checkpoint if one exists
+    import json
+    resume_from = 0
+    shard_idx   = 0
+    shard_paths = []
+
+    if os.path.exists(ckpt_file):
+        with open(ckpt_file) as f:
+            ckpt = json.load(f)
+        resume_from = ckpt["batches_done"]
+        shard_idx   = ckpt["shards_done"]
+        # Reconstruct shard_paths for already-completed shards
+        shard_paths = [os.path.join(shard_dir, f"shard_{i:04d}.pt")
+                       for i in range(shard_idx)]
+        print(f"[Feature Cache] Resuming from batch {resume_from} "
+              f"({shard_idx} shards already saved)...")
 
     # Accumulation buffers -- flushed every shard_size batches
     buf = {k: [] for k in
@@ -63,28 +81,37 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
             if USE_REGION_FEATURES else
             ['bio', 'dino', 'conv', 'labels'])}
 
-    shard_idx      = 0
-    shard_paths    = []
     executor       = ThreadPoolExecutor(max_workers=1)
     pending_future = None
 
-    def _write(data, path):
+    def _write(data, path, progress):
         torch.save(data, path)
+        # Write progress checkpoint atomically after shard is saved
+        with open(ckpt_file + ".tmp", "w") as f:
+            json.dump(progress, f)
+        os.replace(ckpt_file + ".tmp", ckpt_file)
 
     def flush_async():
         nonlocal shard_idx, pending_future
         path       = os.path.join(shard_dir, f"shard_{shard_idx:04d}.pt")
         shard_data = {k: torch.cat(v) for k, v in buf.items()}
+        progress   = {"batches_done": resume_from + (shard_idx + 1) * shard_size,
+                      "shards_done":  shard_idx + 1}
         shard_paths.append(path)
         for v in buf.values():
             v.clear()
         shard_idx += 1
         if pending_future is not None:
-            pending_future.result()   # wait for previous write before submitting next
-        pending_future = executor.submit(_write, shard_data, path)
+            pending_future.result()
+        pending_future = executor.submit(_write, shard_data, path, progress)
 
     with torch.no_grad():
-        for idx, data in enumerate(tqdm(loader, desc="Extracting features")):
+        for idx, data in enumerate(tqdm(loader, desc="Extracting features",
+                                        initial=resume_from,
+                                        total=resume_from + sum(1 for _ in loader) if resume_from == 0 else None)):
+            # Skip batches already processed in a previous run
+            if idx < resume_from:
+                continue
             images = data[0]['data'].to(memory_format=torch.channels_last)
             labels = data[0]['label'].squeeze().long()
 
@@ -142,6 +169,9 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
 
     import shutil
     shutil.rmtree(shard_dir)
+    # Remove progress checkpoint -- extraction is complete
+    if os.path.exists(ckpt_file):
+        os.remove(ckpt_file)
     return cache
 
 
