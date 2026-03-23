@@ -7,33 +7,29 @@ from .convnext import PlantConvNeXt
 
 
 class PlantEnsemble(nn.Module):
-    def __init__(self, num_classes=7800, input_res=448,
+    def __init__(self, num_classes=7800, input_res=384,
                  bioclip_name='hf-hub:imageomics/bioclip',
-                 dinov2_name='vit_giant_patch14_dinov2.lvd142m',
-                 convnext_name='convnextv2_huge.fcmae_ft_in22k_in1k_384'):
+                 dinov2_name='vit_large_patch14_dinov2',
+                 convnext_name='convnextv2_large.fcmae_ft_in22k_in1k_384'):
         """
         Triple Ensemble for PlantCLEF 2026.
-        1. BioCLIP    (Taxonomic Foundation)     -- feature_dim: 512
-        2. DINOv2     (Geometric/Structural)      -- feature_dim: 1024
-        3. ConvNeXt-V2 (Convolutional/Local)      -- feature_dim: 1536
+        1. BioCLIP     (Taxonomic Foundation)     -- feature_dim: 512
+        2. DINOv2-L    (Geometric/Structural)     -- feature_dim: 1024
+        3. ConvNeXt-V2-L (Convolutional/Local)    -- feature_dim: 1536
 
-        Optimisations:
-        - Projection heads include LayerNorm to stabilise features before L2 fusion
-        - Frozen state cached as a flag to avoid per-forward parameter inspection
+        Phase 1: all backbones frozen, only projection heads + classifier train.
+        Phase 2: LoRA adapters on DINOv2 + ConvNeXt; BioCLIP stays fully frozen.
+                 ~5M trainable params vs ~800M for full fine-tuning.
         """
-        super(PlantEnsemble, self).__init__()
-
+        super().__init__()
         print(f"Initializing Triple Ensemble ({input_res}px)...")
 
-        # --- Backbones ---
         self.bioclip  = PlantBioCLIP(checkpoint=bioclip_name, input_res=input_res)
         self.dinov2   = PlantDINOv2(model_name=dinov2_name,   input_res=input_res)
         self.convnext = PlantConvNeXt(model_name=convnext_name, input_res=input_res)
 
-        # --- Per-backbone projection heads ---
-        # Linear + LayerNorm stabilises each backbone's output distribution
-        # before L2 normalisation and fusion. Using LayerNorm here is more
-        # robust than BatchNorm since backbone outputs have different scales.
+        # Per-backbone projection to shared 512-d space
+        # Linear + LayerNorm stabilises output distribution differences before fusion
         PROJ_DIM = 512
         self.proj_bio = nn.Sequential(
             nn.Linear(self.bioclip.feature_dim,  PROJ_DIM),
@@ -48,18 +44,14 @@ class PlantEnsemble(nn.Module):
             nn.LayerNorm(PROJ_DIM)
         )
 
-        self.fusion_dim = PROJ_DIM * 3  # 1536
+        self.fusion_dim = PROJ_DIM * 3
         print(f"Backbone dims: BioCLIP={self.bioclip.feature_dim}, "
               f"DINOv2={self.dinov2.feature_dim}, "
               f"ConvNeXt={self.convnext.feature_dim}")
         print(f"Projected + Fused Feature Dimension: {self.fusion_dim}")
 
-        # --- Deep Fusion Classifier ---
-        # Compiled with torch.compile for kernel fusion across the MLP ops.
-        # The classifier is a simple static graph -- ideal for compile.
+        # Deep fusion classifier
         # LayerNorm > BatchNorm for ViT outputs (batch stats unreliable at small B)
-        # torch.compile removed -- it can cause mid-training recompilation hangs
-        # with gradient checkpointing + autocast. Re-evaluate after training is stable.
         self.classifier = nn.Sequential(
             nn.Linear(self.fusion_dim, 2048),
             nn.LayerNorm(2048),
@@ -72,44 +64,89 @@ class PlantEnsemble(nn.Module):
             nn.Linear(1024, num_classes)
         )
 
-        # Cached frozen state flag -- avoids calling next(backbone.parameters())
-        # on every forward pass, which adds overhead at scale.
         self._backbones_frozen = False
+        self._lora_applied     = False
 
-        # Note: CUDA streams removed -- they deadlock with autocast + gradient
-        # checkpointing in certain PyTorch versions. Sequential execution is safe.
+    # -----------------------------------------------------------------------
+    # Forward (used during validation; training calls components directly)
+    # -----------------------------------------------------------------------
 
     def forward(self, x):
-        """
-        Forward pass with sequential backbone execution.
-
-        CUDA streams were removed as they deadlock with autocast +
-        gradient checkpointing in certain PyTorch versions. Sequential
-        execution is stable and still fully GPU-utilised.
-        """
         ctx = torch.no_grad() if self._backbones_frozen else torch.enable_grad()
-
         with ctx:
             feat_bio  = self.bioclip(x)
             feat_dino = self.dinov2(x)
             feat_conv = self.convnext(x)
+        feat_bio  = F.normalize(self.proj_bio(feat_bio),   dim=1)
+        feat_dino = F.normalize(self.proj_dino(feat_dino), dim=1)
+        feat_conv = F.normalize(self.proj_conv(feat_conv), dim=1)
+        return self.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
 
-        # Project each backbone to a common 512-d space with LayerNorm
-        feat_bio  = self.proj_bio(feat_bio)
-        feat_dino = self.proj_dino(feat_dino)
-        feat_conv = self.proj_conv(feat_conv)
+    # -----------------------------------------------------------------------
+    # LoRA
+    # -----------------------------------------------------------------------
 
-        # L2-normalise to equalise feature scales before fusion
-        feat_bio  = F.normalize(feat_bio,  dim=1)
-        feat_dino = F.normalize(feat_dino, dim=1)
-        feat_conv = F.normalize(feat_conv, dim=1)
+    def apply_lora(self, r=16, lora_alpha=32, lora_dropout=0.05):
+        """
+        Apply LoRA adapters to DINOv2 and ConvNeXt.
+        BioCLIP is intentionally left fully frozen -- its Tree-of-Life pretraining
+        already provides taxonomically discriminative features.
 
-        # Fuse and classify
-        combined = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
-        return self.classifier(combined)
+        Target modules:
+          DINOv2  (timm ViT)  : qkv, proj, fc1, fc2
+          ConvNeXt (timm CNN) : fc1, fc2  (MLP layers inside each block)
+
+        Reduces trainable params from ~800M -> ~5M while keeping most of the
+        fine-tuning benefit, and enables batch=256 without OOM.
+        """
+        try:
+            from peft import get_peft_model, LoraConfig
+        except ImportError:
+            raise ImportError(
+                "PEFT not installed. Run: pip install peft\n"
+                "LoRA is required for Phase 2 training."
+            )
+
+        if self._lora_applied:
+            print("[LoRA] Already applied -- skipping.")
+            return
+
+        # Disable gradient checkpointing before applying LoRA to avoid hook conflicts
+        self.set_grad_checkpointing(False)
+
+        # DINOv2: LoRA on attention (QKV + output) and MLP (fc1, fc2)
+        dino_config = LoraConfig(
+            r=r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            target_modules=["qkv", "proj", "fc1", "fc2"],
+            bias="none",
+        )
+        self.dinov2.backbone = get_peft_model(self.dinov2.backbone, dino_config)
+
+        # ConvNeXt: LoRA on MLP linear layers
+        conv_config = LoraConfig(
+            r=r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            target_modules=["fc1", "fc2"],
+            bias="none",
+        )
+        self.convnext.backbone = get_peft_model(self.convnext.backbone, conv_config)
+
+        self._lora_applied     = True
+        self._backbones_frozen = False  # LoRA params are trainable
+
+        total     = sum(p.numel() for p in self.parameters())
+        trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        print(f"[LoRA] Applied: {trainable:,} trainable / {total:,} total "
+              f"({100*trainable/total:.2f}%)")
+
+    # -----------------------------------------------------------------------
+    # Gradient checkpointing
+    # -----------------------------------------------------------------------
 
     def set_grad_checkpointing(self, enable=True):
-        """Enable gradient checkpointing on all backbones to trade compute for VRAM."""
         for wrapper in [self.bioclip, self.dinov2, self.convnext]:
             target = None
             if hasattr(wrapper, 'set_grad_checkpointing'):
@@ -118,15 +155,16 @@ class PlantEnsemble(nn.Module):
                 target = wrapper.backbone
             elif hasattr(wrapper, 'model') and hasattr(wrapper.model, 'set_grad_checkpointing'):
                 target = wrapper.model
-
             if target:
                 target.set_grad_checkpointing(enable)
-        print(f"Gradient checkpointing {'enabled' if enable else 'disabled'} on all backbones.")
+        print(f"Gradient checkpointing {'enabled' if enable else 'disabled'}.")
 
+    # -----------------------------------------------------------------------
+    # Freeze / unfreeze
+    # -----------------------------------------------------------------------
 
     def freeze_backbones(self):
-        """Freeze all three backbones to warm up the fusion head
-        without disrupting pre-trained features."""
+        """Freeze all backbone params for Phase 1 head warmup."""
         for backbone in [self.bioclip, self.dinov2, self.convnext]:
             for param in backbone.parameters():
                 param.requires_grad = False
@@ -134,7 +172,7 @@ class PlantEnsemble(nn.Module):
         print("All 3 backbones frozen.")
 
     def unfreeze_backbones(self):
-        """Unfreeze all three backbones for full fine-tuning."""
+        """Unfreeze all backbone params (used for full fine-tuning without LoRA)."""
         for backbone in [self.bioclip, self.dinov2, self.convnext]:
             for param in backbone.parameters():
                 param.requires_grad = True

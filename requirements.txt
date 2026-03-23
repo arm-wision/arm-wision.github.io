@@ -2,25 +2,21 @@
 torch>=2.2.0
 torchvision>=0.17.0
 torchaudio
-# Mixed precision, distributed training helpers
 accelerate>=0.27.0
 
-# --- Memory & Batch Size Optimisation ---
-# ZeRO Stage 1: offloads optimizer states to CPU RAM, freeing ~4-8GB VRAM
-# enabling larger batch sizes on a single GPU
+# --- Memory & Training Optimisation ---
 deepspeed>=0.14.0
-mpi4py>=3.1.0
+# LoRA: reduces Phase 2 trainable params from ~800M to ~5M
+# Enables batch=256 and < 24 hr Phase 2 on a single 5090
+peft>=0.10.0
 
 # --- Foundation Model (BioCLIP) ---
-# BioCLIP is accessed via the OpenCLIP interface
 open_clip_torch>=2.24.0
 
 # --- Backbone Models ---
-# timm provides DINOv2, ConvNeXt-V2 and all other backbone architectures
 timm>=1.0.0
 
 # --- GPU-Accelerated Metrics ---
-# Replaces sklearn for F1/Precision/Recall -- accumulates on GPU, no CPU transfers
 torchmetrics>=1.3.0
 
 # --- Data Processing & Augmentation ---
@@ -32,21 +28,17 @@ Pillow>=10.0.0
 cudf-cu12
 cupy-cuda12x
 nvidia-dali-cuda120
-# For advanced botanical augmentations later
 albumentations>=1.4.0
 
-# --- Optimization & Metrics (Brent's Method & F1) ---
+# --- Optimization & Metrics ---
 scipy>=1.11.0
 scikit-learn>=1.4.0
 
 # --- Utilities & Experiment Tracking ---
 tqdm
 python-dotenv
-# Highly recommended for tracking 1.4M image training runs
 wandb>=0.16.0
 
 # --- Phase 2 & 3 Dependencies (SAM & Tiling) ---
-# Segment Anything for the "Plant Sticker" factory
 git+https://github.com/facebookresearch/segment-anything.git
-# Slicing Aided Hyper Inference for high-res tiling
 sahi>=0.11.15

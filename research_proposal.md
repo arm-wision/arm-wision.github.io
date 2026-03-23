@@ -1,114 +1,112 @@
-# Research Proposal: BioCLIP & DINOv2 Ensemble for High-Resolution Multi-Label Plant Identification in Vegetation Plots
+# Research Proposal: BioCLIP, DINOv2 & ConvNeXt-V2 Ensemble for High-Resolution Multi-Label Plant Identification in Vegetation Plots
 
-**Date:** March 22, 2026
+**Date:** March 23, 2026
 
 ## 1. Title
-**BioCLIP, ConvNeXt-V2 & DINOv2 Ensemble for High-Resolution Multi-Label Plant Identification in Vegetation Plots**
+**BioCLIP, ConvNeXt-V2 & DINOv2 Ensemble with LoRA Adaptation for High-Resolution Multi-Label Plant Identification in Vegetation Plots**
 
 ## 2. Research Questions
 1. How can domain-specific foundation models (BioCLIP) be adapted to identify rare species in complex, overlapping vegetation plots where visual occlusion and a long-tailed species distribution typically degrade performance?
-2. Does taxonomic-aware pre-training (BioCLIP) provide superior feature discrimination for morphologically similar species compared to domain-agnostic self-supervised models (DINOv2) in high-density vegetation plots?
-3. To what extent do Segment Anything Model (SAM)-derived synthetic multi-species collages reduce the need for pre-labeled real-world data in automated biodiversity monitoring?
-4. Does high-resolution tiling (SAHI) disproportionately benefit the recall of rare, small-stature plants in 50x50cm vegetation quadrats?
+2. Does taxonomic-aware pre-training (BioCLIP) provide superior feature discrimination for morphologically similar species compared to domain-agnostic self-supervised models (DINOv2)?
+3. Can Low-Rank Adaptation (LoRA) provide competitive fine-tuning performance relative to full fine-tuning while reducing training cost by an order of magnitude?
+4. Does high-resolution tiling (SAHI) disproportionately benefit the recall of rare, small-stature plants in 50×50cm vegetation quadrats?
 
 ## 3. National Interest Statement
 Monitoring plant biodiversity is a matter of critical national security regarding climate resilience, agriculture, and ecosystem services. Current manual surveying methods are slow, subjective, and cost-prohibitive. This research aims to automate large-scale botanical surveys, providing governmental agencies and environmental organizations with the tools to respond instantly to invasive species threats, track habitat loss, and monitor the health of national ecosystems.
 
 ## 4. Introduction
-Identifying plants in the wild is traditionally a "single-focus" task. However, ecological reality consists of complex "vegetation plots" (quadrats) where multiple species overlap, compete, and obscure one another. This project seeks to build a high-performance AI system capable of "dissecting" these plots to identify every species present, utilizing the latest advancements in biological foundation models and synthetic data generation.
+Identifying plants in the wild is traditionally a "single-focus" task. However, ecological reality consists of complex "vegetation plots" (quadrats) where multiple species overlap, compete, and obscure one another. This project builds a high-performance AI system capable of identifying every species present in such plots, utilizing biological foundation models, synthetic data generation, and parameter-efficient fine-tuning.
 
 ## 5. Research Problem
 Three major bottlenecks hinder current botanical AI:
-1. **The Domain Gap:** Models trained on centered, clean, single-plant images often fail in the "messy" real-world context of overlapping vegetation.
-2. **The Long-Tail Problem:** Common species are over-represented in datasets, leading to AI systems that ignore endangered or high-priority rare species.
-3. **Multi-Label Ambiguity:** Standard classification losses struggle when an image contains 5–15 overlapping species, often failing to detect sub-dominant plants.
+1. **The Domain Gap:** Models trained on clean, single-plant images fail in overlapping vegetation.
+2. **The Long-Tail Problem:** Common species dominate datasets, leading to AI systems that ignore rare species.
+3. **Compute Cost:** Full fine-tuning of large multi-backbone ensembles on 1.4M images is prohibitively expensive, requiring days per run and limiting iteration speed.
 
 ## 6. Research Design & Methodology
-Our methodology follows a four-phase pipeline designed for the PlantCLEF 2026 challenge:
 
 ### A. Feature Fusion Ensemble
-To achieve state-of-the-art accuracy, we employ a multi-modal feature fusion ensemble that leverages three distinct architectural inductive biases. Our implementation uses a high-capacity fusion head (LayerNorm, GELU, and Dropout) to combine features from:
+Three complementary backbones with distinct inductive biases:
 
-1. **BioCLIP (ViT-L/14 — The Taxonomic Expert):**
-   - **Rationale:** Pre-trained on the "Tree of Life" (10M+ biological images), BioCLIP provides an intrinsic understanding of taxonomic hierarchies and botanical relationships critical for identifying rare species with limited training data.
+1. **BioCLIP (ViT-L/14 — Taxonomic Expert):** Pre-trained on the "Tree of Life" (10M+ biological images). Provides taxonomic hierarchy understanding critical for rare species. Fully frozen in both Phase 1 and Phase 2 — its specialised pretraining already provides near-optimal botanical features.
 
-2. **DINOv2 (ViT-L/14 — The Geometric Expert):**
-   - **Rationale:** A self-supervised transformer excelling at fine-grained structural features (leaf venation, serrations) with robust "objectness" that separates individual plants from cluttered backgrounds.
+2. **DINOv2 (ViT-L/14 — Geometric Expert):** Self-supervised transformer excelling at fine-grained structural features (leaf venation, serrations). LoRA-adapted in Phase 2.
 
-3. **ConvNeXt-V2 (Large — The Local Context Expert):**
-   - **Rationale:** Convolutional inductive biases provide superior local translation invariance, robust to variations in leaf orientation, scale, and lighting — acting as a stabilizer for the Transformer-based backbones.
+3. **ConvNeXt-V2 (Large — Local Context Expert):** CNN providing local translation invariance robust to leaf orientation, scale, and lighting variation. LoRA-adapted in Phase 2.
 
-Each backbone's output is projected to a shared 512-dimensional space via a `Linear + LayerNorm` projection head, L2-normalised, then concatenated into a 1536-dimensional fused representation. This equalises each backbone's contribution regardless of raw feature scale.
+Each backbone's output is projected to a shared 512-dimensional space via `Linear + LayerNorm`, L2-normalised, then concatenated into a 1536-d fused representation.
 
 ### B. High-Resolution Adaptation
-- **Positional Embedding Interpolation:** Pre-trained 224px Transformer backbones adapted to **448px** via bicubic interpolation of positional embeddings, capturing 4× more pixel-level detail.
-- **Channels-Last Memory Format:** Images and model weights stored in NHWC layout (`torch.channels_last`), aligning with NVIDIA tensor core preferences for improved ConvNeXt throughput.
+- **Positional Embedding Interpolation:** ViT backbones adapted to 384px via bicubic interpolation, maintaining spatial understanding while operating at ConvNeXt's native resolution.
+- **Channels-Last Memory Format:** NHWC layout (`torch.channels_last`) aligns with NVIDIA tensor core preferences, improving ConvNeXt throughput.
 
 ### C. GPU-Accelerated Data Engineering
-- **NVIDIA DALI Pipeline:** Full GPU-resident I/O — JPEG decoding, resizing, and colour conversion via `fn.decoders.image(device='mixed')`, eliminating CPU bottlenecks entirely.
-- **cuDF Metadata Auditing:** 100× faster CSV processing and file verification on GPU.
-- **Blur Audit:** DALI + PyTorch Laplacian Variance GPU filter removes 15,500 blurry samples (~1.1%) from 1.4M images before training.
+- **NVIDIA DALI:** Full GPU I/O — JPEG decode, resize, and colour conversion via `fn.decoders.image(device='mixed')`. Eliminates CPU bottleneck entirely.
+- **cuDF Metadata Auditing:** 100× faster CSV processing on GPU.
+- **Blur Audit:** DALI + PyTorch Laplacian Variance GPU filter removes blurry samples.
 
-### D. Hardware Precision & Throughput Optimisations
-We exploit the full capability of the RTX 5090's Blackwell tensor cores:
+### D. Hardware Precision Optimisations
+- **BF16 Mixed Precision:** Eliminates FP16 gradient underflow; removes GradScaler.
+- **TF32 Matmul:** ~2× throughput on Blackwell/Hopper tensor cores.
+- **FlashAttention 2:** O(N) memory attention for BioCLIP and DINOv2 ViT layers.
+- **Fused AdamW:** Single-kernel parameter updates in Phase 2.
+- **GPU-Accelerated Metrics:** torchmetrics accumulates F1/Precision/Recall on GPU; single transfer per epoch.
 
-- **BF16 Mixed Precision:** `bfloat16` autocast throughout. BF16 has the same dynamic range as FP32, eliminating gradient underflow and the need for `GradScaler` while halving activation memory vs FP32. ~15–25% throughput improvement over FP16.
-- **TF32 Matmul Acceleration:** `allow_tf32` flags enabled for ~2× matmul throughput with negligible accuracy impact.
-- **FlashAttention 2:** Enabled via `torch.backends.cuda.enable_flash_sdp(True)`. BioCLIP and DINOv2 use `scaled_dot_product_attention` internally, automatically benefiting from O(N) memory attention and fused kernel execution on the 5090.
-- **Fused AdamW:** `fused=True` executes all parameter updates in a single CUDA kernel (~10–15% optimizer step speedup).
-- **GPU-Accelerated Metrics:** All F1, Precision, Recall, and Accuracy use `torchmetrics` with GPU-resident state accumulation and a single CPU transfer per epoch at `.compute()`.
+### E. Parameter-Efficient Fine-Tuning via LoRA
 
-### E. Single-GPU Batch Size Maximisation
-Training a triple-backbone ensemble on 1.4M images at 448px on a single GPU presents a fundamental VRAM constraint. We apply a layered strategy to maximise effective batch size:
+A key innovation in this work is the application of Low-Rank Adaptation (LoRA) to the fine-tuning phase, motivated by the prohibitive cost of full fine-tuning a triple-backbone ensemble on 1.4M images.
 
-1. **Expandable Segments Allocator:** `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` is set before PyTorch initialises its allocator, reducing memory fragmentation by ~2–3GB and recovering headroom for larger batches at no computational cost.
+**LoRA formulation:** For a weight matrix $W \in \mathbb{R}^{d \times k}$, LoRA adds a low-rank update $\Delta W = BA$ where $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$ with rank $r \ll \min(d, k)$. The forward pass becomes $h = Wx + \frac{\alpha}{r}BAx$, scaling the adaptation by $\alpha/r$.
 
-2. **DeepSpeed ZeRO Stage 1:** Adam optimizer states (mean and variance tensors) consume approximately 2× the model parameter footprint in VRAM. With three large backbones, this amounts to ~8–12GB. DeepSpeed ZeRO Stage 1 partitions and offloads these optimizer states to pinned CPU RAM via PCIe 5.0, freeing ~4–8GB of VRAM during training. This is the single largest batch size lever available on a single GPU.
+**Application strategy:**
+- **BioCLIP:** Fully frozen. Tree-of-Life pretraining already provides optimal taxonomic features.
+- **DINOv2:** LoRA applied to attention layers (QKV, output projection) and MLP layers (fc1, fc2) with $r=16$, $\alpha=32$.
+- **ConvNeXt-V2:** LoRA applied to MLP linear layers (fc1, fc2) with $r=16$, $\alpha=32$.
 
-3. **Chunked Backbone Forward:** Rather than passing the full batch through each backbone at once, images are processed in sub-chunks of size 8. This caps peak activation VRAM at 8-image activations regardless of the logical batch size, while the gradient graph still accumulates over the full batch. Combined with gradient accumulation, effective batch sizes of 64–128 become achievable without OOM.
+**Impact:** Reduces trainable parameters from ~800M to ~5M (~0.6% of total), enabling batch=256 in Phase 2 (vs batch=16 for full fine-tuning), and reducing Phase 2 training time from ~6 days to under 24 hours on a single RTX 5090.
 
-4. **Gradient Checkpointing:** Enabled on all transformer blocks in BioCLIP and DINOv2 (`set_grad_checkpointing(True)`), trading ~30% additional compute for ~40% reduction in stored activation memory during the backward pass.
+### F. Progressive 2-Stage Training with Feature Caching
 
-Together, these techniques shift the batch size ceiling from ~16 (naive) to 64+ images per step on a single RTX 5090.
+1. **Phase 1 — Head Warmup (auto-skipped on restarts if checkpoint exists):**
+   - All backbones frozen. Backbone features extracted once and cached to disk (~1-1.5 hrs at 384px).
+   - Only projection heads and classifier train on cached tensors (~30-40 min for 10 epochs).
+   - DeepSpeed ZeRO Stage 1 with CPU optimizer offload (head params are tiny).
 
-### F. Long-Tail Balancing: The Calibration Strategy
+2. **Phase 2 — LoRA Fine-Tuning:**
+   - LoRA adapters applied to DINOv2 and ConvNeXt. BioCLIP frozen.
+   - Square-root resampling boosts rare species visibility ($P \propto 1/\sqrt{N_{class}}$).
+   - Differential learning rates: LoRA params at 1e-4, projection heads at 2e-4.
+   - OneCycleLR stepped per batch with short warmup (pct_start=0.1).
+   - Target: 3 epochs < 24 hours total on RTX 5090.
 
-1. **Square-Root (Power) Resampling:** Sampling probability $P \propto 1/\sqrt{N_{class}}$ creates a "Goldilocks" distribution — neither dominated by common species nor overfit to rare ones.
-
-2. **Progressive 2-Stage Training with Feature Caching:**
-   - **Phase 1 (Head Warmup):** Backbones frozen. Features extracted once via chunked forward and cached to disk. All 10 Phase 1 epochs train only the projection heads and classifier on cached tensors — approximately **10× faster** than naive frozen-backbone training.
-   - **Phase 2 (Calibration):** All weights unfrozen. Differential LR: backbones at 5e-6, heads at 2e-4. Square-root resampling active.
-
-3. **OneCycleLR Scheduler:** Stepped per batch with a short warmup and long cosine decay, converging ~30% faster than per-epoch CosineAnnealingLR.
-
-4. **Asymmetric Loss (ASL) with Logit Adjustment:** ASL down-weights easy negatives across 7,800 classes. Logit adjustment shifts scores by $\log N_{class}$ to counteract frequency bias at the loss level.
-
-### G. Synthetic Scene Generation
-- SAM-based "Plant Sticker Factory" extracts individual instances from 1.4M training images.
-- 500k synthetic multi-species collages generated via Copy-Paste with alpha blending, Z-ordering, and global augmentation (colour cast, shadow) for domain realism.
+### G. Long-Tail Balancing
+1. **Square-Root Resampling:** $P \propto 1/\sqrt{N_{class}}$ — "Goldilocks" distribution.
+2. **Asymmetric Loss (ASL):** Aggressively down-weights easy negatives across 7,800 classes.
+3. **Logit Adjustment:** Shifts scores by $\log N_{class}$ to counteract frequency bias.
+4. **Early Stopping (patience=2):** Prevents overfitting on short LoRA runs.
 
 ### H. Inference Strategy
 - **SAHI Tiling:** Overlapping 512×512 patches with 20% overlap and Max Pooling aggregation.
-- **Hybrid Attention:** Low-res "hotspot" pass to skip bare soil regions and save ~70% compute.
+- **Hybrid Attention:** Low-res hotspot pass skips bare soil, saving ~70% inference compute.
 
 ### I. Metric & Ecological Optimization
-- **Per-Class Thresholding:** Brent's Method on validation data for all 7,800 species.
-- **Temperature Scaling:** Learned temperature parameter $T$ on validation data.
-- **SINR + GPS Filtering:** Suppress ecologically impossible predictions geographically.
-- **Co-occurrence Smoothing:** Suppress impossible species combinations taxonomically.
+- **Per-Class Thresholding:** Brent's Method for all 7,800 species.
+- **Temperature Scaling:** Logit calibration via learned $T$.
+- **SINR + GPS Filtering:** Suppress ecologically impossible predictions.
+- **Co-occurrence Smoothing:** Suppress impossible species combinations.
 
 ## 7. Expected Outcomes
 - A robust, high-resolution inference engine for multi-label identification in dense vegetation.
-- Improved recall and precision for rare species in the long-tail distribution.
-- A validated pipeline for synthetic-to-real domain adaptation in botanical monitoring.
-- Demonstrated techniques for large-scale multi-backbone ensemble training on a single consumer GPU, including DeepSpeed ZeRO offloading and chunked backbone forward passes as practical solutions to VRAM constraints.
+- Demonstrated that LoRA fine-tuning of a multi-backbone ensemble matches or approaches full fine-tuning at ~1% of the parameter count and ~10% of the training time.
+- A validated pipeline for rapid botanical AI development on consumer-grade GPU hardware.
 
 ## 8. Technical Stack Summary
-- **Backbones:** BioCLIP (ViT-L/14), DINOv2 (ViT-L/14), ConvNeXt-V2-Large (via `timm` and `open_clip`).
+- **Backbones:** BioCLIP (ViT-L/14), DINOv2-L (ViT-L/14), ConvNeXt-V2-L (timm + open_clip).
+- **Fine-Tuning:** LoRA via PEFT library (r=16, α=32).
 - **Data Pipeline:** NVIDIA DALI (full GPU I/O).
-- **Training Engine:** DeepSpeed ZeRO Stage 1 (optimizer state offload).
+- **Training Engine:** DeepSpeed ZeRO Stage 1.
 - **Precision:** BF16 autocast, TF32 matmul, FlashAttention 2, fused AdamW.
-- **Metrics:** torchmetrics (GPU-resident accumulation).
+- **Metrics:** torchmetrics (GPU-resident).
 - **Augmentation:** SAM, Copy-Paste Synthesis, Albumentations.
 - **Experiment Tracking:** Weights & Biases (WandB).
 - **Hardware:** NVIDIA RTX 5090 (32GB), optimised for Blackwell tensor cores.
