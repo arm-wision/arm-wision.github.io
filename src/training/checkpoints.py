@@ -1,6 +1,10 @@
 import os
 import torch
-from config import P1_CKPT_PATH, P2_CKPT_DIR, P2_EPOCH_CKPT, EPOCHS_PHASE1
+import config as _cfg
+P1_CKPT_PATH  = _cfg.P1_CKPT_PATH
+P2_CKPT_DIR   = _cfg.P2_CKPT_DIR
+P2_EPOCH_CKPT = _cfg.P2_EPOCH_CKPT
+EPOCHS_PHASE1 = _cfg.EPOCHS_PHASE1
 
 
 def phase1_is_complete():

@@ -6,7 +6,12 @@ from torchmetrics.classification import (MulticlassF1Score, MulticlassPrecision,
 from tqdm import tqdm
 import wandb
 
-from config import BATCH_SIZE, CHUNK_SIZE, P2_CHUNK_SIZE, MAX_VAL_BATCHES, PCA_COMPONENTS
+import config as _cfg
+BATCH_SIZE    = _cfg.BATCH_SIZE
+CHUNK_SIZE    = _cfg.CHUNK_SIZE
+P2_CHUNK_SIZE = _cfg.P2_CHUNK_SIZE
+MAX_VAL_BATCHES = _cfg.MAX_VAL_BATCHES
+PCA_COMPONENTS  = _cfg.PCA_COMPONENTS
 from .cache import chunked_backbone_forward, CachedFeatureDataset, CachedPCADataset
 
 

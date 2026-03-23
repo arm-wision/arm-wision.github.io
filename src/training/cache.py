@@ -5,7 +5,9 @@ from torch.amp import autocast
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
-from config import EXTRACT_CHUNK_SIZE, USE_REGION_FEATURES
+import config as _cfg
+EXTRACT_CHUNK_SIZE  = _cfg.EXTRACT_CHUNK_SIZE
+USE_REGION_FEATURES = _cfg.USE_REGION_FEATURES
 
 
 def chunked_backbone_forward(backbone, x, chunk_size):
@@ -34,7 +36,7 @@ def _make_center_crop(images):
     return resized.to(images.dtype)
 
 
-def extract_and_cache_features(model, loader, device, cache_path, shard_size=200):
+def extract_and_cache_features(model, loader, device, cache_path, shard_size=50):
     """
     One-time frozen-backbone feature extraction.
 
@@ -97,9 +99,10 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=200
                     feat_dino_c= chunked_backbone_forward(model.dinov2,   crops, EXTRACT_CHUNK_SIZE)
                     feat_conv_c= chunked_backbone_forward(model.convnext, crops, EXTRACT_CHUNK_SIZE)
 
-            buf['bio'].append(feat_bio.cpu())
-            buf['dino'].append(feat_dino.cpu())
-            buf['conv'].append(feat_conv.cpu())
+            # Store as bfloat16 -- halves CPU RAM vs float32
+            buf['bio'].append(feat_bio.cpu().to(torch.bfloat16))
+            buf['dino'].append(feat_dino.cpu().to(torch.bfloat16))
+            buf['conv'].append(feat_conv.cpu().to(torch.bfloat16))
             buf['labels'].append(labels.cpu())
 
             if USE_REGION_FEATURES:
@@ -127,7 +130,12 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=200
             merged[k].append(shard[k])
         del shard
 
-    cache = {k: torch.cat(v) for k, v in merged.items()}
+    # Convert feature tensors back to float32 for PCA + training compatibility
+    # Labels stay as-is (int32)
+    cache = {}
+    for k, v in merged.items():
+        t = torch.cat(v)
+        cache[k] = t.float() if k != 'labels' else t
     torch.save(cache, cache_path)
     n = len(cache['labels'])
     print(f"[Feature Cache] Saved {n:,} samples to {cache_path}")

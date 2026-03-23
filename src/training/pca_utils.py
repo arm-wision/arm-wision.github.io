@@ -18,7 +18,10 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-from config import PCA_COMPONENTS, PCA_TRANSFORM_PATH, USE_REGION_FEATURES
+import config as _cfg
+PCA_COMPONENTS      = _cfg.PCA_COMPONENTS
+PCA_TRANSFORM_PATH  = _cfg.PCA_TRANSFORM_PATH
+USE_REGION_FEATURES = _cfg.USE_REGION_FEATURES
 
 
 def _build_feature_matrix(cache):
