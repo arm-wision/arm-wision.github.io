@@ -159,10 +159,10 @@ def get_dali_loaders(csv_path, img_dir, batch_size=128, resolution=384,
     val_pipe.build()
 
     train_loader = DALIGenericIterator(
-        [train_pipe], ['data', 'label'], reader_name="Reader", auto_reset=True
+        [train_pipe], ['data', 'label'], reader_name="Reader", auto_reset=False
     )
     val_loader = DALIGenericIterator(
-        [val_pipe], ['data', 'label'], reader_name="Reader", auto_reset=True
+        [val_pipe], ['data', 'label'], reader_name="Reader", auto_reset=False
     )
 
     return train_loader, val_loader, len(unique_species)

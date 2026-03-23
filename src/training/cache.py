@@ -95,7 +95,9 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
         nonlocal shard_idx, pending_future
         path       = os.path.join(shard_dir, f"shard_{shard_idx:04d}.pt")
         shard_data = {k: torch.cat(v) for k, v in buf.items()}
-        progress   = {"batches_done": resume_from + (shard_idx + 1) * shard_size,
+        # Correctly calculate batches_done: shard_idx starts from 0.
+        # After finishing shard_idx, we have completed (shard_idx + 1) shards.
+        progress   = {"batches_done": (shard_idx + 1) * shard_size,
                       "shards_done":  shard_idx + 1}
         shard_paths.append(path)
         for v in buf.values():
@@ -106,6 +108,7 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
         pending_future = executor.submit(_write, shard_data, path, progress)
 
     total_batches = len(loader)  # DALI iterator exposes __len__
+    print(f"[Feature Cache] Total batches to process: {total_batches}")
 
     # Create dedicated streams for parallel backbone execution
     stream_bio  = torch.cuda.Stream()
@@ -116,6 +119,10 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
         pbar = tqdm(total=total_batches, desc="Extracting features",
                     initial=resume_from, unit="batch")
         for idx, data in enumerate(loader):
+            # Stop if we reached total_batches (safety for infinite iterators)
+            if total_batches and idx >= total_batches:
+                break
+
             # Skip batches already processed in a previous run
             if idx < resume_from:
                 pbar.update(1)
