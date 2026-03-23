@@ -1,99 +1,181 @@
 import os
+import torch
+import torch.nn.functional as F
+from torch.amp import autocast
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
+
+from config import EXTRACT_CHUNK_SIZE, USE_REGION_FEATURES
+
+
+def chunked_backbone_forward(backbone, x, chunk_size):
+    """
+    Run a backbone on x in sub-batches of chunk_size to cap peak VRAM.
+    Only chunk_size images worth of activations exist at any moment.
+    """
+    return torch.cat([backbone(chunk) for chunk in x.split(chunk_size)])
+
+
+def _make_center_crop(images):
+    """
+    Produce a 75% center crop of each image and resize back to original resolution.
+    All ops on GPU -- adds negligible overhead to extraction.
+    images: (B, C, H, W) BF16 tensor on CUDA.
+    """
+    h, w      = images.shape[2], images.shape[3]
+    crop_h    = int(h * 0.75)
+    crop_w    = int(w * 0.75)
+    top       = (h - crop_h) // 2
+    left      = (w - crop_w) // 2
+    cropped   = images[:, :, top:top + crop_h, left:left + crop_w]
+    # Resize back to original resolution so backbone receives same-shape input
+    resized   = F.interpolate(cropped.float(), size=(h, w),
+                              mode='bilinear', align_corners=False)
+    return resized.to(images.dtype)
+
+
+def extract_and_cache_features(model, loader, device, cache_path, shard_size=50):
+    """
+    One-time frozen-backbone feature extraction.
+
+    When USE_REGION_FEATURES=True, extracts BOTH full image and center crop
+    features for each backbone.  The resulting raw feature concatenation is:
+        [bio_full(512) + bio_crop(512) + dino_full(1024) + dino_crop(1024)
+         + conv_full(1536) + conv_crop(1536)] = 6144-d per sample.
+    PCA (fitted in pca_utils.py) then compresses this to PCA_COMPONENTS-d.
+
+    Async shard saving keeps the GPU busy -- disk writes run in a background
+    thread while the GPU processes the next batch.
+    """
+    mode = "full+crop" if USE_REGION_FEATURES else "full only"
+    print(f"[Feature Cache] Extracting features ({mode}, async shards)...")
+    model.eval()
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+
+    shard_dir = cache_path + "_shards"
+    os.makedirs(shard_dir, exist_ok=True)
+
+    # Accumulation buffers -- flushed every shard_size batches
+    buf = {k: [] for k in
+           (['bio', 'bio_crop', 'dino', 'dino_crop', 'conv', 'conv_crop', 'labels']
+            if USE_REGION_FEATURES else
+            ['bio', 'dino', 'conv', 'labels'])}
+
+    shard_idx      = 0
+    shard_paths    = []
+    executor       = ThreadPoolExecutor(max_workers=1)
+    pending_future = None
+
+    def _write(data, path):
+        torch.save(data, path)
+
+    def flush_async():
+        nonlocal shard_idx, pending_future
+        path       = os.path.join(shard_dir, f"shard_{shard_idx:04d}.pt")
+        shard_data = {k: torch.cat(v) for k, v in buf.items()}
+        shard_paths.append(path)
+        for v in buf.values():
+            v.clear()
+        shard_idx += 1
+        if pending_future is not None:
+            pending_future.result()   # wait for previous write before submitting next
+        pending_future = executor.submit(_write, shard_data, path)
+
+    with torch.no_grad():
+        for idx, data in enumerate(tqdm(loader, desc="Extracting features")):
+            images = data[0]['data'].to(memory_format=torch.channels_last)
+            labels = data[0]['label'].squeeze().long()
+
+            with autocast(device_type='cuda', dtype=torch.bfloat16):
+                feat_bio  = chunked_backbone_forward(model.bioclip,  images, EXTRACT_CHUNK_SIZE)
+                feat_dino = chunked_backbone_forward(model.dinov2,   images, EXTRACT_CHUNK_SIZE)
+                feat_conv = chunked_backbone_forward(model.convnext, images, EXTRACT_CHUNK_SIZE)
+
+                if USE_REGION_FEATURES:
+                    crops      = _make_center_crop(images)
+                    feat_bio_c = chunked_backbone_forward(model.bioclip,  crops, EXTRACT_CHUNK_SIZE)
+                    feat_dino_c= chunked_backbone_forward(model.dinov2,   crops, EXTRACT_CHUNK_SIZE)
+                    feat_conv_c= chunked_backbone_forward(model.convnext, crops, EXTRACT_CHUNK_SIZE)
+
+            # Store as bfloat16 -- halves CPU RAM vs float32
+            buf['bio'].append(feat_bio.cpu().to(torch.bfloat16))
+            buf['dino'].append(feat_dino.cpu().to(torch.bfloat16))
+            buf['conv'].append(feat_conv.cpu().to(torch.bfloat16))
+            buf['labels'].append(labels.cpu())
+
+            if USE_REGION_FEATURES:
+                buf['bio_crop'].append(feat_bio_c.cpu())
+                buf['dino_crop'].append(feat_dino_c.cpu())
+                buf['conv_crop'].append(feat_conv_c.cpu())
+
+            if (idx + 1) % shard_size == 0:
+                flush_async()
+
+    if any(buf.values()):
+        flush_async()
+
+    if pending_future is not None:
+        pending_future.result()
+    executor.shutdown(wait=False)
+    loader.reset()
+
+    # Merge shards
+    print(f"[Feature Cache] Merging {shard_idx} shards...")
+    merged = {k: [] for k in buf}
+    for path in shard_paths:
+        shard = torch.load(path, weights_only=False)
+        for k in merged:
+            merged[k].append(shard[k])
+        del shard
+
+    # Convert feature tensors back to float32 for PCA + training compatibility
+    # Labels stay as-is (int32)
+    cache = {}
+    for k, v in merged.items():
+        t = torch.cat(v)
+        cache[k] = t.float() if k != 'labels' else t
+    torch.save(cache, cache_path)
+    n = len(cache['labels'])
+    print(f"[Feature Cache] Saved {n:,} samples to {cache_path}")
+
+    import shutil
+    shutil.rmtree(shard_dir)
+    return cache
+
 
 # ---------------------------------------------------------------------------
-# Dataset
+# Datasets
 # ---------------------------------------------------------------------------
-DATASET_MODE = "plantclef"  # or "kaggle_test"
 
-DATASETS = {
-    "plantclef": {
-        "raw_csv":     "/workspace/plantclef/raw/PlantCLEF2024_single_plant_training_metadata.csv",
-        "img_dir":     "/workspace/plantclef/raw/train/images_max_side_800/",
-        "cleaned_csv": "/workspace/plantclef/processed/train_metadata_cleaned.csv"
-    },
-    "kaggle_test": {
-        "raw_csv":     "/workspace/plantclef/processed/kaggle_test_metadata.csv",
-        "img_dir":     "/workspace/plantclef/raw/test/data/PlantCLEF/PlantCLEF2025/DataOut/test/package/images/",
-        "cleaned_csv": "/workspace/plantclef/processed/kaggle_test_metadata_cleaned.csv"
-    }
-}
+class CachedFeatureDataset(torch.utils.data.Dataset):
+    """
+    Returns raw backbone features (bio, dino, conv) for Phase 1 proj-head training.
+    Used when PCA is disabled or for Phase 2 head transfer.
+    """
+    def __init__(self, cache):
+        self.bio    = cache['bio']
+        self.dino   = cache['dino']
+        self.conv   = cache['conv']
+        self.labels = cache['labels']
 
-RAW_CSV     = DATASETS[DATASET_MODE]["raw_csv"]
-IMG_DIR     = DATASETS[DATASET_MODE]["img_dir"]
-CLEANED_CSV = DATASETS[DATASET_MODE]["cleaned_csv"]
+    def __len__(self):
+        return len(self.labels)
 
-# ---------------------------------------------------------------------------
-# Resolution & batch sizes
-# Timing targets:
-#   Feature extraction : 1-2 hours
-#   Phase 1            : 1-2 hours
-#   Phase 2 (LoRA)     : < 24 hours
-# ---------------------------------------------------------------------------
-RESOLUTION    = 384   # ConvNeXt native resolution; 26% cheaper than 448px (scales as res²)
-BATCH_SIZE    = 384   # Phase 1 extraction + head training
-P2_BATCH_SIZE = 256   # LoRA removes full-backbone backward -- much larger batch fits
+    def __getitem__(self, idx):
+        return self.bio[idx], self.dino[idx], self.conv[idx], self.labels[idx]
 
-# ---------------------------------------------------------------------------
-# Chunked forward chunk sizes
-# EXTRACT_CHUNK_SIZE : feature extraction  (no_grad, safe to be large -> faster)
-# CHUNK_SIZE         : Phase 1 validation  (no_grad)
-# P2_CHUNK_SIZE      : Phase 2 training    (LoRA backward is small, moderate size)
-# ---------------------------------------------------------------------------
-EXTRACT_CHUNK_SIZE = 64  # no_grad during extraction -- 2x larger chunk is safe
-CHUNK_SIZE         = 32
-P2_CHUNK_SIZE      = 16
 
-# ---------------------------------------------------------------------------
-# Training schedule
-# ---------------------------------------------------------------------------
-ACCUMULATION_STEPS = 1
+class CachedPCADataset(torch.utils.data.Dataset):
+    """
+    Returns PCA-compressed features for fast Phase 1 linear-probe training.
+    Requires cache['features_pca'] to exist (populated by pca_utils.apply_pca).
+    """
+    def __init__(self, cache):
+        self.features = cache['features_pca']
+        self.labels   = cache['labels']
 
-EPOCHS_PHASE1      = 10
-EPOCHS_PHASE2      = 3    # LoRA converges fast from Phase 1 init; 3 epochs ≈ 10-12 hrs
+    def __len__(self):
+        return len(self.labels)
 
-VAL_EVERY_N_EPOCHS = 1    # Validate every epoch in Phase 2 (short run, tight feedback)
-MAX_VAL_BATCHES    = 100  # ~25,600 images per val pass -- statistically representative
-PATIENCE           = 2    # Early stop after 2 consecutive non-improving validations
-
-# ---------------------------------------------------------------------------
-# LoRA (Phase 2)
-# Applied to DINOv2 + ConvNeXt.  BioCLIP stays fully frozen.
-# Reduces trainable params from ~800M -> ~5M; enables batch=256 + fast convergence.
-# ---------------------------------------------------------------------------
-LORA_R       = 16
-LORA_ALPHA   = 32    # effective scaling = lora_alpha / r = 2.0
-LORA_DROPOUT = 0.05
-
-# ---------------------------------------------------------------------------
-# Backbone selection
-# ---------------------------------------------------------------------------
-MODE = "4090"   # switch to "A100" for giant/huge backbones on higher-VRAM GPU
-
-if MODE == "4090":
-    BIOCLIP_NAME  = "hf-hub:imageomics/bioclip"
-    DINOV2_NAME   = "vit_large_patch14_dinov2"
-    CONVNEXT_NAME = "convnextv2_large.fcmae_ft_in22k_in1k_384"
-else:
-    BIOCLIP_NAME  = "hf-hub:imageomics/bioclip"
-    DINOV2_NAME   = "vit_giant_patch14_dinov2.lvd142m"
-    CONVNEXT_NAME = "convnextv2_huge.fcmae_ft_in22k_in1k_384"
-
-# ---------------------------------------------------------------------------
-# Region features + PCA
-# Region features: extract full image + center crop per backbone.
-# Doubles raw feature richness before PCA with zero extra training cost.
-# PCA compresses [bio_full+bio_crop+dino_full+dino_crop+conv_full+conv_crop]
-# (512+512+1024+1024+1536+1536 = 6144-d) -> PCA_COMPONENTS-d.
-# Phase 1 then trains a tiny linear head on PCA_COMPONENTS-d features.
-# ---------------------------------------------------------------------------
-USE_REGION_FEATURES = True
-PCA_COMPONENTS      = 512   # target dim after PCA (< raw 6144-d -> much faster Phase 1)
-PCA_TRANSFORM_PATH  = "models/pca_transform.pkl"
-
-# ---------------------------------------------------------------------------
-# Checkpoint paths (centralised so all modules agree)
-# ---------------------------------------------------------------------------
-FEATURE_CACHE_PATH = "models/phase1_feature_cache.pt"
-P1_CKPT_PATH       = "models/phase1_checkpoint.pth"
-P2_CKPT_DIR        = "models/phase2_checkpoint"
-P2_EPOCH_CKPT      = "models/phase2_epoch_checkpoint.pth"
+    def __getitem__(self, idx):
+        return self.features[idx], self.labels[idx]
