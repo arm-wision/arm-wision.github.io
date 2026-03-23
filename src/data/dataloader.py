@@ -83,7 +83,7 @@ class PlantDALIPipeline(Pipeline):
 
 
 def get_dali_loaders(csv_path, img_dir, batch_size=128, resolution=384,
-                     val_split=0.1, num_threads=4, device_id=0,
+                     val_split=0.1, num_threads=8, device_id=0,
                      sampling_mode='natural'):
     """
     Constructs training and validation DALI iterators.

@@ -39,7 +39,7 @@ P2_BATCH_SIZE = 256   # LoRA removes full-backbone backward -- much larger batch
 # CHUNK_SIZE         : Phase 1 validation  (no_grad)
 # P2_CHUNK_SIZE      : Phase 2 training    (LoRA backward is small, moderate size)
 # ---------------------------------------------------------------------------
-EXTRACT_CHUNK_SIZE = 64
+EXTRACT_CHUNK_SIZE = 128  # no_grad during extraction -- 2x larger chunk is safe
 CHUNK_SIZE         = 32
 P2_CHUNK_SIZE      = 16
 
