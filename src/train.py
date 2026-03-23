@@ -48,7 +48,7 @@ ACCUMULATION_STEPS = 1  # reduced -- batch=384 is large enough without accumulat
 # Increase BATCH_SIZE and tune CHUNK_SIZE to find the best GPU utilisation.
 CHUNK_SIZE = 32    # used for extraction and Phase 1 (no_grad, lower memory)
 P2_CHUNK_SIZE = 4   # Phase 2: unfrozen backbones store full gradient graphs
-P2_BATCH_SIZE = 32  # Phase 2: smaller batch than Phase 1 to fit gradient memory
+P2_BATCH_SIZE = 16  # Phase 2: smaller batch than Phase 1 to fit gradient memory
 
 # Maximum batches to evaluate during validation.
 # At batch=256, 100 batches = ~25,600 images -- statistically representative
@@ -464,7 +464,7 @@ def train():
     # PHASE 1: Feature Caching + Head Warmup
     # -----------------------------------------------------------------------
     print("\n--- PHASE 1: Feature Caching + Head Warmup ---")
-
+    model_engine_p1 = None
     train_loader, val_loader, num_classes = get_dali_loaders(
         csv_path, IMG_DIR, batch_size=config.batch_size, sampling_mode='natural'
     )
@@ -569,19 +569,26 @@ def train():
 
     # Free Phase 1 resources before Phase 2 allocates new ones.
     # cache_dataset holds tensor refs into cache so must be deleted first.
+    if model_engine_p1 is not None:
+        raw_model = model_engine_p1.module
+        del model_engine_p1
+        del optimizer_p1
+        del scheduler_p1
+    else:
+        raw_model = model
+
     del cache_dataset
     del cache
     del train_loader
     del val_loader
     gc.collect()
     torch.cuda.empty_cache()
+    
+    DS_CONFIG["train_micro_batch_size_per_gpu"] = P2_BATCH_SIZE
 
     train_loader, val_loader, _ = get_dali_loaders(
         csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE, sampling_mode='sqrt'
     )
-
-    # Unwrap from Phase 1 DeepSpeed engine before re-wrapping for Phase 2
-    raw_model = model_engine_p1.module
 
     # Reload best Phase 1 checkpoint before Phase 2 -- the final Phase 1 epoch
     # trains at near-zero LR (end of OneCycleLR) so may be slightly worse than

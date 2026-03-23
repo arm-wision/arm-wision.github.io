@@ -110,13 +110,19 @@ class PlantEnsemble(nn.Module):
 
     def set_grad_checkpointing(self, enable=True):
         """Enable gradient checkpointing on all backbones to trade compute for VRAM."""
-        for backbone in [self.bioclip, self.dinov2, self.convnext]:
-            if hasattr(backbone, 'set_grad_checkpointing'):
-                backbone.set_grad_checkpointing(enable)
-            elif hasattr(backbone, 'model'):
-                if hasattr(backbone.model, 'set_grad_checkpointing'):
-                    backbone.model.set_grad_checkpointing(enable)
+        for wrapper in [self.bioclip, self.dinov2, self.convnext]:
+            target = None
+            if hasattr(wrapper, 'set_grad_checkpointing'):
+                target = wrapper
+            elif hasattr(wrapper, 'backbone') and hasattr(wrapper.backbone, 'set_grad_checkpointing'):
+                target = wrapper.backbone
+            elif hasattr(wrapper, 'model') and hasattr(wrapper.model, 'set_grad_checkpointing'):
+                target = wrapper.model
+
+            if target:
+                target.set_grad_checkpointing(enable)
         print(f"Gradient checkpointing {'enabled' if enable else 'disabled'} on all backbones.")
+
 
     def freeze_backbones(self):
         """Freeze all three backbones to warm up the fusion head
