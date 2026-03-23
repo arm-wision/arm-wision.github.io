@@ -36,14 +36,15 @@ class PlantDALIPipeline(Pipeline):
             name="Reader",
             num_shards=1,
             shard_id=0,
-            pad_last_batch=True
+            pad_last_batch=True,
+            dont_use_mmap=True  # Stabilises extraction on network drives (MFS/WSL)
         )
 
         self.decode = ops.decoders.Image(
             device="mixed",
             output_type=types.RGB,
-            device_memory_padding=21101592,
-            host_memory_padding=8388608,
+            device_memory_padding=25165824, # Increased for larger batches
+            host_memory_padding=10485760,
         )
 
         self.training = training
@@ -83,7 +84,7 @@ class PlantDALIPipeline(Pipeline):
 
 
 def get_dali_loaders(csv_path, img_dir, batch_size=128, resolution=384,
-                     val_split=0.1, num_threads=8, device_id=0,
+                     val_split=0.1, num_threads=4, device_id=0,
                      sampling_mode='natural'):
     """
     Constructs training and validation DALI iterators.

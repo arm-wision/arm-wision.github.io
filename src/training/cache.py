@@ -107,6 +107,11 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
 
     total_batches = len(loader)  # DALI iterator exposes __len__
 
+    # Create dedicated streams for parallel backbone execution
+    stream_bio  = torch.cuda.Stream()
+    stream_dino = torch.cuda.Stream()
+    stream_conv = torch.cuda.Stream()
+
     with torch.no_grad():
         pbar = tqdm(total=total_batches, desc="Extracting features",
                     initial=resume_from, unit="batch")
@@ -119,15 +124,26 @@ def extract_and_cache_features(model, loader, device, cache_path, shard_size=50)
             labels = data[0]['label'].squeeze().long()
 
             with autocast(device_type='cuda', dtype=torch.bfloat16):
-                feat_bio  = chunked_backbone_forward(model.bioclip,  images, EXTRACT_CHUNK_SIZE)
-                feat_dino = chunked_backbone_forward(model.dinov2,   images, EXTRACT_CHUNK_SIZE)
-                feat_conv = chunked_backbone_forward(model.convnext, images, EXTRACT_CHUNK_SIZE)
+                # Run backbones in parallel streams
+                with torch.cuda.stream(stream_bio):
+                    feat_bio  = chunked_backbone_forward(model.bioclip,  images, EXTRACT_CHUNK_SIZE)
+                with torch.cuda.stream(stream_dino):
+                    feat_dino = chunked_backbone_forward(model.dinov2,   images, EXTRACT_CHUNK_SIZE)
+                with torch.cuda.stream(stream_conv):
+                    feat_conv = chunked_backbone_forward(model.convnext, images, EXTRACT_CHUNK_SIZE)
 
                 if USE_REGION_FEATURES:
-                    crops      = _make_center_crop(images)
-                    feat_bio_c = chunked_backbone_forward(model.bioclip,  crops, EXTRACT_CHUNK_SIZE)
-                    feat_dino_c= chunked_backbone_forward(model.dinov2,   crops, EXTRACT_CHUNK_SIZE)
-                    feat_conv_c= chunked_backbone_forward(model.convnext, crops, EXTRACT_CHUNK_SIZE)
+                    crops = _make_center_crop(images)
+                    # Reuse streams for crop features
+                    with torch.cuda.stream(stream_bio):
+                        feat_bio_c  = chunked_backbone_forward(model.bioclip,  crops, EXTRACT_CHUNK_SIZE)
+                    with torch.cuda.stream(stream_dino):
+                        feat_dino_c = chunked_backbone_forward(model.dinov2,   crops, EXTRACT_CHUNK_SIZE)
+                    with torch.cuda.stream(stream_conv):
+                        feat_conv_c = chunked_backbone_forward(model.convnext, crops, EXTRACT_CHUNK_SIZE)
+
+            # Sync all streams before moving to CPU
+            torch.cuda.synchronize()
 
             # Store as bfloat16 -- halves CPU RAM vs float32
             buf['bio'].append(feat_bio.cpu().to(torch.bfloat16))
