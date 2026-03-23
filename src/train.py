@@ -143,7 +143,8 @@ def train():
         print(f"\n[Phase1] Complete checkpoint found -- skipping Phase 1.")
         # Still need the model object for Phase 2
         train_loader, val_loader, num_classes = get_dali_loaders(
-            csv_path, IMG_DIR, batch_size=BATCH_SIZE, sampling_mode='natural'
+            csv_path, IMG_DIR, batch_size=BATCH_SIZE,
+            resolution=RESOLUTION, sampling_mode='natural'
         )
         model = PlantEnsemble(
             num_classes=num_classes, input_res=config.resolution,
@@ -159,7 +160,8 @@ def train():
     else:
         print("\n--- PHASE 1: Feature Caching + Head Warmup ---")
         train_loader, val_loader, num_classes = get_dali_loaders(
-            csv_path, IMG_DIR, batch_size=BATCH_SIZE, sampling_mode='natural'
+            csv_path, IMG_DIR, batch_size=BATCH_SIZE,
+            resolution=RESOLUTION, sampling_mode='natural'
         )
 
         model = PlantEnsemble(
@@ -233,7 +235,8 @@ def train():
     print("\n--- PHASE 2: LoRA Fine-Tuning (Long-Tail Calibration) ---")
 
     train_loader, val_loader, _ = get_dali_loaders(
-        csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE, sampling_mode='sqrt'
+        csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE,
+        resolution=RESOLUTION, sampling_mode='sqrt'
     )
 
     # Load best Phase 1 head weights (backbone weights stay as pretrained)
