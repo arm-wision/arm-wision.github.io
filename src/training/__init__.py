@@ -1,5 +1,6 @@
 from .losses import LogitAdjustmentLoss, AsymmetricLoss, EarlyStopping
-from .cache import chunked_backbone_forward, extract_and_cache_features, CachedFeatureDataset
+from .cache import (chunked_backbone_forward, extract_and_cache_features,
+                    CachedFeatureDataset, CachedPCADataset)
 from .loops import validate, run_phase1_cached, run_epoch
 from .checkpoints import (
     phase1_is_complete,
@@ -10,3 +11,5 @@ from .checkpoints import (
     save_epoch_checkpoint,
     save_deepspeed_checkpoint,
 )
+from .pca_utils import fit_pca, apply_pca, save_pca, load_pca, fit_and_save
+from .query_expansion import predict_with_expansion

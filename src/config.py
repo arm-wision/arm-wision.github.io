@@ -39,7 +39,7 @@ P2_BATCH_SIZE = 256   # LoRA removes full-backbone backward -- much larger batch
 # CHUNK_SIZE         : Phase 1 validation  (no_grad)
 # P2_CHUNK_SIZE      : Phase 2 training    (LoRA backward is small, moderate size)
 # ---------------------------------------------------------------------------
-EXTRACT_CHUNK_SIZE = 128  # no_grad during extraction -- 2x larger chunk is safe
+EXTRACT_CHUNK_SIZE = 64  # no_grad during extraction -- 2x larger chunk is safe
 CHUNK_SIZE         = 32
 P2_CHUNK_SIZE      = 16
 
@@ -77,6 +77,18 @@ else:
     BIOCLIP_NAME  = "hf-hub:imageomics/bioclip"
     DINOV2_NAME   = "vit_giant_patch14_dinov2.lvd142m"
     CONVNEXT_NAME = "convnextv2_huge.fcmae_ft_in22k_in1k_384"
+
+# ---------------------------------------------------------------------------
+# Region features + PCA
+# Region features: extract full image + center crop per backbone.
+# Doubles raw feature richness before PCA with zero extra training cost.
+# PCA compresses [bio_full+bio_crop+dino_full+dino_crop+conv_full+conv_crop]
+# (512+512+1024+1024+1536+1536 = 6144-d) -> PCA_COMPONENTS-d.
+# Phase 1 then trains a tiny linear head on PCA_COMPONENTS-d features.
+# ---------------------------------------------------------------------------
+USE_REGION_FEATURES = True
+PCA_COMPONENTS      = 512   # target dim after PCA (< raw 6144-d -> much faster Phase 1)
+PCA_TRANSFORM_PATH  = "models/pca_transform.pkl"
 
 # ---------------------------------------------------------------------------
 # Checkpoint paths (centralised so all modules agree)

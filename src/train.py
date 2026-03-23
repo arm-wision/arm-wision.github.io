@@ -30,7 +30,7 @@ from training import (
     load_phase1_checkpoint, save_phase1_checkpoint,
     load_phase1_heads_for_phase2,
     load_phase2_checkpoint, save_epoch_checkpoint, save_deepspeed_checkpoint,
-    phase1_is_complete,
+    phase1_is_complete, fit_and_save, load_pca, apply_pca,
 )
 from config import (
     RAW_CSV, IMG_DIR, CLEANED_CSV, BATCH_SIZE, P2_BATCH_SIZE,
@@ -39,6 +39,7 @@ from config import (
     VAL_EVERY_N_EPOCHS, PATIENCE,
     LORA_R, LORA_ALPHA, LORA_DROPOUT,
     FEATURE_CACHE_PATH, P1_CKPT_PATH, P2_CKPT_DIR, P2_EPOCH_CKPT,
+    PCA_TRANSFORM_PATH,
 )
 
 # ---------------------------------------------------------------------------
@@ -183,15 +184,28 @@ def train():
         else:
             cache = extract_and_cache_features(model, train_loader, DEVICE, FEATURE_CACHE_PATH)
 
+        # Fit PCA on cached features (or load existing transform)
+        if 'features_pca' not in cache:
+            if os.path.exists(PCA_TRANSFORM_PATH):
+                print("[PCA] Loading existing transform...")
+                pca   = load_pca(PCA_TRANSFORM_PATH)
+                cache = apply_pca(cache, pca)
+            else:
+                print("[PCA] Fitting PCA on cached features...")
+                cache, _ = fit_and_save(cache)
+            torch.save(cache, FEATURE_CACHE_PATH)
+            print("[PCA] Cache updated with PCA features.")
+
+        # Phase 1 trains only the phase1_head (linear probe on PCA features).
+        # Much faster than training proj heads on raw features (~3x smaller input).
+        # Phase 2 still uses full proj heads + ensemble (unaffected by this).
         # Phase 1 optimizer: DeepSpeedCPUAdam required for CPU offload
-        phase1_params  = (list(model.proj_bio.parameters())  +
-                          list(model.proj_dino.parameters()) +
-                          list(model.proj_conv.parameters()) +
-                          list(model.classifier.parameters()))
+        phase1_params  = list(model.phase1_head.parameters())
         optimizer_p1   = DeepSpeedCPUAdam(phase1_params, lr=config.lr_phase1,
                                            weight_decay=0.05)
 
-        cache_dataset      = CachedFeatureDataset(cache)
+        from training import CachedPCADataset
+        cache_dataset      = CachedPCADataset(cache) if 'features_pca' in cache else CachedFeatureDataset(cache)
         steps_per_epoch_p1 = len(cache_dataset) // (BATCH_SIZE * 4 * ACCUMULATION_STEPS)
         total_steps_p1     = (steps_per_epoch_p1 + 5) * EPOCHS_PHASE1
 

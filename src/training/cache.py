@@ -1,10 +1,11 @@
 import os
 import torch
+import torch.nn.functional as F
 from torch.amp import autocast
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
-from config import EXTRACT_CHUNK_SIZE
+from config import EXTRACT_CHUNK_SIZE, USE_REGION_FEATURES
 
 
 def chunked_backbone_forward(backbone, x, chunk_size):
@@ -15,107 +16,136 @@ def chunked_backbone_forward(backbone, x, chunk_size):
     return torch.cat([backbone(chunk) for chunk in x.split(chunk_size)])
 
 
-def extract_and_cache_features(model, loader, device, cache_path,
-                                shard_size=200):
+def _make_center_crop(images):
     """
-    One-time frozen-backbone feature extraction for all training images.
-
-    Optimisations for speed:
-    - EXTRACT_CHUNK_SIZE=128: larger chunks, fewer kernel launches (no_grad is safe)
-    - Async shard saving: GPU never waits for disk -- background thread writes
-      each shard while the GPU processes the next batch immediately
-    - shard_size=200 batches: ~77k images per shard, ~1.5GB RAM peak
-
-    Timing target: < 1 hour at 384px, batch=384, chunk=128.
+    Produce a 75% center crop of each image and resize back to original resolution.
+    All ops on GPU -- adds negligible overhead to extraction.
+    images: (B, C, H, W) BF16 tensor on CUDA.
     """
-    print("[Feature Cache] Extracting backbone features (async shard saving)...")
+    h, w      = images.shape[2], images.shape[3]
+    crop_h    = int(h * 0.75)
+    crop_w    = int(w * 0.75)
+    top       = (h - crop_h) // 2
+    left      = (w - crop_w) // 2
+    cropped   = images[:, :, top:top + crop_h, left:left + crop_w]
+    # Resize back to original resolution so backbone receives same-shape input
+    resized   = F.interpolate(cropped.float(), size=(h, w),
+                              mode='bilinear', align_corners=False)
+    return resized.to(images.dtype)
+
+
+def extract_and_cache_features(model, loader, device, cache_path, shard_size=200):
+    """
+    One-time frozen-backbone feature extraction.
+
+    When USE_REGION_FEATURES=True, extracts BOTH full image and center crop
+    features for each backbone.  The resulting raw feature concatenation is:
+        [bio_full(512) + bio_crop(512) + dino_full(1024) + dino_crop(1024)
+         + conv_full(1536) + conv_crop(1536)] = 6144-d per sample.
+    PCA (fitted in pca_utils.py) then compresses this to PCA_COMPONENTS-d.
+
+    Async shard saving keeps the GPU busy -- disk writes run in a background
+    thread while the GPU processes the next batch.
+    """
+    mode = "full+crop" if USE_REGION_FEATURES else "full only"
+    print(f"[Feature Cache] Extracting features ({mode}, async shards)...")
     model.eval()
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
 
     shard_dir = cache_path + "_shards"
     os.makedirs(shard_dir, exist_ok=True)
 
-    batch_bio, batch_dino, batch_conv, batch_labels = [], [], [], []
-    shard_idx   = 0
-    shard_paths = []
-    executor    = ThreadPoolExecutor(max_workers=1)  # single background save thread
+    # Accumulation buffers -- flushed every shard_size batches
+    buf = {k: [] for k in
+           (['bio', 'bio_crop', 'dino', 'dino_crop', 'conv', 'conv_crop', 'labels']
+            if USE_REGION_FEATURES else
+            ['bio', 'dino', 'conv', 'labels'])}
+
+    shard_idx      = 0
+    shard_paths    = []
+    executor       = ThreadPoolExecutor(max_workers=1)
     pending_future = None
 
-    def _save_shard(data, path):
-        """Runs in background thread -- GPU continues while this writes to disk."""
+    def _write(data, path):
         torch.save(data, path)
 
-    def flush_shard_async():
+    def flush_async():
         nonlocal shard_idx, pending_future
-        path = os.path.join(shard_dir, f"shard_{shard_idx:04d}.pt")
-        shard_data = {
-            'bio':    torch.cat(batch_bio),
-            'dino':   torch.cat(batch_dino),
-            'conv':   torch.cat(batch_conv),
-            'labels': torch.cat(batch_labels),
-        }
+        path       = os.path.join(shard_dir, f"shard_{shard_idx:04d}.pt")
+        shard_data = {k: torch.cat(v) for k, v in buf.items()}
         shard_paths.append(path)
-        batch_bio.clear(); batch_dino.clear()
-        batch_conv.clear(); batch_labels.clear()
+        for v in buf.values():
+            v.clear()
         shard_idx += 1
-        # Wait for previous save to finish before submitting next
-        # (avoids piling up shard data in RAM while writes queue up)
         if pending_future is not None:
-            pending_future.result()
-        pending_future = executor.submit(_save_shard, shard_data, path)
+            pending_future.result()   # wait for previous write before submitting next
+        pending_future = executor.submit(_write, shard_data, path)
 
     with torch.no_grad():
         for idx, data in enumerate(tqdm(loader, desc="Extracting features")):
             images = data[0]['data'].to(memory_format=torch.channels_last)
             labels = data[0]['label'].squeeze().long()
+
             with autocast(device_type='cuda', dtype=torch.bfloat16):
                 feat_bio  = chunked_backbone_forward(model.bioclip,  images, EXTRACT_CHUNK_SIZE)
                 feat_dino = chunked_backbone_forward(model.dinov2,   images, EXTRACT_CHUNK_SIZE)
                 feat_conv = chunked_backbone_forward(model.convnext, images, EXTRACT_CHUNK_SIZE)
-            batch_bio.append(feat_bio.cpu())
-            batch_dino.append(feat_dino.cpu())
-            batch_conv.append(feat_conv.cpu())
-            batch_labels.append(labels.cpu())
+
+                if USE_REGION_FEATURES:
+                    crops      = _make_center_crop(images)
+                    feat_bio_c = chunked_backbone_forward(model.bioclip,  crops, EXTRACT_CHUNK_SIZE)
+                    feat_dino_c= chunked_backbone_forward(model.dinov2,   crops, EXTRACT_CHUNK_SIZE)
+                    feat_conv_c= chunked_backbone_forward(model.convnext, crops, EXTRACT_CHUNK_SIZE)
+
+            buf['bio'].append(feat_bio.cpu())
+            buf['dino'].append(feat_dino.cpu())
+            buf['conv'].append(feat_conv.cpu())
+            buf['labels'].append(labels.cpu())
+
+            if USE_REGION_FEATURES:
+                buf['bio_crop'].append(feat_bio_c.cpu())
+                buf['dino_crop'].append(feat_dino_c.cpu())
+                buf['conv_crop'].append(feat_conv_c.cpu())
 
             if (idx + 1) % shard_size == 0:
-                flush_shard_async()
+                flush_async()
 
-    if batch_bio:
-        flush_shard_async()
+    if any(buf.values()):
+        flush_async()
 
-    # Wait for the last background save to complete
     if pending_future is not None:
         pending_future.result()
     executor.shutdown(wait=False)
     loader.reset()
 
-    # Merge all shards into a single cache file
+    # Merge shards
     print(f"[Feature Cache] Merging {shard_idx} shards...")
-    all_bio, all_dino, all_conv, all_labels = [], [], [], []
+    merged = {k: [] for k in buf}
     for path in shard_paths:
         shard = torch.load(path, weights_only=False)
-        all_bio.append(shard['bio'])
-        all_dino.append(shard['dino'])
-        all_conv.append(shard['conv'])
-        all_labels.append(shard['labels'])
+        for k in merged:
+            merged[k].append(shard[k])
         del shard
 
-    cache = {
-        'bio':    torch.cat(all_bio),
-        'dino':   torch.cat(all_dino),
-        'conv':   torch.cat(all_conv),
-        'labels': torch.cat(all_labels),
-    }
+    cache = {k: torch.cat(v) for k, v in merged.items()}
     torch.save(cache, cache_path)
-    print(f"[Feature Cache] Saved {len(cache['labels']):,} samples to {cache_path}")
+    n = len(cache['labels'])
+    print(f"[Feature Cache] Saved {n:,} samples to {cache_path}")
 
     import shutil
     shutil.rmtree(shard_dir)
     return cache
 
 
+# ---------------------------------------------------------------------------
+# Datasets
+# ---------------------------------------------------------------------------
+
 class CachedFeatureDataset(torch.utils.data.Dataset):
-    """Wraps cached backbone features for fast Phase 1 head training."""
+    """
+    Returns raw backbone features (bio, dino, conv) for Phase 1 proj-head training.
+    Used when PCA is disabled or for Phase 2 head transfer.
+    """
     def __init__(self, cache):
         self.bio    = cache['bio']
         self.dino   = cache['dino']
@@ -127,3 +157,19 @@ class CachedFeatureDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return self.bio[idx], self.dino[idx], self.conv[idx], self.labels[idx]
+
+
+class CachedPCADataset(torch.utils.data.Dataset):
+    """
+    Returns PCA-compressed features for fast Phase 1 linear-probe training.
+    Requires cache['features_pca'] to exist (populated by pca_utils.apply_pca).
+    """
+    def __init__(self, cache):
+        self.features = cache['features_pca']
+        self.labels   = cache['labels']
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        return self.features[idx], self.labels[idx]
