@@ -5,7 +5,6 @@ from torch.amp import autocast
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
-from config import EXTRACT_CHUNK_SIZE, USE_REGION_FEATURES
 
 
 def chunked_backbone_forward(backbone, x, chunk_size):
