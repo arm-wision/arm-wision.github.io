@@ -13,6 +13,7 @@ P2_CHUNK_SIZE   = getattr(_cfg, "P2_CHUNK_SIZE",   16)
 MAX_VAL_BATCHES = getattr(_cfg, "MAX_VAL_BATCHES", 100)
 PCA_COMPONENTS  = getattr(_cfg, "PCA_COMPONENTS",  512)
 from .cache import chunked_backbone_forward, CachedFeatureDataset, CachedPCADataset
+from .checkpoints import save_progress_checkpoint
 
 
 # ---------------------------------------------------------------------------
@@ -201,6 +202,10 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
     running_loss     = 0.0
     running_kd_loss  = 0.0
 
+    total_steps = len(train_loader)
+    # Save progress every 5% of total steps (min 1, max total_steps)
+    save_interval = max(1, total_steps // 20)
+
     for i, data in pbar:
         images = data[0]['data'].to(memory_format=torch.channels_last)
         labels = data[0]['label'].squeeze().long()
@@ -255,6 +260,10 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
                 "KD":      f"{running_kd_loss/(i+1):.4f}",
                 "Acc":     f"{acc_m.compute().item()*100:.2f}%"
             })
+
+        # Progress saving (every 5%)
+        if (i + 1) % save_interval == 0 and (i + 1) < total_steps:
+            save_progress_checkpoint(model, epoch, i + 1, total_steps)
 
     train_loader.reset()
     train_acc = acc_m.compute().item() * 100.0

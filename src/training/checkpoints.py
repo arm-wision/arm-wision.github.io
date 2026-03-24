@@ -115,6 +115,21 @@ def save_epoch_checkpoint(model_engine, epoch, best_val_acc):
     }, P2_EPOCH_CKPT)
 
 
+def save_progress_checkpoint(model_engine, epoch, step, total_steps):
+    """
+    Lightweight mid-epoch progress checkpoint. Saves to a fixed path,
+    overwriting previous progress within the same epoch.
+    """
+    path = "models/phase2_progress.pth"
+    torch.save({
+        'epoch':        epoch,
+        'step':         step,
+        'total_steps':  total_steps,
+        'model_state':  model_engine.module.state_dict(),
+    }, path)
+    print(f"\n[Progress] 5% checkpoint saved (Epoch {epoch}, Step {step}/{total_steps})")
+
+
 def save_deepspeed_checkpoint(model_engine, directory, tag, epoch, best_val_acc):
     """Full DeepSpeed checkpoint -- model + optimizer + scheduler states."""
     model_engine.save_checkpoint(

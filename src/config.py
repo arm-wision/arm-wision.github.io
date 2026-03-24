@@ -41,7 +41,7 @@ P2_BATCH_SIZE = 128   # Reduced from 256 to fit on 32GB GPU with LoRA+Gradients
 # ---------------------------------------------------------------------------
 EXTRACT_CHUNK_SIZE = 384  # no_grad during extraction -- 5090 can handle full batch
 CHUNK_SIZE         = 32
-P2_CHUNK_SIZE      = 8   # Reduced from 16 for extra VRAM safety during Phase 2
+P2_CHUNK_SIZE      = 128 # Increased from 8 to eliminate chunking overhead; LoRA is memory-efficient
 
 # ---------------------------------------------------------------------------
 # Training schedule
@@ -50,6 +50,7 @@ ACCUMULATION_STEPS = 2    # Increased from 1 to keep effective batch size at 256
 
 EPOCHS_PHASE1      = 10
 EPOCHS_PHASE2      = 3    # LoRA converges fast from Phase 1 init; 3 epochs ≈ 10-12 hrs
+P2_SAMPLES_PER_EPOCH = 250000 # Sub-sample to ~2 hrs per epoch (total 6 hrs vs 36 hrs)
 
 VAL_EVERY_N_EPOCHS = 1    # Validate every epoch in Phase 2 (short run, tight feedback)
 MAX_VAL_BATCHES    = 100  # ~25,600 images per val pass -- statistically representative

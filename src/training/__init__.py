@@ -9,6 +9,7 @@ from .checkpoints import (
     load_phase1_heads_for_phase2,
     load_phase2_checkpoint,
     save_epoch_checkpoint,
+    save_progress_checkpoint,
     save_deepspeed_checkpoint,
 )
 from .pca_utils import fit_pca, apply_pca, save_pca, load_pca, fit_and_save

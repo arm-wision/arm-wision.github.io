@@ -85,7 +85,7 @@ class PlantDALIPipeline(Pipeline):
 
 def get_dali_loaders(csv_path, img_dir, batch_size=128, resolution=384,
                      val_split=0.1, num_threads=4, device_id=0,
-                     sampling_mode='natural'):
+                     sampling_mode='natural', samples_per_epoch=None):
     """
     Constructs training and validation DALI iterators.
 
@@ -96,6 +96,8 @@ def get_dali_loaders(csv_path, img_dir, batch_size=128, resolution=384,
             'natural'  - Direct distribution from CSV.
             'sqrt'     - Square-root resampling (P ∝ 1/√N). Best for Phase 2.
             'balanced' - Full class-aware balancing (P ∝ 1/N).
+        samples_per_epoch (int): Optional sub-sampling limit. If set, each epoch
+                                 will only use this many images (drawn randomly).
     """
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
@@ -139,12 +141,21 @@ def get_dali_loaders(csv_path, img_dir, batch_size=128, resolution=384,
         sample_weights  = np.array([class_weights[l] for l in train_labels])
         sample_weights /= sample_weights.sum()
 
+        target_size = samples_per_epoch if samples_per_epoch else len(train_paths)
         resampled = np.random.choice(
-            len(train_paths), size=len(train_paths), replace=True, p=sample_weights
+            len(train_paths), size=target_size, replace=True, p=sample_weights
         )
         train_paths  = [train_paths[i]  for i in resampled]
         train_labels = [train_labels[i] for i in resampled]
         print(f"[Dataloader] Resampling complete. Effective samples: {len(train_paths):,}")
+    elif samples_per_epoch and samples_per_epoch < len(train_paths):
+        # Random sub-sampling for 'natural' mode
+        resampled = np.random.choice(
+            len(train_paths), size=samples_per_epoch, replace=False
+        )
+        train_paths  = [train_paths[i]  for i in resampled]
+        train_labels = [train_labels[i] for i in resampled]
+        print(f"[Dataloader] Sub-sampling complete. Effective samples: {len(train_paths):,}")
 
     train_pipe = PlantDALIPipeline(
         batch_size, num_threads, device_id, train_paths, train_labels,
