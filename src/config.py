@@ -41,7 +41,7 @@ P2_BATCH_SIZE = 128   # Reduced from 256 to fit on 32GB GPU with LoRA+Gradients
 # ---------------------------------------------------------------------------
 EXTRACT_CHUNK_SIZE = 384  # no_grad during extraction -- 5090 can handle full batch
 CHUNK_SIZE         = 32
-P2_CHUNK_SIZE      = 128 # Increased from 8 to eliminate chunking overhead; LoRA is memory-efficient
+P2_CHUNK_SIZE      = 32 # Balanced for speed and VRAM; 128 caused OOM on 32GB GPU
 
 # ---------------------------------------------------------------------------
 # Training schedule

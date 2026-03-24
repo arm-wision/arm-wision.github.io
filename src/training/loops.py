@@ -9,7 +9,7 @@ import wandb
 import config as _cfg
 BATCH_SIZE      = getattr(_cfg, "BATCH_SIZE",      384)
 CHUNK_SIZE      = getattr(_cfg, "CHUNK_SIZE",      32)
-P2_CHUNK_SIZE   = getattr(_cfg, "P2_CHUNK_SIZE",   128)
+P2_CHUNK_SIZE   = getattr(_cfg, "P2_CHUNK_SIZE",   32)
 MAX_VAL_BATCHES = getattr(_cfg, "MAX_VAL_BATCHES", 100)
 PCA_COMPONENTS  = getattr(_cfg, "PCA_COMPONENTS",  512)
 from .cache import chunked_backbone_forward, CachedFeatureDataset, CachedPCADataset
