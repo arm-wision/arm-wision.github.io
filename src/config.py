@@ -31,7 +31,7 @@ CLEANED_CSV = DATASETS[DATASET_MODE]["cleaned_csv"]
 # ---------------------------------------------------------------------------
 RESOLUTION    = 384   # ConvNeXt native resolution; 26% cheaper than 448px (scales as res²)
 BATCH_SIZE    = 384   # Phase 1 extraction + head training
-P2_BATCH_SIZE = 256   # LoRA removes full-backbone backward -- much larger batch fits
+P2_BATCH_SIZE = 128   # Reduced from 256 to fit on 32GB GPU with LoRA+Gradients
 
 # ---------------------------------------------------------------------------
 # Chunked forward chunk sizes
@@ -41,12 +41,12 @@ P2_BATCH_SIZE = 256   # LoRA removes full-backbone backward -- much larger batch
 # ---------------------------------------------------------------------------
 EXTRACT_CHUNK_SIZE = 384  # no_grad during extraction -- 5090 can handle full batch
 CHUNK_SIZE         = 32
-P2_CHUNK_SIZE      = 16
+P2_CHUNK_SIZE      = 8   # Reduced from 16 for extra VRAM safety during Phase 2
 
 # ---------------------------------------------------------------------------
 # Training schedule
 # ---------------------------------------------------------------------------
-ACCUMULATION_STEPS = 1
+ACCUMULATION_STEPS = 2    # Increased from 1 to keep effective batch size at 256
 
 EPOCHS_PHASE1      = 10
 EPOCHS_PHASE2      = 3    # LoRA converges fast from Phase 1 init; 3 epochs ≈ 10-12 hrs

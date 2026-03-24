@@ -146,6 +146,9 @@ class PlantEnsemble(nn.Module):
         )
         self.convnext.backbone = get_peft_model(self.convnext.backbone, conv_config)
 
+        # Re-enable gradient checkpointing after LoRA application
+        self.set_grad_checkpointing(True)
+
         self._lora_applied     = True
         self._backbones_frozen = False  # LoRA params are trainable
 
@@ -160,16 +163,26 @@ class PlantEnsemble(nn.Module):
 
     def set_grad_checkpointing(self, enable=True):
         for wrapper in [self.bioclip, self.dinov2, self.convnext]:
-            target = None
-            if hasattr(wrapper, 'set_grad_checkpointing'):
-                target = wrapper
-            elif hasattr(wrapper, 'backbone') and hasattr(wrapper.backbone, 'set_grad_checkpointing'):
-                target = wrapper.backbone
-            elif hasattr(wrapper, 'model') and hasattr(wrapper.model, 'set_grad_checkpointing'):
-                target = wrapper.model
-            if target:
-                target.set_grad_checkpointing(enable)
-        print(f"Gradient checkpointing {'enabled' if enable else 'disabled'}.")
+            # Try finding the method directly on the wrapper, its backbone, or its model
+            for attr_name in ['', 'backbone', 'model', 'base_model']:
+                obj = wrapper if not attr_name else getattr(wrapper, attr_name, None)
+                if obj is None:
+                    continue
+                
+                # Check for standard PyTorch/timm/HF method name
+                if hasattr(obj, 'set_grad_checkpointing'):
+                    obj.set_grad_checkpointing(enable)
+                    break
+                # Check for PEFT method name
+                elif enable and hasattr(obj, 'gradient_checkpointing_enable'):
+                    obj.gradient_checkpointing_enable()
+                    break
+                elif not enable and hasattr(obj, 'gradient_checkpointing_disable'):
+                    obj.gradient_checkpointing_disable()
+                    break
+        
+        status = 'enabled' if enable else 'disabled'
+        print(f"Gradient checkpointing {status}.")
 
     # -----------------------------------------------------------------------
     # Freeze / unfreeze
