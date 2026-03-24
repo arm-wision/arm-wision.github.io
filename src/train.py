@@ -261,7 +261,7 @@ def train():
     # PHASE 2 - Part A: Head Warmup (Frozen Backbones)
     # -----------------------------------------------------------------------
     # Resume check BEFORE warmup
-    resumed_epoch, _ = load_phase2_checkpoint(model, DEVICE, tag="checkpoint_latest")
+    resumed_epoch, _, resumed_step = load_phase2_checkpoint(model, DEVICE, tag="checkpoint_latest")
     
     if resumed_epoch is None or resumed_epoch < EPOCHS_PHASE1:
         print("\n--- PHASE 2A: Head Warmup (Frozen Backbones) ---")
@@ -273,7 +273,9 @@ def train():
         )
         
         # One warmup epoch (Epoch -1)
-        run_epoch(model, train_loader, criterion, -1, num_classes, DEVICE, optimizer=warmup_optimizer)
+        start_step = resumed_step if (resumed_epoch == -1 or resumed_epoch == EPOCHS_PHASE1 - 1) else 0
+        run_epoch(model, train_loader, criterion, -1, num_classes, DEVICE, 
+                  optimizer=warmup_optimizer, start_step=start_step)
         print("Warmup complete. Classifier is now initialized.")
     else:
         print(f"\n[Phase2A] Skipping warmup (Already at epoch {resumed_epoch})")
@@ -323,13 +325,16 @@ def train():
     final_epoch    = EPOCHS_PHASE1 + EPOCHS_PHASE2 - 1
 
     # Resume from checkpoint if one exists
-    resumed_epoch, resumed_acc = load_phase2_checkpoint(model_engine_p2, DEVICE, tag="checkpoint_latest")
+    resumed_epoch, resumed_acc, resumed_step = load_phase2_checkpoint(model_engine_p2, DEVICE, tag="checkpoint_latest")
     if resumed_epoch is not None:
         start_epoch  = resumed_epoch
         best_val_acc = resumed_acc
 
     for epoch in range(start_epoch, EPOCHS_PHASE1 + EPOCHS_PHASE2):
-        run_epoch(model_engine_p2, train_loader, criterion, epoch, num_classes, DEVICE)
+        # Only use resumed_step for the very first epoch we resume into
+        current_start_step = resumed_step if epoch == resumed_epoch else 0
+        run_epoch(model_engine_p2, train_loader, criterion, epoch, num_classes, DEVICE, 
+                  start_step=current_start_step)
 
         # Lightweight per-epoch checkpoint every epoch
         save_epoch_checkpoint(model_engine_p2, epoch, best_val_acc)

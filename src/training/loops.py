@@ -177,7 +177,7 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
 KD_ALPHA = 0.3
 
 
-def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimizer=None):
+def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimizer=None, start_step=0):
     """
     Phase 2 LoRA training with BioCLIP taxonomic feature distillation.
     Supports both raw models (with explicit optimizer) and DeepSpeed engines.
@@ -190,7 +190,7 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
     raw_model    = model.module if is_deepspeed else model
 
     pbar         = tqdm(enumerate(train_loader), total=len(train_loader),
-                        desc=f"Epoch {epoch} [Train]")
+                        desc=f"Epoch {epoch} [Train]", initial=start_step)
     running_loss     = 0.0
     running_kd_loss  = 0.0
 
@@ -198,6 +198,8 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
     save_interval = max(1, total_steps // 20)
 
     for i, data in pbar:
+        if i < start_step:
+            continue
         images = data[0]['data'].to(memory_format=torch.channels_last)
         labels = data[0]['label'].squeeze().long()
         labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()

@@ -82,27 +82,23 @@ def load_phase1_heads_for_phase2(raw_model, device):
 
 def load_phase2_checkpoint(model_engine, device, tag=None):
     """
-    Load Phase 2 checkpoint.  Tries full DeepSpeed checkpoint first (optimizer +
-    scheduler states intact), then falls back to lightweight epoch checkpoint.
-    Returns (start_epoch, best_val_acc).
+    Load Phase 2 checkpoint. Returns (start_epoch, best_val_acc, start_step).
     """
     if os.path.exists(P2_CKPT_DIR):
         _, client_state = model_engine.load_checkpoint(P2_CKPT_DIR, tag=tag)
         if client_state is not None:
             start_epoch  = client_state['epoch'] + 1
             best_val_acc = client_state.get('best_val_acc', 0.0)
-            print(f"[Phase2] Resumed from DeepSpeed checkpoint epoch {start_epoch} "
-                  f"(best val acc: {best_val_acc:.2f}%)")
-            return start_epoch, best_val_acc
+            print(f"[Phase2] Resumed from DeepSpeed checkpoint epoch {start_epoch}")
+            return start_epoch, best_val_acc, 0
 
     if os.path.exists(P2_EPOCH_CKPT):
         ckpt = torch.load(P2_EPOCH_CKPT, map_location=device, weights_only=False)
         model_engine.module.load_state_dict(ckpt['model_state'])
         start_epoch  = ckpt['epoch'] + 1
         best_val_acc = ckpt.get('best_val_acc', 0.0)
-        print(f"[Phase2] Resumed from epoch checkpoint {start_epoch} "
-              f"(optimizer reset, best val acc: {best_val_acc:.2f}%)")
-        return start_epoch, best_val_acc
+        print(f"[Phase2] Resumed from epoch checkpoint {start_epoch}")
+        return start_epoch, best_val_acc, 0
 
     # Fallback to mid-epoch progress
     progress_path = "models/phase2_progress.pth"
@@ -110,10 +106,11 @@ def load_phase2_checkpoint(model_engine, device, tag=None):
         ckpt = torch.load(progress_path, map_location=device, weights_only=False)
         raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
         raw_model.load_state_dict(ckpt['model_state'])
-        print(f"[Phase2] Found mid-epoch progress (Epoch {ckpt['epoch']}, Step {ckpt['step']})")
-        return ckpt['epoch'], 0.0
+        step = ckpt.get('step', 0)
+        print(f"[Phase2] Found mid-epoch progress (Epoch {ckpt['epoch']}, Step {step})")
+        return ckpt['epoch'], 0.0, step
 
-    return None, 0.0  # None signals no checkpoint found
+    return None, 0.0, 0
 
 
 def save_epoch_checkpoint(model_engine, epoch, best_val_acc):
