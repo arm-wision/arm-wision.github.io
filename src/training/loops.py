@@ -177,25 +177,17 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
 KD_ALPHA = 0.3
 
 
-def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
+def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimizer=None):
     """
     Phase 2 LoRA training with BioCLIP taxonomic feature distillation.
-
-    Loss = (1 - KD_ALPHA) * ASL+LogitAdjustment  +  KD_ALPHA * distillation
-
-    Distillation term: cosine similarity loss between the L2-normalised
-    projected features of DINOv2/ConvNeXt and BioCLIP's frozen features.
-
-    Since BioCLIP is already computed at zero extra cost (it's needed for
-    the forward pass anyway), distillation adds no compute overhead.
-
-    Intuition: BioCLIP's Tree-of-Life pretraining encodes botanical taxonomy.
-    Pulling DINOv2 and ConvNeXt features towards BioCLIP's feature space
-    transfers that taxonomic knowledge into the adapting backbones, improving
-    rare species discrimination without requiring any additional training data.
+    Supports both raw models (with explicit optimizer) and DeepSpeed engines.
     """
     model.train()
     acc_m = MulticlassAccuracy(num_classes=num_classes, average='micro').to(device)
+
+    # Handle DeepSpeed vs Raw Model
+    is_deepspeed = hasattr(model, 'backward')
+    raw_model    = model.module if is_deepspeed else model
 
     pbar         = tqdm(enumerate(train_loader), total=len(train_loader),
                         desc=f"Epoch {epoch} [Train]")
@@ -203,7 +195,6 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
     running_kd_loss  = 0.0
 
     total_steps = len(train_loader)
-    # Save progress every 5% of total steps (min 1, max total_steps)
     save_interval = max(1, total_steps // 20)
 
     for i, data in pbar:
@@ -212,42 +203,40 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
         labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
 
         with autocast(device_type='cuda', dtype=torch.bfloat16):
-            # BioCLIP: fully frozen teacher -- no gradient graph, zero extra cost
+            # BioCLIP: fully frozen teacher
             with torch.no_grad():
                 feat_bio_raw = chunked_backbone_forward(
-                    model.module.bioclip, images, P2_CHUNK_SIZE)
-                # Teacher reference: L2-normalised BioCLIP projection
+                    raw_model.bioclip, images, P2_CHUNK_SIZE)
                 feat_bio_teacher = F.normalize(
-                    model.module.proj_bio(feat_bio_raw), dim=1).detach()
+                    raw_model.proj_bio(feat_bio_raw), dim=1).detach()
 
-            # DINOv2 + ConvNeXt: LoRA adapters active, gradients flow
+            # DINOv2 + ConvNeXt
             feat_dino_raw = chunked_backbone_forward(
-                model.module.dinov2, images, P2_CHUNK_SIZE)
+                raw_model.dinov2, images, P2_CHUNK_SIZE)
             feat_conv_raw = chunked_backbone_forward(
-                model.module.convnext, images, P2_CHUNK_SIZE)
+                raw_model.convnext, images, P2_CHUNK_SIZE)
 
-            feat_bio  = F.normalize(model.module.proj_bio(feat_bio_raw),   dim=1)
-            feat_dino = F.normalize(model.module.proj_dino(feat_dino_raw), dim=1)
-            feat_conv = F.normalize(model.module.proj_conv(feat_conv_raw), dim=1)
+            feat_bio  = F.normalize(raw_model.proj_bio(feat_bio_raw),   dim=1)
+            feat_dino = F.normalize(raw_model.proj_dino(feat_dino_raw), dim=1)
+            feat_conv = F.normalize(raw_model.proj_conv(feat_conv_raw), dim=1)
 
-            # Classification loss (ASL + LogitAdjustment)
-            outputs   = model.module.classifier(
+            outputs   = raw_model.classifier(
                 torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
             hard_loss = criterion(outputs, labels_one_hot)
 
-            # Taxonomic feature distillation loss:
-            # Pull DINOv2 and ConvNeXt projected features toward BioCLIP's
-            # frozen taxonomy-aware feature space using cosine similarity.
-            # 1 - cosine_similarity gives 0 for perfectly aligned, 2 for opposite.
             kd_loss_dino = (1 - F.cosine_similarity(feat_dino, feat_bio_teacher)).mean()
             kd_loss_conv = (1 - F.cosine_similarity(feat_conv, feat_bio_teacher)).mean()
             kd_loss      = (kd_loss_dino + kd_loss_conv) / 2
 
-            # Blended total loss
             loss = (1 - KD_ALPHA) * hard_loss + KD_ALPHA * kd_loss
 
-        model.backward(loss)
-        model.step()
+        if is_deepspeed:
+            model.backward(loss)
+            model.step()
+        else:
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
         _, predicted = outputs.max(1)
         acc_m.update(predicted, labels)

@@ -254,9 +254,32 @@ def train():
         samples_per_epoch=P2_SAMPLES_PER_EPOCH
     )
 
-    # Load best Phase 1 head weights (backbone weights stay as pretrained)
+    # Load best Phase 1 head weights (if any match the current structure)
     load_phase1_heads_for_phase2(model, DEVICE)
 
+    # -----------------------------------------------------------------------
+    # PHASE 2 - Part A: Head Warmup (Frozen Backbones)
+    # Why? Phase 1 likely trained 'phase1_head' (PCA) but Phase 2 uses the 
+    # main 'classifier'. This ensures the classifier is ready before LoRA.
+    # -----------------------------------------------------------------------
+    print("\n--- PHASE 2A: Head Warmup (Frozen Backbones) ---")
+    model.freeze_backbones()
+    
+    # Simple AdamW for heads
+    warmup_optimizer = optim.AdamW(
+        [p for p in model.parameters() if p.requires_grad],
+        lr=2e-4, weight_decay=0.01
+    )
+    
+    # One warmup epoch
+    run_epoch(model, train_loader, criterion, -1, num_classes, DEVICE, optimizer=warmup_optimizer)
+    print("Warmup complete. Classifier is now initialized.")
+
+    # -----------------------------------------------------------------------
+    # PHASE 2 - Part B: LoRA Fine-Tuning
+    # -----------------------------------------------------------------------
+    print("\n--- PHASE 2B: LoRA Fine-Tuning (Long-Tail Calibration) ---")
+    
     # Apply LoRA to DINOv2 + ConvNeXt; BioCLIP stays frozen
     model.apply_lora(r=LORA_R, lora_alpha=LORA_ALPHA, lora_dropout=LORA_DROPOUT)
 
