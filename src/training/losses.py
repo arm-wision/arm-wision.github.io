@@ -42,7 +42,11 @@ class AsymmetricLoss(nn.Module):
             pt      = xs_pos * y + xs_neg * (1 - y)
             weights = (1 - pt).pow(self.gamma_pos * y + self.gamma_neg * (1 - y))
         loss *= weights
-        return -loss.mean()
+        
+        # Sum across classes (C=7800), then mean across batch (B=128/256)
+        # Using .mean() across all B*C elements dilutes the positive class loss
+        # by a factor of 1/7800. Summing first ensures a strong training signal.
+        return -loss.sum(dim=1).mean()
 
 
 class EarlyStopping:
