@@ -297,7 +297,7 @@ def train():
     final_epoch    = EPOCHS_PHASE1 + EPOCHS_PHASE2 - 1
 
     # Resume from checkpoint if one exists
-    resumed_epoch, resumed_acc = load_phase2_checkpoint(model_engine_p2, DEVICE)
+    resumed_epoch, resumed_acc = load_phase2_checkpoint(model_engine_p2, DEVICE, tag="checkpoint_latest")
     if resumed_epoch is not None:
         start_epoch  = resumed_epoch
         best_val_acc = resumed_acc
@@ -328,7 +328,7 @@ def train():
                 print(f"--> New Best (Acc: {val_acc:.2f}%)")
 
             save_deepspeed_checkpoint(
-                model_engine_p2, P2_CKPT_DIR, "latest", epoch, best_val_acc
+                model_engine_p2, P2_CKPT_DIR, "checkpoint_latest", epoch, best_val_acc
             )
 
             early_stopping(val_acc)

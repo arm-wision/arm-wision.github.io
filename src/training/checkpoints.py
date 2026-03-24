@@ -79,14 +79,14 @@ def load_phase1_heads_for_phase2(raw_model, device):
     return best_val_acc
 
 
-def load_phase2_checkpoint(model_engine, device):
+def load_phase2_checkpoint(model_engine, device, tag=None):
     """
     Load Phase 2 checkpoint.  Tries full DeepSpeed checkpoint first (optimizer +
     scheduler states intact), then falls back to lightweight epoch checkpoint.
     Returns (start_epoch, best_val_acc).
     """
     if os.path.exists(P2_CKPT_DIR):
-        _, client_state = model_engine.load_checkpoint(P2_CKPT_DIR)
+        _, client_state = model_engine.load_checkpoint(P2_CKPT_DIR, tag=tag)
         if client_state is not None:
             start_epoch  = client_state['epoch'] + 1
             best_val_acc = client_state.get('best_val_acc', 0.0)
