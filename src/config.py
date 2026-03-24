@@ -9,7 +9,7 @@ DATASETS = {
     "plantclef": {
         "raw_csv":     "/workspace/plantclef/raw/PlantCLEF2024_single_plant_training_metadata.csv",
         "img_dir":     "/workspace/plantclef/raw/train/images_max_side_800/",
-        "cleaned_csv": "/workspace/plantclef/processed/train_metadata_cleaned.csv"
+        "cleaned_csv": "/workspace/plantclef/processed/train_metadata_cleaned_verified.csv"
     },
     "kaggle_test": {
         "raw_csv":     "/workspace/plantclef/processed/kaggle_test_metadata.csv",
