@@ -52,7 +52,7 @@ def validate(model, loader, criterion, num_classes, device):
                 feat_dino = F.normalize(model.proj_dino(feat_dino), dim=1)
                 feat_conv = F.normalize(model.proj_conv(feat_conv), dim=1)
                 outputs   = model.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
-                loss      = criterion(outputs, labels_one_hot)
+                loss      = criterion(outputs, labels)
 
             val_loss += loss.item()
             _, predicted = outputs.max(1)
@@ -119,7 +119,7 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
             with autocast(device_type='cuda', dtype=torch.bfloat16):
                 # phase1_head: simple linear probe on PCA features
                 outputs = model.phase1_head(feat_pca)
-                loss    = criterion(outputs, labels_one_hot)
+                loss    = criterion(outputs, labels)
 
             model.backward(loss)
             model.step()
@@ -146,7 +146,7 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
                 fd      = F.normalize(model.proj_dino(feat_dino), dim=1)
                 fc      = F.normalize(model.proj_conv(feat_conv), dim=1)
                 outputs = model.classifier(torch.cat([fb, fd, fc], dim=1))
-                loss    = criterion(outputs, labels_one_hot)
+                loss    = criterion(outputs, labels)
 
             model.backward(loss)
             model.step()
@@ -237,7 +237,7 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
 
             outputs   = raw_model.classifier(
                 torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
-            hard_loss = criterion(outputs, labels_one_hot)
+            hard_loss = criterion(outputs, labels)
 
             kd_loss_dino = (1 - F.cosine_similarity(feat_dino, feat_bio_teacher)).mean()
             kd_loss_conv = (1 - F.cosine_similarity(feat_conv, feat_bio_teacher)).mean()
