@@ -250,7 +250,7 @@ def train():
 
     train_loader, val_loader, _ = get_dali_loaders(
         csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE,
-        resolution=RESOLUTION, sampling_mode='sqrt',
+        resolution=RESOLUTION, sampling_mode='natural',
         samples_per_epoch=P2_SAMPLES_PER_EPOCH
     )
 

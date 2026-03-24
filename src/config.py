@@ -49,20 +49,20 @@ P2_CHUNK_SIZE      = 32 # Balanced for speed and VRAM; 128 caused OOM on 32GB GP
 ACCUMULATION_STEPS = 2    # Increased from 1 to keep effective batch size at 256
 
 EPOCHS_PHASE1      = 10
-EPOCHS_PHASE2      = 3    # LoRA converges fast from Phase 1 init; 3 epochs ≈ 10-12 hrs
-P2_SAMPLES_PER_EPOCH = 250000 # Sub-sample to ~2 hrs per epoch (total 6 hrs vs 36 hrs)
+EPOCHS_PHASE2      = 5    # Increased for deeper fine-tuning
+P2_SAMPLES_PER_EPOCH = 1000000 # 4x more data per epoch for 80% accuracy push
 
 VAL_EVERY_N_EPOCHS = 1    # Validate every epoch in Phase 2 (short run, tight feedback)
-MAX_VAL_BATCHES    = 100  # ~25,600 images per val pass -- statistically representative
-PATIENCE           = 2    # Early stop after 2 consecutive non-improving validations
+MAX_VAL_BATCHES    = 150  # More validation batches for better statistical confidence
+PATIENCE           = 3    # More patience for the longer run
 
 # ---------------------------------------------------------------------------
 # LoRA (Phase 2)
 # Applied to DINOv2 + ConvNeXt.  BioCLIP stays fully frozen.
 # Reduces trainable params from ~800M -> ~5M; enables batch=256 + fast convergence.
 # ---------------------------------------------------------------------------
-LORA_R       = 16
-LORA_ALPHA   = 32    # effective scaling = lora_alpha / r = 2.0
+LORA_R       = 64    # Quadrupled brain capacity (from 16)
+LORA_ALPHA   = 128   # alpha = 2 * r
 LORA_DROPOUT = 0.05
 
 # ---------------------------------------------------------------------------
