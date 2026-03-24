@@ -104,6 +104,15 @@ def load_phase2_checkpoint(model_engine, device, tag=None):
               f"(optimizer reset, best val acc: {best_val_acc:.2f}%)")
         return start_epoch, best_val_acc
 
+    # Fallback to mid-epoch progress
+    progress_path = "models/phase2_progress.pth"
+    if os.path.exists(progress_path):
+        ckpt = torch.load(progress_path, map_location=device, weights_only=False)
+        raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
+        raw_model.load_state_dict(ckpt['model_state'])
+        print(f"[Phase2] Found mid-epoch progress (Epoch {ckpt['epoch']}, Step {ckpt['step']})")
+        return ckpt['epoch'], 0.0
+
     return None, 0.0  # None signals no checkpoint found
 
 

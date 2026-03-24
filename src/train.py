@@ -259,21 +259,24 @@ def train():
 
     # -----------------------------------------------------------------------
     # PHASE 2 - Part A: Head Warmup (Frozen Backbones)
-    # Why? Phase 1 likely trained 'phase1_head' (PCA) but Phase 2 uses the 
-    # main 'classifier'. This ensures the classifier is ready before LoRA.
     # -----------------------------------------------------------------------
-    print("\n--- PHASE 2A: Head Warmup (Frozen Backbones) ---")
-    model.freeze_backbones()
+    # Resume check BEFORE warmup
+    resumed_epoch, _ = load_phase2_checkpoint(model, DEVICE, tag="checkpoint_latest")
     
-    # Simple AdamW for heads
-    warmup_optimizer = optim.AdamW(
-        [p for p in model.parameters() if p.requires_grad],
-        lr=2e-4, weight_decay=0.01
-    )
-    
-    # One warmup epoch
-    run_epoch(model, train_loader, criterion, -1, num_classes, DEVICE, optimizer=warmup_optimizer)
-    print("Warmup complete. Classifier is now initialized.")
+    if resumed_epoch is None or resumed_epoch < EPOCHS_PHASE1:
+        print("\n--- PHASE 2A: Head Warmup (Frozen Backbones) ---")
+        model.freeze_backbones()
+        
+        warmup_optimizer = optim.AdamW(
+            [p for p in model.parameters() if p.requires_grad],
+            lr=2e-4, weight_decay=0.01
+        )
+        
+        # One warmup epoch (Epoch -1)
+        run_epoch(model, train_loader, criterion, -1, num_classes, DEVICE, optimizer=warmup_optimizer)
+        print("Warmup complete. Classifier is now initialized.")
+    else:
+        print(f"\n[Phase2A] Skipping warmup (Already at epoch {resumed_epoch})")
 
     # -----------------------------------------------------------------------
     # PHASE 2 - Part B: LoRA Fine-Tuning
