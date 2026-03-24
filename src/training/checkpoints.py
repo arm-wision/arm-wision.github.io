@@ -44,9 +44,10 @@ def load_phase1_checkpoint(model_engine, device):
 
 def save_phase1_checkpoint(model_engine, epoch, best_val_acc):
     """Save lightweight Phase 1 checkpoint (model weights + metadata)."""
+    raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
     torch.save({
         'epoch':        epoch,
-        'model_state':  model_engine.module.state_dict(),
+        'model_state':  raw_model.state_dict(),
         'best_val_acc': best_val_acc,
     }, P1_CKPT_PATH)
     print(f"[Phase1] Checkpoint saved (epoch {epoch})")
@@ -108,9 +109,10 @@ def load_phase2_checkpoint(model_engine, device, tag=None):
 
 def save_epoch_checkpoint(model_engine, epoch, best_val_acc):
     """Lightweight per-epoch checkpoint -- model weights only, saves every epoch."""
+    raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
     torch.save({
         'epoch':        epoch,
-        'model_state':  model_engine.module.state_dict(),
+        'model_state':  raw_model.state_dict(),
         'best_val_acc': best_val_acc,
     }, P2_EPOCH_CKPT)
 
@@ -121,11 +123,12 @@ def save_progress_checkpoint(model_engine, epoch, step, total_steps):
     overwriting previous progress within the same epoch.
     """
     path = "models/phase2_progress.pth"
+    raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
     torch.save({
         'epoch':        epoch,
         'step':         step,
         'total_steps':  total_steps,
-        'model_state':  model_engine.module.state_dict(),
+        'model_state':  raw_model.state_dict(),
     }, path)
     print(f"\n[Progress] 5% checkpoint saved (Epoch {epoch}, Step {step}/{total_steps})")
 
