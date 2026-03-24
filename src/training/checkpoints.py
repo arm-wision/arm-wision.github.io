@@ -83,7 +83,9 @@ def load_phase1_heads_for_phase2(raw_model, device):
 def load_phase2_checkpoint(model_engine, device, tag=None):
     """
     Load Phase 2 checkpoint. Returns (start_epoch, best_val_acc, start_step).
+    Auto-discovers the latest unique checkpoint if tag is not provided.
     """
+    # 1. Try DeepSpeed auto-load if tag is provided or 'latest' exists
     if os.path.exists(P2_CKPT_DIR):
         _, client_state = model_engine.load_checkpoint(P2_CKPT_DIR, tag=tag)
         if client_state is not None:
@@ -92,43 +94,59 @@ def load_phase2_checkpoint(model_engine, device, tag=None):
             print(f"[Phase2] Resumed from DeepSpeed checkpoint epoch {start_epoch}")
             return start_epoch, best_val_acc, 0
 
-    if os.path.exists(P2_EPOCH_CKPT):
-        ckpt = torch.load(P2_EPOCH_CKPT, map_location=device, weights_only=False)
-        model_engine.module.load_state_dict(ckpt['model_state'])
-        start_epoch  = ckpt['epoch'] + 1
-        best_val_acc = ckpt.get('best_val_acc', 0.0)
-        print(f"[Phase2] Resumed from epoch checkpoint {start_epoch}")
-        return start_epoch, best_val_acc, 0
-
-    # Fallback to mid-epoch progress
-    progress_path = "models/phase2_progress.pth"
-    if os.path.exists(progress_path):
-        ckpt = torch.load(progress_path, map_location=device, weights_only=False)
+    # 2. Auto-discover unique mid-epoch or per-epoch checkpoints
+    import glob
+    ckpts = glob.glob("models/phase2_checkpoint_ep*_step*.pth")
+    if ckpts:
+        # Sort by epoch then step to find the absolute latest
+        latest_ckpt = sorted(ckpts, key=lambda x: [int(i) for i in x.replace("models/phase2_checkpoint_ep", "").replace(".pth", "").split("_step")])[-1]
+        
+        ckpt = torch.load(latest_ckpt, map_location=device, weights_only=False)
         raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
-        raw_model.load_state_dict(ckpt['model_state'])
-        step = ckpt.get('step', 0)
-        print(f"[Phase2] Found mid-epoch progress (Epoch {ckpt['epoch']}, Step {step})")
-        return ckpt['epoch'], 0.0, step
+        
+        # Use strict=False because Warmup checkpoints don't have LoRA keys, 
+        # and DeepSpeed checkpoints have different wrappers. We only need the heads.
+        raw_model.load_state_dict(ckpt['model_state'], strict=False)
+        
+        epoch = ckpt.get('epoch', 0)
+        step  = ckpt.get('step', 0)
+        best_acc = ckpt.get('best_val_acc', 0.0)
+        
+        print(f"[Phase2] Resumed from unique checkpoint: {os.path.basename(latest_ckpt)}")
+        # If it was a full epoch checkpoint (step == total_steps), start next epoch
+        if step >= ckpt.get('total_steps', 1e9):
+            return epoch + 1, best_acc, 0
+        return epoch, best_acc, step
+
+    # 3. Legacy fallbacks
+    for path in [P2_EPOCH_CKPT, "models/phase2_progress.pth"]:
+        if os.path.exists(path):
+            ckpt = torch.load(path, map_location=device, weights_only=False)
+            raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
+            raw_model.load_state_dict(ckpt['model_state'], strict=False)
+            print(f"[Phase2] Resumed from legacy path: {path}")
+            return ckpt['epoch'], ckpt.get('best_val_acc', 0.0), ckpt.get('step', 0)
 
     return None, 0.0, 0
 
 
 def save_epoch_checkpoint(model_engine, epoch, best_val_acc):
-    """Lightweight per-epoch checkpoint -- model weights only, saves every epoch."""
+    """Save unique per-epoch checkpoint."""
+    path = f"models/phase2_checkpoint_ep{epoch}_step_final.pth"
     raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
     torch.save({
         'epoch':        epoch,
+        'step':         0, # mark as finished
+        'total_steps':  0,
         'model_state':  raw_model.state_dict(),
         'best_val_acc': best_val_acc,
-    }, P2_EPOCH_CKPT)
+    }, path)
+    print(f"[Checkpoint] Saved epoch {epoch} to {path}")
 
 
 def save_progress_checkpoint(model_engine, epoch, step, total_steps):
-    """
-    Lightweight mid-epoch progress checkpoint. Saves to a fixed path,
-    overwriting previous progress within the same epoch.
-    """
-    path = "models/phase2_progress.pth"
+    """Save unique mid-epoch progress checkpoint."""
+    path = f"models/phase2_checkpoint_ep{epoch}_step{step}.pth"
     raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
     torch.save({
         'epoch':        epoch,
@@ -136,7 +154,7 @@ def save_progress_checkpoint(model_engine, epoch, step, total_steps):
         'total_steps':  total_steps,
         'model_state':  raw_model.state_dict(),
     }, path)
-    print(f"\n[Progress] 5% checkpoint saved (Epoch {epoch}, Step {step}/{total_steps})")
+    print(f"\n[Progress-v2] Saved mid-epoch progress to {path}")
 
 
 def save_deepspeed_checkpoint(model_engine, directory, tag, epoch, best_val_acc):

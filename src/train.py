@@ -275,7 +275,8 @@ def train():
         # One warmup epoch (Epoch -1)
         start_step = resumed_step if (resumed_epoch == -1 or resumed_epoch == EPOCHS_PHASE1 - 1) else 0
         run_epoch(model, train_loader, criterion, -1, num_classes, DEVICE, 
-                  optimizer=warmup_optimizer, start_step=start_step)
+                  optimizer=warmup_optimizer, start_step=start_step, 
+                  p2_chunk_size=P2_BATCH_SIZE)
         print("Warmup complete. Classifier is now initialized.")
     else:
         print(f"\n[Phase2A] Skipping warmup (Already at epoch {resumed_epoch})")
@@ -327,7 +328,10 @@ def train():
     # Resume from checkpoint if one exists
     resumed_epoch, resumed_acc, resumed_step = load_phase2_checkpoint(model_engine_p2, DEVICE, tag="checkpoint_latest")
     if resumed_epoch is not None:
-        start_epoch  = resumed_epoch
+        # If the checkpoint is from the warmup (e.g. -1), we start at the 
+        # actual Phase 2 start epoch (EPOCHS_PHASE1). 
+        # If it's a real Phase 2 epoch (e.g. 10+), we resume there.
+        start_epoch  = max(EPOCHS_PHASE1, resumed_epoch)
         best_val_acc = resumed_acc
 
     for epoch in range(start_epoch, EPOCHS_PHASE1 + EPOCHS_PHASE2):

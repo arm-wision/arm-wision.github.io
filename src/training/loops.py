@@ -177,7 +177,7 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
 KD_ALPHA = 0.3
 
 
-def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimizer=None, start_step=0):
+def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimizer=None, start_step=0, p2_chunk_size=None):
     """
     Phase 2 LoRA training with BioCLIP taxonomic feature distillation.
     Supports both raw models (with explicit optimizer) and DeepSpeed engines.
@@ -188,6 +188,9 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
     # Handle DeepSpeed vs Raw Model
     is_deepspeed = hasattr(model, 'backward')
     raw_model    = model.module if is_deepspeed else model
+    
+    # Use provided chunk size or default from config
+    chunk_size = p2_chunk_size if p2_chunk_size is not None else P2_CHUNK_SIZE
 
     pbar         = tqdm(enumerate(train_loader), total=len(train_loader),
                         desc=f"Epoch {epoch} [Train]", initial=start_step)
@@ -205,18 +208,28 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
         labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
 
         with autocast(device_type='cuda', dtype=torch.bfloat16):
-            # BioCLIP: fully frozen teacher
-            with torch.no_grad():
+            # If optimizer is provided (Warmup), all backbones are frozen.
+            # We can skip gradient tracking for ALL backbones.
+            backbone_ctx = torch.no_grad() if optimizer is not None else torch.enable_grad()
+            
+            with backbone_ctx:
+                # BioCLIP: teacher reference
                 feat_bio_raw = chunked_backbone_forward(
-                    raw_model.bioclip, images, P2_CHUNK_SIZE)
+                    raw_model.bioclip, images, chunk_size)
+                
+                # In LoRA mode, DINOv2 and ConvNeXt need gradients, but BioCLIP never does.
+                # However, chunked_backbone_forward for BioCLIP is already inside backbone_ctx.
+                
+                # DINOv2 + ConvNeXt
+                feat_dino_raw = chunked_backbone_forward(
+                    raw_model.dinov2, images, chunk_size)
+                feat_conv_raw = chunked_backbone_forward(
+                    raw_model.convnext, images, chunk_size)
+
+            # Teacher reference for distillation
+            with torch.no_grad():
                 feat_bio_teacher = F.normalize(
                     raw_model.proj_bio(feat_bio_raw), dim=1).detach()
-
-            # DINOv2 + ConvNeXt
-            feat_dino_raw = chunked_backbone_forward(
-                raw_model.dinov2, images, P2_CHUNK_SIZE)
-            feat_conv_raw = chunked_backbone_forward(
-                raw_model.convnext, images, P2_CHUNK_SIZE)
 
             feat_bio  = F.normalize(raw_model.proj_bio(feat_bio_raw),   dim=1)
             feat_dino = F.normalize(raw_model.proj_dino(feat_dino_raw), dim=1)
@@ -246,9 +259,11 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
         running_kd_loss += kd_loss.item()
 
         if i % 10 == 0:
+            # Correct average for resumed runs
+            steps_this_session = i - start_step + 1
             pbar.set_postfix({
-                "Loss":    f"{running_loss/(i+1):.4f}",
-                "KD":      f"{running_kd_loss/(i+1):.4f}",
+                "Loss":    f"{running_loss / steps_this_session:.4f}",
+                "KD":      f"{running_kd_loss / steps_this_session:.4f}",
                 "Acc":     f"{acc_m.compute().item()*100:.2f}%"
             })
 
