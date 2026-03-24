@@ -258,10 +258,18 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
     train_acc = acc_m.compute().item() * 100.0
     acc_m.reset()
 
+    # Get LR for logging
+    if is_deepspeed:
+        current_lr = model.get_lr()[0]
+    elif optimizer is not None:
+        current_lr = optimizer.param_groups[0]['lr']
+    else:
+        current_lr = 0.0
+
     wandb.log({
         "epoch":      epoch,
         "train_acc":  train_acc,
-        "lr":         model.get_lr()[0],
+        "lr":         current_lr,
         "kd_loss":    running_kd_loss / (i + 1),
     })
     print(f"[Epoch {epoch}] Train Acc: {train_acc:.2f}%  "
