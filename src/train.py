@@ -132,8 +132,8 @@ def train():
     del df
     torch.cuda.empty_cache()
 
-    asl       = AsymmetricLoss(gamma_neg=4, gamma_pos=1)
-    criterion = LogitAdjustmentLoss(class_counts=counts, base_criterion=asl)
+    # Logit Adjustment for 7,800-class long-tail
+    criterion = LogitAdjustmentLoss(class_counts=counts)
 
     # -----------------------------------------------------------------------
     # PHASE 1: Feature Caching + Head Warmup
