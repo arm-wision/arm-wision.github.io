@@ -60,11 +60,13 @@ class PlantEnsemble(nn.Module):
         )
 
         # Phase 1 linear probe on PCA-compressed features.
-        # Bypasses proj heads -- input is PCA_COMPONENTS-d (default 512).
-        # Swapped in when cache contains 'features_pca'; unused in Phase 2.
+        # Deepened to a 3-layer MLP for better non-linear modeling of PCA features.
         from config import PCA_COMPONENTS
         self.phase1_head = torch.nn.Sequential(
-            torch.nn.Linear(PCA_COMPONENTS, 1024),
+            torch.nn.Linear(PCA_COMPONENTS, 2048),
+            torch.nn.LayerNorm(2048),
+            torch.nn.GELU(),
+            torch.nn.Linear(2048, 1024),
             torch.nn.LayerNorm(1024),
             torch.nn.GELU(),
             torch.nn.Dropout(0.2),

@@ -48,7 +48,7 @@ P2_CHUNK_SIZE      = 32 # Balanced for speed and VRAM; 128 caused OOM on 32GB GP
 # ---------------------------------------------------------------------------
 ACCUMULATION_STEPS = 2    # Increased from 1 to keep effective batch size at 256
 
-EPOCHS_PHASE1      = 10
+EPOCHS_PHASE1      = 20
 EPOCHS_PHASE2      = 5    # Increased for deeper fine-tuning
 P2_SAMPLES_PER_EPOCH = 1000000 # 4x more data per epoch for 80% accuracy push
 
@@ -103,7 +103,7 @@ else:
 # Phase 1 then trains a tiny linear head on PCA_COMPONENTS-d features.
 # ---------------------------------------------------------------------------
 USE_REGION_FEATURES = True
-PCA_COMPONENTS      = 512   # target dim after PCA (< raw 6144-d -> much faster Phase 1)
+PCA_COMPONENTS      = 1024  # Doubled from 512 to retain more feature detail
 # ---------------------------------------------------------------------------
 # Checkpoint paths (centralised so all modules agree)
 # ---------------------------------------------------------------------------
@@ -111,5 +111,5 @@ FEATURE_CACHE_PATH = "models/legacy_v1/phase1_feature_cache.pt" # Reuse existing
 P1_CKPT_PATH       = "models/blackwell_v2/phase1_checkpoint.pth"
 P2_CKPT_DIR        = "models/blackwell_v2/phase2_checkpoint"
 P2_EPOCH_CKPT      = "models/blackwell_v2/phase2_epoch_checkpoint.pth"
-PCA_TRANSFORM_PATH  = "models/legacy_v1/pca_transform.pkl" # Reuse existing PCA
+PCA_TRANSFORM_PATH  = "models/blackwell_v2/pca_transform.pkl" # New transform for 1024-d
 
