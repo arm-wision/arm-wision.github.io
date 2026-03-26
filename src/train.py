@@ -55,10 +55,11 @@ torch.backends.cuda.enable_mem_efficient_sdp(False)
 # ---------------------------------------------------------------------------
 # DeepSpeed configs
 # ---------------------------------------------------------------------------
+# Blackwell Optimisation: Disable all CPU offloading to leverage 32GB VRAM
 DS_CONFIG_P1 = {
     "zero_optimization": {
         "stage": 1,
-        "offload_optimizer": {"device": "cpu", "pin_memory": True}
+        # Offload disabled for 5090 Blackwell efficiency
     },
     "bf16": {"enabled": True},
     "gradient_accumulation_steps": ACCUMULATION_STEPS,
@@ -140,22 +141,29 @@ def train():
     # Auto-skipped if Phase 1 already completed (checkpoint covers all epochs)
     # -----------------------------------------------------------------------
     skip_phase1 = phase1_is_complete()
+    
+    # Load model and apply Blackwell-native compilation
+    # Note: num_classes is 7800 by default, updated later if needed
+    model = PlantEnsemble(
+        num_classes=7800, 
+        input_res=RESOLUTION,
+        bioclip_name=BIOCLIP_NAME,
+        dinov2_name=DINOV2_NAME,
+        convnext_name=CONVNEXT_NAME,
+    ).to(DEVICE).to(memory_format=torch.channels_last)
+    
+    # Blackwell Optimisation: max-autotune uses Triton for specialized Blackwell kernels
+    if getattr(config, 'USE_COMPILE', False):
+        print("[Blackwell] Applying torch.compile(model, mode='max-autotune')...")
+        model = torch.compile(model, mode="max-autotune")
+
     if skip_phase1:
         print(f"\n[Phase1] Complete checkpoint found -- skipping Phase 1.")
-        # Still need the model object for Phase 2
-        train_loader, val_loader, num_classes = get_dali_loaders(
-            csv_path, IMG_DIR, batch_size=BATCH_SIZE,
-            resolution=RESOLUTION, sampling_mode='natural'
-        )
-        model = PlantEnsemble(
-            num_classes=num_classes, input_res=config.resolution,
-            bioclip_name=config.bioclip_backbone,
-            dinov2_name=config.dinov2_backbone,
-            convnext_name=config.convnext_backbone,
-        ).to(DEVICE).to(memory_format=torch.channels_last)
+        # Need num_classes for loader
+        _, _, num_classes = get_dali_loaders(csv_path, IMG_DIR, batch_size=BATCH_SIZE)
         model.set_grad_checkpointing(True)
         model.freeze_backbones()
-        del train_loader, val_loader
+        del _
         gc.collect()
         torch.cuda.empty_cache()
     else:
@@ -164,13 +172,7 @@ def train():
             csv_path, IMG_DIR, batch_size=BATCH_SIZE,
             resolution=RESOLUTION, sampling_mode='natural'
         )
-
-        model = PlantEnsemble(
-            num_classes=num_classes, input_res=config.resolution,
-            bioclip_name=config.bioclip_backbone,
-            dinov2_name=config.dinov2_backbone,
-            convnext_name=config.convnext_backbone,
-        ).to(DEVICE).to(memory_format=torch.channels_last)
+        
         model.set_grad_checkpointing(True)
         model.freeze_backbones()
 
@@ -181,6 +183,14 @@ def train():
             with tqdm(total=1, desc="Loading feature cache", unit="file") as pbar:
                 cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
                 pbar.update(1)
+            
+            # Blackwell: Load entire 22.5GB cache to GPU to eliminate PCIe bottlenecks
+            # The 5090 has 32GB VRAM, plenty for the 22.5GB cache + model weights.
+            if getattr(config, 'LOAD_CACHE_TO_GPU', False):
+                print("[Blackwell] Moving feature cache to GPU memory...")
+                for k in cache:
+                    if torch.is_tensor(cache[k]):
+                        cache[k] = cache[k].to(DEVICE, non_blocking=True)
         else:
             cache = extract_and_cache_features(model, train_loader, DEVICE, FEATURE_CACHE_PATH)
 

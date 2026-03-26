@@ -68,16 +68,31 @@ LORA_DROPOUT = 0.05
 # ---------------------------------------------------------------------------
 # Backbone selection
 # ---------------------------------------------------------------------------
-MODE = "4090"   # switch to "A100" for giant/huge backbones on higher-VRAM GPU
+MODE = "5090"   # Blackwell-optimized: switch to "A100" for giant/huge, "4090" for standard
 
-if MODE == "4090":
+if MODE == "5090":
+    # 5090 has 32GB VRAM + massive FP8 throughput
     BIOCLIP_NAME  = "hf-hub:imageomics/bioclip"
     DINOV2_NAME   = "vit_large_patch14_dinov2"
     CONVNEXT_NAME = "convnextv2_large.fcmae_ft_in22k_in1k_384"
+    # Blackwell specific speedups
+    USE_FP8       = True
+    USE_COMPILE   = True
+    LOAD_CACHE_TO_GPU = True 
+elif MODE == "4090":
+    BIOCLIP_NAME  = "hf-hub:imageomics/bioclip"
+    DINOV2_NAME   = "vit_large_patch14_dinov2"
+    CONVNEXT_NAME = "convnextv2_large.fcmae_ft_in22k_in1k_384"
+    USE_FP8       = False
+    USE_COMPILE   = False
+    LOAD_CACHE_TO_GPU = False
 else:
     BIOCLIP_NAME  = "hf-hub:imageomics/bioclip"
     DINOV2_NAME   = "vit_giant_patch14_dinov2.lvd142m"
     CONVNEXT_NAME = "convnextv2_huge.fcmae_ft_in22k_in1k_384"
+    USE_FP8       = False
+    USE_COMPILE   = False
+    LOAD_CACHE_TO_GPU = False
 
 # ---------------------------------------------------------------------------
 # Region features + PCA
@@ -89,12 +104,12 @@ else:
 # ---------------------------------------------------------------------------
 USE_REGION_FEATURES = True
 PCA_COMPONENTS      = 512   # target dim after PCA (< raw 6144-d -> much faster Phase 1)
-PCA_TRANSFORM_PATH  = "models/pca_transform.pkl"
-
 # ---------------------------------------------------------------------------
 # Checkpoint paths (centralised so all modules agree)
 # ---------------------------------------------------------------------------
-FEATURE_CACHE_PATH = "models/phase1_feature_cache.pt"
-P1_CKPT_PATH       = "models/phase1_checkpoint.pth"
-P2_CKPT_DIR        = "models/phase2_checkpoint"
-P2_EPOCH_CKPT      = "models/phase2_epoch_checkpoint.pth"
+FEATURE_CACHE_PATH = "models/legacy_v1/phase1_feature_cache.pt" # Reuse existing cache
+P1_CKPT_PATH       = "models/blackwell_v2/phase1_checkpoint.pth"
+P2_CKPT_DIR        = "models/blackwell_v2/phase2_checkpoint"
+P2_EPOCH_CKPT      = "models/blackwell_v2/phase2_epoch_checkpoint.pth"
+PCA_TRANSFORM_PATH  = "models/legacy_v1/pca_transform.pkl" # Reuse existing PCA
+

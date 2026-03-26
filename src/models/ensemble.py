@@ -28,27 +28,22 @@ class PlantEnsemble(nn.Module):
         self.dinov2   = PlantDINOv2(model_name=dinov2_name,   input_res=input_res)
         self.convnext = PlantConvNeXt(model_name=convnext_name, input_res=input_res)
 
-        # Per-backbone projection to shared 512-d space
-        # Linear + LayerNorm stabilises output distribution differences before fusion
-        PROJ_DIM = 512
-        self.proj_bio = nn.Sequential(
-            nn.Linear(self.bioclip.feature_dim,  PROJ_DIM),
-            nn.LayerNorm(PROJ_DIM)
-        )
-        self.proj_dino = nn.Sequential(
-            nn.Linear(self.dinov2.feature_dim,   PROJ_DIM),
-            nn.LayerNorm(PROJ_DIM)
-        )
-        self.proj_conv = nn.Sequential(
-            nn.Linear(self.convnext.feature_dim, PROJ_DIM),
-            nn.LayerNorm(PROJ_DIM)
+        # Grouped projection to shared 1536-d space (512 * 3)
+        # Using a single Linear layer is much faster on Blackwell than 3 sequential ones
+        # and allows torch.compile to generate a single fused kernel.
+        self.PROJ_DIM = 512
+        self.total_input_dim = self.bioclip.feature_dim + self.dinov2.feature_dim + self.convnext.feature_dim
+        self.fusion_dim      = self.PROJ_DIM * 3
+        
+        self.proj_grouped = nn.Sequential(
+            nn.Linear(self.total_input_dim, self.fusion_dim),
+            nn.LayerNorm(self.fusion_dim)
         )
 
-        self.fusion_dim = PROJ_DIM * 3
         print(f"Backbone dims: BioCLIP={self.bioclip.feature_dim}, "
               f"DINOv2={self.dinov2.feature_dim}, "
               f"ConvNeXt={self.convnext.feature_dim}")
-        print(f"Projected + Fused Feature Dimension: {self.fusion_dim}")
+        print(f"Grouped Projection: {self.total_input_dim} -> {self.fusion_dim}")
 
         # Deep fusion classifier
         # LayerNorm > BatchNorm for ViT outputs (batch stats unreliable at small B)
@@ -89,10 +84,13 @@ class PlantEnsemble(nn.Module):
             feat_bio  = self.bioclip(x)
             feat_dino = self.dinov2(x)
             feat_conv = self.convnext(x)
-        feat_bio  = F.normalize(self.proj_bio(feat_bio),   dim=1)
-        feat_dino = F.normalize(self.proj_dino(feat_dino), dim=1)
-        feat_conv = F.normalize(self.proj_conv(feat_conv), dim=1)
-        return self.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
+        
+        # Vectorized projection
+        fused_raw = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+        fused_proj = self.proj_grouped(fused_raw)
+        
+        # Split for normalization if needed, but better to normalize fused space
+        return self.classifier(F.normalize(fused_proj, dim=1))
 
     # -----------------------------------------------------------------------
     # LoRA

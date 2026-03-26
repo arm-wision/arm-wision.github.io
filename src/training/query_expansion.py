@@ -56,11 +56,12 @@ def extract_query_features(model, image, chunk_size=32):
                 feat_bio  = model.bioclip(view)
                 feat_dino = model.dinov2(view)
                 feat_conv = model.convnext(view)
-                feat_bio  = F.normalize(model.proj_bio(feat_bio),   dim=1)
-                feat_dino = F.normalize(model.proj_dino(feat_dino), dim=1)
-                feat_conv = F.normalize(model.proj_conv(feat_conv), dim=1)
-                logits    = model.classifier(
-                    torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
+                
+                # Grouped Blackwell-native projection
+                fused_raw  = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+                fused_proj = model.proj_grouped(fused_raw)
+                
+                logits = model.classifier(F.normalize(fused_proj, dim=1))
             all_logits.append(logits)
 
     # Average logits across all views before argmax

@@ -25,6 +25,13 @@
 - [x] **Gradient Checkpointing:** Enabled on all backbones for Phase 1.
       Disabled before applying LoRA to avoid hook conflicts.
 
+### RTX 5090 Blackwell Optimization (Current)
+- [ ] **Zero-I/O: Pin Feature Cache to VRAM:** Load 22.5GB `phase1_feature_cache.pt` directly to CUDA to eliminate disk bottlenecks.
+- [ ] **FP8 Training:** Enable Blackwell native FP8 via TransformerEngine for Phase 2.
+- [ ] **Inductor Max-Autotune:** Use `torch.compile(mode="max-autotune")` for ensemble heads.
+- [ ] **Vectorized Ensemble Heads:** Consolidate multiple head forward passes into a single GEMM.
+- [ ] **ZeRO-1 / No-Offload Tuning:** Maximize 5090 compute throughput; disable all PCIe/CPU synchronization.
+
 ### LoRA Fine-Tuning (Phase 2)
 - [x] **LoRA on DINOv2 + ConvNeXt:** PEFT LoRA (r=16) on attention + MLP layers.
       Reduces trainable params from ~800M to ~5M. BioCLIP fully frozen throughout.
@@ -88,4 +95,4 @@
     - [ ] Revert DALI to Mixed GPU Decoding once NVML driver issues resolved.
 
 ---
-*Last updated: March 23, 2026*
+*Last updated: March 26, 2026*

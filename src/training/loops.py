@@ -42,17 +42,23 @@ def validate(model, loader, criterion, num_classes, device):
                 break
             images = data[0]['data'].to(memory_format=torch.channels_last)
             labels = data[0]['label'].squeeze().long()
-            labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
 
-            with autocast(device_type='cuda', dtype=torch.bfloat16):
+            # Blackwell: Use FP8 autocast if enabled in config
+            mixed_precision_dtype = torch.bfloat16
+            if getattr(_cfg, 'USE_FP8', False) and hasattr(torch, 'float8_e4m3fn'):
+                mixed_precision_dtype = torch.float8_e4m3fn
+
+            with autocast(device_type='cuda', dtype=mixed_precision_dtype):
                 feat_bio  = chunked_backbone_forward(model.bioclip,  images, val_chunk)
                 feat_dino = chunked_backbone_forward(model.dinov2,   images, val_chunk)
                 feat_conv = chunked_backbone_forward(model.convnext, images, val_chunk)
-                feat_bio  = F.normalize(model.proj_bio(feat_bio),   dim=1)
-                feat_dino = F.normalize(model.proj_dino(feat_dino), dim=1)
-                feat_conv = F.normalize(model.proj_conv(feat_conv), dim=1)
-                outputs   = model.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
-                loss      = criterion(outputs, labels)
+                
+                # Grouped Blackwell-native projection
+                fused_raw  = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+                fused_proj = model.proj_grouped(fused_raw)
+                
+                outputs = model.classifier(F.normalize(fused_proj, dim=1))
+                loss    = criterion(outputs, labels)
 
             val_loss += loss.item()
             _, predicted = outputs.max(1)
@@ -101,9 +107,17 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
         dataset = CachedFeatureDataset(cache)
         mode    = "raw"
 
+    # Blackwell: If features are already on GPU, num_workers=0 is faster (no pickling)
+    is_on_gpu = False
+    if use_pca and cache['features_pca'].is_cuda:
+        is_on_gpu = True
+    elif not use_pca and cache['bio'].is_cuda:
+        is_on_gpu = True
+
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=BATCH_SIZE * 4,
-        shuffle=True, num_workers=4, pin_memory=True
+        shuffle=True, num_workers=0 if is_on_gpu else 4, 
+        pin_memory=not is_on_gpu
     )
 
     running_loss = 0.0
@@ -114,7 +128,6 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
         for i, (feat_pca, labels) in pbar:
             feat_pca = feat_pca.to(device, non_blocking=True)
             labels   = labels.to(device,   non_blocking=True)
-            labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
 
             with autocast(device_type='cuda', dtype=torch.bfloat16):
                 # phase1_head: simple linear probe on PCA features
@@ -139,14 +152,12 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
             feat_dino = feat_dino.to(device, non_blocking=True)
             feat_conv = feat_conv.to(device, non_blocking=True)
             labels    = labels.to(device,    non_blocking=True)
-            labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
 
             with autocast(device_type='cuda', dtype=torch.bfloat16):
-                fb      = F.normalize(model.proj_bio(feat_bio),   dim=1)
-                fd      = F.normalize(model.proj_dino(feat_dino), dim=1)
-                fc      = F.normalize(model.proj_conv(feat_conv), dim=1)
-                outputs = model.classifier(torch.cat([fb, fd, fc], dim=1))
-                loss    = criterion(outputs, labels)
+                fused_raw  = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+                fused_proj = model.proj_grouped(fused_raw)
+                outputs    = model.classifier(F.normalize(fused_proj, dim=1))
+                loss       = criterion(outputs, labels)
 
             model.backward(loss)
             model.step()
@@ -205,38 +216,38 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
             continue
         images = data[0]['data'].to(memory_format=torch.channels_last)
         labels = data[0]['label'].squeeze().long()
-        labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
 
-        with autocast(device_type='cuda', dtype=torch.bfloat16):
+        # Blackwell: Use FP8 autocast if enabled in config
+        # e4m3fn is best for forward/backward pass on Blackwell
+        # Fallback to BF16 if FP8 is not supported or enabled
+        mixed_precision_dtype = torch.bfloat16
+        if getattr(_cfg, 'USE_FP8', False) and hasattr(torch, 'float8_e4m3fn'):
+            mixed_precision_dtype = torch.float8_e4m3fn
+
+        with autocast(device_type='cuda', dtype=mixed_precision_dtype):
             # If optimizer is provided (Warmup), all backbones are frozen.
             # We can skip gradient tracking for ALL backbones.
             backbone_ctx = torch.no_grad() if optimizer is not None else torch.enable_grad()
             
             with backbone_ctx:
-                # BioCLIP: teacher reference
-                feat_bio_raw = chunked_backbone_forward(
-                    raw_model.bioclip, images, chunk_size)
-                
-                # In LoRA mode, DINOv2 and ConvNeXt need gradients, but BioCLIP never does.
-                # However, chunked_backbone_forward for BioCLIP is already inside backbone_ctx.
-                
-                # DINOv2 + ConvNeXt
-                feat_dino_raw = chunked_backbone_forward(
-                    raw_model.dinov2, images, chunk_size)
-                feat_conv_raw = chunked_backbone_forward(
-                    raw_model.convnext, images, chunk_size)
+                feat_bio_raw  = chunked_backbone_forward(raw_model.bioclip,  images, chunk_size)
+                feat_dino_raw = chunked_backbone_forward(raw_model.dinov2,   images, chunk_size)
+                feat_conv_raw = chunked_backbone_forward(raw_model.convnext, images, chunk_size)
 
-            # Teacher reference for distillation
-            with torch.no_grad():
-                feat_bio_teacher = F.normalize(
-                    raw_model.proj_bio(feat_bio_raw), dim=1).detach()
+            # Blackwell-native grouped projection
+            fused_raw  = torch.cat([feat_bio_raw, feat_dino_raw, feat_conv_raw], dim=1)
+            fused_proj = raw_model.proj_grouped(fused_raw)
+            
+            # Slice for KD distillation (each backbone still aligns to BioCLIP)
+            # BioCLIP projected is 0:512, DINO is 512:1024, ConvNeXt is 1024:1536
+            feat_bio  = F.normalize(fused_proj[:, 0:512],    dim=1)
+            feat_dino = F.normalize(fused_proj[:, 512:1024], dim=1)
+            feat_conv = F.normalize(fused_proj[:, 1024:1536],dim=1)
 
-            feat_bio  = F.normalize(raw_model.proj_bio(feat_bio_raw),   dim=1)
-            feat_dino = F.normalize(raw_model.proj_dino(feat_dino_raw), dim=1)
-            feat_conv = F.normalize(raw_model.proj_conv(feat_conv_raw), dim=1)
+            # Teacher reference (detached BioCLIP features)
+            feat_bio_teacher = feat_bio.detach()
 
-            outputs   = raw_model.classifier(
-                torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
+            outputs   = raw_model.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
             hard_loss = criterion(outputs, labels)
 
             kd_loss_dino = (1 - F.cosine_similarity(feat_dino, feat_bio_teacher)).mean()

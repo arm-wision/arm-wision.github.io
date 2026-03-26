@@ -19,9 +19,13 @@ venv/
 .env.*
 *.env
 
-# Data
+# Data & Models
 data/
 datasets/
-models/*.pt
-models/*.pth
-models/phase2_checkpoint/
+models/
+!models/*.py
+
+# Logs & Visualization
+wandb/
+src/wandb/
+artifacts/

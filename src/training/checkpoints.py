@@ -67,9 +67,9 @@ def load_phase1_heads_for_phase2(raw_model, device):
     ckpt        = torch.load(P1_CKPT_PATH, map_location=device, weights_only=False)
     saved_state = ckpt['model_state']
 
-    # Only load projection heads and classifier -- skip backbones entirely
-    # (LoRA changes backbone key structure; backbone weights come from pretrained init)
-    head_prefixes = ('proj_bio.', 'proj_dino.', 'proj_conv.', 'classifier.')
+    # Only load classifier -- skip backbones and old projection heads
+    # (LoRA and Grouped Projection changed the structure; classifier is still compatible)
+    head_prefixes = ('classifier.',)
     head_state    = {k: v for k, v in saved_state.items()
                      if any(k.startswith(p) for p in head_prefixes)}
 
