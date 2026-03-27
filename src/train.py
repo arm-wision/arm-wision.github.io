@@ -309,10 +309,15 @@ def train():
     for param in model.bioclip.parameters():
         param.requires_grad = False
 
+    # Phase 2 optimizer
     optimizer_p2 = optim.AdamW([
         {'params': lora_params, 'lr': config.lr_phase2_lora},
         {'params': head_params, 'lr': config.lr_phase2_head},
     ], weight_decay=0.01, fused=True)
+
+    # Wrap with Lookahead to find flatter minima
+    from timm.optim import Lookahead
+    optimizer_p2 = Lookahead(optimizer_p2, alpha=0.5, k=6)
 
     steps_per_epoch_p2 = len(train_loader)
     total_steps_p2     = (steps_per_epoch_p2 + 5) * EPOCHS_PHASE2

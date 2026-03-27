@@ -6,6 +6,38 @@ from .dinov2 import PlantDINOv2
 from .convnext import PlantConvNeXt
 
 
+class ResidualMLP(nn.Module):
+    def __init__(self, in_features, hidden_features, out_features, dropout=0.2, num_samples=5):
+        super().__init__()
+        self.num_samples = num_samples
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.ln1 = nn.LayerNorm(hidden_features)
+        self.gelu = nn.GELU()
+        
+        self.res_block = nn.Sequential(
+            nn.Linear(hidden_features, hidden_features),
+            nn.LayerNorm(hidden_features),
+            nn.GELU(),
+            nn.Linear(hidden_features, hidden_features),
+            nn.LayerNorm(hidden_features)
+        )
+        
+        # Multi-Sample Dropout for the final classification layer
+        self.dropout_samples = nn.ModuleList([nn.Dropout(dropout) for _ in range(num_samples)])
+        self.fc_final = nn.Linear(hidden_features, out_features)
+
+    def forward(self, x):
+        x = self.gelu(self.ln1(self.fc1(x)))
+        x = x + self.res_block(x)
+        
+        if self.training:
+            # Multi-sample dropout: average logits from multiple masks
+            logits = sum(self.fc_final(d(x)) for d in self.dropout_samples) / self.num_samples
+        else:
+            logits = self.fc_final(x)
+        return logits
+
+
 class PlantEnsemble(nn.Module):
     def __init__(self, num_classes=7800, input_res=384,
                  bioclip_name='hf-hub:imageomics/bioclip',
@@ -60,17 +92,13 @@ class PlantEnsemble(nn.Module):
         )
 
         # Phase 1 linear probe on PCA-compressed features.
-        # Deepened to a 3-layer MLP for better non-linear modeling of PCA features.
+        # Upgraded to ResidualMLP with Multi-Sample Dropout for better PCA feature modeling.
         from config import PCA_COMPONENTS
-        self.phase1_head = torch.nn.Sequential(
-            torch.nn.Linear(PCA_COMPONENTS, 2048),
-            torch.nn.LayerNorm(2048),
-            torch.nn.GELU(),
-            torch.nn.Linear(2048, 1024),
-            torch.nn.LayerNorm(1024),
-            torch.nn.GELU(),
-            torch.nn.Dropout(0.2),
-            torch.nn.Linear(1024, num_classes)
+        self.phase1_head = ResidualMLP(
+            in_features=PCA_COMPONENTS, 
+            hidden_features=2048, 
+            out_features=num_classes,
+            dropout=0.2
         )
 
         self._backbones_frozen = False

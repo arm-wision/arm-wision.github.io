@@ -7,13 +7,13 @@ class LogitAdjustmentLoss(nn.Module):
     Shifts logits by log(prior) to demand larger margins for common classes
     and ease requirements for rare ones -- critical for 7,800-class long-tail.
     """
-    def __init__(self, class_counts, tau=1.0):
+    def __init__(self, class_counts, tau=1.0, label_smoothing=0.1):
         super().__init__()
         counts = torch.tensor(class_counts, dtype=torch.float32)
         priors = counts / counts.sum()
         self.adjustment = (tau * torch.log(priors + 1e-12)).to('cuda')
         # Use CrossEntropyLoss for single-label 7,800-class classification
-        self.criterion  = nn.CrossEntropyLoss()
+        self.criterion  = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
 
     def forward(self, x, y):
         # y should be class indices (LongTensor)
