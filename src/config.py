@@ -39,7 +39,7 @@ P2_BATCH_SIZE = 128   # Reduced from 256 to fit on 32GB GPU with LoRA+Gradients
 # CHUNK_SIZE         : Phase 1 validation  (no_grad)
 # P2_CHUNK_SIZE      : Phase 2 training    (LoRA backward is small, moderate size)
 # ---------------------------------------------------------------------------
-EXTRACT_CHUNK_SIZE = 384  # no_grad during extraction -- 5090 can handle full batch
+EXTRACT_CHUNK_SIZE = 64   # Reduced from 384; 384 caused OOM on ConvNeXt-L
 CHUNK_SIZE         = 32
 P2_CHUNK_SIZE      = 32 # Balanced for speed and VRAM; 128 caused OOM on 32GB GPU
 
