@@ -107,7 +107,7 @@ PCA_COMPONENTS      = 1024  # Doubled from 512 to retain more feature detail
 # ---------------------------------------------------------------------------
 # Checkpoint paths (centralised so all modules agree)
 # ---------------------------------------------------------------------------
-FEATURE_CACHE_PATH = "models/legacy_v1/phase1_feature_cache.pt" # Reuse existing cache
+FEATURE_CACHE_PATH = "models/blackwell_v2/phase1_feature_cache.pt" # Move to Blackwell folder
 P1_CKPT_PATH       = "models/blackwell_v2/phase1_checkpoint.pth"
 P2_CKPT_DIR        = "models/blackwell_v2/phase2_checkpoint"
 P2_EPOCH_CKPT      = "models/blackwell_v2/phase2_epoch_checkpoint.pth"

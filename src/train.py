@@ -209,10 +209,9 @@ def train():
         # Phase 1 trains only the phase1_head (linear probe on PCA features).
         # Much faster than training proj heads on raw features (~3x smaller input).
         # Phase 2 still uses full proj heads + ensemble (unaffected by this).
-        # Phase 1 optimizer: DeepSpeedCPUAdam required for CPU offload
         phase1_params  = list(model.phase1_head.parameters())
-        optimizer_p1   = DeepSpeedCPUAdam(phase1_params, lr=config.lr_phase1,
-                                           weight_decay=0.05)
+        optimizer_p1   = optim.AdamW(phase1_params, lr=config.lr_phase1,
+                                     weight_decay=0.05, fused=True)
 
         from training import CachedPCADataset
         cache_dataset      = CachedPCADataset(cache) if 'features_pca' in cache else CachedFeatureDataset(cache)
