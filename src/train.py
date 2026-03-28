@@ -134,7 +134,8 @@ def train():
     torch.cuda.empty_cache()
 
     # Logit Adjustment for 7,800-class long-tail
-    criterion = LogitAdjustmentLoss(class_counts=counts)
+    num_classes = len(counts)
+    criterion   = LogitAdjustmentLoss(class_counts=counts)
 
     # -----------------------------------------------------------------------
     # PHASE 1: Feature Caching + Head Warmup
@@ -143,9 +144,8 @@ def train():
     skip_phase1 = phase1_is_complete()
     
     # Load model and apply Blackwell-native compilation
-    # Note: num_classes is 7800 by default, updated later if needed
     model = PlantEnsemble(
-        num_classes=7800, 
+        num_classes=num_classes, 
         input_res=RESOLUTION,
         bioclip_name=BIOCLIP_NAME,
         dinov2_name=DINOV2_NAME,
@@ -159,16 +159,16 @@ def train():
 
     if skip_phase1:
         print(f"\n[Phase1] Complete checkpoint found -- skipping Phase 1.")
-        # Need num_classes for loader
-        _, _, num_classes = get_dali_loaders(csv_path, IMG_DIR, batch_size=BATCH_SIZE)
+        # Need to initialize loaders to get total samples etc, though we skip P1
+        _t_loader, _v_loader, _ = get_dali_loaders(csv_path, IMG_DIR, batch_size=BATCH_SIZE)
         model.set_grad_checkpointing(True)
         model.freeze_backbones()
-        del _
+        del _t_loader, _v_loader
         gc.collect()
         torch.cuda.empty_cache()
     else:
         print("\n--- PHASE 1: Feature Caching + Head Warmup ---")
-        train_loader, val_loader, num_classes = get_dali_loaders(
+        train_loader, val_loader, _ = get_dali_loaders(
             csv_path, IMG_DIR, batch_size=BATCH_SIZE,
             resolution=RESOLUTION, sampling_mode='natural'
         )
