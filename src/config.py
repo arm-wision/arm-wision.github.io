@@ -76,7 +76,7 @@ if MODE == "5090":
     DINOV2_NAME   = "vit_large_patch14_dinov2"
     CONVNEXT_NAME = "convnextv2_large.fcmae_ft_in22k_in1k_384"
     # Blackwell specific speedups
-    USE_FP8       = True
+    USE_FP8       = False  # Disabled: caused cuDNN compatibility issues in backbones
     USE_COMPILE   = True
     LOAD_CACHE_TO_GPU = True 
 elif MODE == "4090":
