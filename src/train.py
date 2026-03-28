@@ -71,7 +71,10 @@ DS_CONFIG_P1 = {
 
 # Phase 2: no CPU offload -- LoRA makes optimizer states tiny, keep on GPU
 DS_CONFIG_P2 = {
-    "zero_optimization": {"stage": 1},
+    "zero_optimization": {
+        "stage": 1,
+        "zero_allow_untested_optimizer": True
+    },
     "bf16": {"enabled": True},
     "gradient_accumulation_steps": ACCUMULATION_STEPS,
     "train_micro_batch_size_per_gpu": P2_BATCH_SIZE,
