@@ -20,11 +20,15 @@ from .checkpoints import save_progress_checkpoint
 # Validation
 # ---------------------------------------------------------------------------
 
-def validate(model, loader, criterion, num_classes, device):
+def validate(model, loader, criterion, num_classes, device, pca_layer=None):
     """
     GPU-accelerated validation via torchmetrics.
     All state accumulates on GPU; single CPU transfer at .compute().
     Stops at MAX_VAL_BATCHES for speed (~25,600 images, within 0.5% of full val).
+
+    Args:
+        pca_layer (nn.Module): Optional GPU-native PCA transformation. If provided,
+                               validation will use the model's phase1_head.
     """
     model.eval()
     val_loss = 0.0
@@ -36,6 +40,10 @@ def validate(model, loader, criterion, num_classes, device):
     val_chunk = CHUNK_SIZE * 2   # no_grad -> 2x chunk is safe
     i = 0
 
+    # Ensure PCA layer is in eval mode if provided
+    if pca_layer is not None:
+        pca_layer.eval()
+
     with torch.no_grad():
         for i, data in enumerate(tqdm(loader, desc="Validating", unit="batch", leave=False)):
             if i >= MAX_VAL_BATCHES:
@@ -43,22 +51,27 @@ def validate(model, loader, criterion, num_classes, device):
             images = data[0]['data'].to(memory_format=torch.channels_last)
             labels = data[0]['label'].squeeze().long()
 
-            # Blackwell: Use FP8 autocast if enabled in config
+            # Blackwell: Use BF16 for backbone validation
             mixed_precision_dtype = torch.bfloat16
-            if getattr(_cfg, 'USE_FP8', False) and hasattr(torch, 'float8_e4m3fn'):
-                mixed_precision_dtype = torch.float8_e4m3fn
 
             with autocast(device_type='cuda', dtype=mixed_precision_dtype):
                 feat_bio  = chunked_backbone_forward(model.bioclip,  images, val_chunk)
                 feat_dino = chunked_backbone_forward(model.dinov2,   images, val_chunk)
                 feat_conv = chunked_backbone_forward(model.convnext, images, val_chunk)
                 
-                # Grouped Blackwell-native projection
-                fused_raw  = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
-                fused_proj = model.proj_grouped(fused_raw)
+                if pca_layer is not None:
+                    # Phase 1 path: apply PCA + use phase1_head
+                    # Concatenate raw backbone features (matches _build_feature_matrix)
+                    fused_raw = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+                    feat_pca  = pca_layer(fused_raw)
+                    outputs   = model.phase1_head(feat_pca)
+                else:
+                    # Phase 2 path: apply grouped projection + use main classifier
+                    fused_raw  = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+                    fused_proj = model.proj_grouped(fused_raw)
+                    outputs    = model.classifier(F.normalize(fused_proj, dim=1))
                 
-                outputs = model.classifier(F.normalize(fused_proj, dim=1))
-                loss    = criterion(outputs, labels)
+                loss = criterion(outputs, labels)
 
             val_loss += loss.item()
             _, predicted = outputs.max(1)

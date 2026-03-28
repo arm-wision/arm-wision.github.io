@@ -85,6 +85,22 @@ DS_CONFIG_P2 = {
 # Main
 # ---------------------------------------------------------------------------
 
+def get_pca_module(pca, device):
+    """
+    Convert a fitted sklearn IncrementalPCA into a torch.nn.Module
+    for fast GPU-native transformation.
+    """
+    import torch.nn as nn
+    n_components = pca.n_components_
+    d_in = pca.components_.shape[1]
+    
+    layer = nn.Linear(d_in, n_components)
+    layer.weight.data = torch.from_numpy(pca.components_).float()
+    layer.bias.data   = torch.from_numpy(-pca.mean_ @ pca.components_.T).float()
+    
+    return layer.to(device)
+
+
 def train():
     """
     Progressive 2-Stage Training:
@@ -202,9 +218,15 @@ def train():
                 cache = apply_pca(cache, pca)
             else:
                 print("[PCA] Fitting PCA on cached features...")
-                cache, _ = fit_and_save(cache)
+                cache, pca = fit_and_save(cache)
             torch.save(cache, FEATURE_CACHE_PATH)
             print("[PCA] Cache updated with PCA features.")
+        else:
+            # Need the PCA object to build the validation module
+            pca = load_pca(PCA_TRANSFORM_PATH)
+
+        # GPU-native PCA for validation
+        pca_module = get_pca_module(pca, DEVICE)
 
         # Phase 1 trains only the phase1_head (linear probe on PCA features).
         # Much faster than training proj heads on raw features (~3x smaller input).
@@ -234,8 +256,9 @@ def train():
             train_acc = run_phase1_cached(
                 model_engine_p1, cache, criterion, epoch, num_classes, DEVICE
             )
+            # Use pca_module during Phase 1 validation to evaluate the correct head
             metrics = validate(model_engine_p1.module, val_loader, criterion,
-                               num_classes, DEVICE)
+                               num_classes, DEVICE, pca_layer=pca_module)
             print(f"\n[Phase1 Epoch {epoch}] Train: {train_acc:.2f}%  "
                   f"Val: {metrics['acc']:.2f}%  F1: {metrics['f1']:.4f}")
             wandb.log({"epoch": epoch, "train_acc": train_acc,
