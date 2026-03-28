@@ -280,48 +280,49 @@ def train():
     # -----------------------------------------------------------------------
     print("\n--- PHASE 2: LoRA Fine-Tuning (Long-Tail Calibration) ---")
 
-    # FAST WARMUP: Train main classifier on cached features if needed
-    # This reaches 90%+ accuracy in minutes instead of hours
-    if os.path.exists(FEATURE_CACHE_PATH):
-        print("\n--- PHASE 2A: Fast Head Warmup (Using Cache) ---")
-        # We use run_phase1_cached but it will automatically use the 'else' block
-        # to train proj_grouped + classifier because we'll tell it not to use PCA
-        raw_cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
-        if 'features_pca' in raw_cache:
-            # Temporarily hide PCA features to force training on raw backbone features
-            pca_features = raw_cache.pop('features_pca')
-            
-            # Setup a temporary optimizer for the main head
-            head_params = list(model.proj_grouped.parameters()) + list(model.classifier.parameters())
-            warmup_opt  = optim.AdamW(head_params, lr=1e-3, weight_decay=0.01, fused=True)
-            
-            # DeepSpeed engine for the warmup
-            model_engine_warmup, _, _, _ = deepspeed.initialize(
-                model=model, optimizer=warmup_opt, config=DS_CONFIG_P1
-            )
-            
-            # 2 quick epochs on cached features
-            for w_epoch in range(2):
-                run_phase1_cached(model_engine_warmup, raw_cache, criterion, 
-                                  f"Warmup-{w_epoch}", num_classes, DEVICE)
-            
-            # Clean up warmup engine
-            model = model_engine_warmup.module
-            del model_engine_warmup, warmup_opt
-            raw_cache['features_pca'] = pca_features # Restore cache
-            del raw_cache
-            gc.collect()
-            torch.cuda.empty_cache()
-            print("Fast Warmup Complete. Classifier is now initialized.")
-
     train_loader, val_loader, _ = get_dali_loaders(
         csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE,
         resolution=RESOLUTION, sampling_mode='natural',
         samples_per_epoch=P2_SAMPLES_PER_EPOCH
     )
 
-    # Load best Phase 1 head weights (if any match the current structure)
-    load_phase1_heads_for_phase2(model, DEVICE)
+    # FAST WARMUP: Train main classifier on cached features if needed
+    # This reaches 90%+ accuracy in minutes instead of hours
+    fast_warmup_done = False
+    if os.path.exists(FEATURE_CACHE_PATH):
+        print("\n--- PHASE 2A: Fast Head Warmup (Using Cache) ---")
+        raw_cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
+        if 'features_pca' in raw_cache:
+            pca_features = raw_cache.pop('features_pca')
+            
+            head_params = list(model.proj_grouped.parameters()) + list(model.classifier.parameters())
+            warmup_opt  = optim.AdamW(head_params, lr=1e-3, weight_decay=0.01, fused=True)
+            
+            model_engine_warmup, _, _, _ = deepspeed.initialize(
+                model=model, optimizer=warmup_opt, config=DS_CONFIG_P1
+            )
+            
+            # 10 epochs on cached features to fully initialize the main head
+            for w_epoch in range(10):
+                run_phase1_cached(model_engine_warmup, raw_cache, criterion, 
+                                  f"Warmup-{w_epoch}", num_classes, DEVICE)
+            
+            model = model_engine_warmup.module
+            del model_engine_warmup, warmup_opt
+            raw_cache['features_pca'] = pca_features
+            del raw_cache
+            gc.collect()
+            torch.cuda.empty_cache()
+            fast_warmup_done = True
+            print("Fast Warmup Complete. Classifier is now fully initialized.")
+            
+            # Validate after warmup to see real progress
+            print("[Warmup] Running validation...")
+            metrics = validate(model, val_loader, criterion, num_classes, DEVICE)
+            print(f"Post-Warmup Accuracy: {metrics['acc']:.2f}%")
+
+    # Note: load_phase1_heads_for_phase2 removed because it was overwriting 
+    # the Fast Warmup with untrained random weights from the P1 probe checkpoint.
 
     # -----------------------------------------------------------------------
     # PHASE 2 - Part A: Head Warmup (Frozen Backbones)
@@ -329,7 +330,7 @@ def train():
     # Resume check BEFORE warmup
     resumed_epoch, _, resumed_step = load_phase2_checkpoint(model, DEVICE, tag="checkpoint_latest")
     
-    if resumed_epoch is None or resumed_epoch < EPOCHS_PHASE1:
+    if (resumed_epoch is None or resumed_epoch < EPOCHS_PHASE1) and not fast_warmup_done:
         print("\n--- PHASE 2A: Head Warmup (Frozen Backbones) ---")
         model.freeze_backbones()
         
