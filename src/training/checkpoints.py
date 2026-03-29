@@ -104,7 +104,15 @@ def load_phase2_checkpoint(model_engine, device, tag=None):
     ckpts = glob.glob("models/phase2_checkpoint_ep*_step*.pth")
     if ckpts:
         # Sort by epoch then step to find the absolute latest
-        latest_ckpt = sorted(ckpts, key=lambda x: [int(i) for i in x.replace("models/phase2_checkpoint_ep", "").replace(".pth", "").split("_step")])[-1]
+        # Handle '_final' by replacing it with a large number for sorting
+        def sort_key(x):
+            parts = x.replace("models/phase2_checkpoint_ep", "").replace(".pth", "").split("_step")
+            epoch = int(parts[0])
+            step_str = parts[1].replace("_", "")
+            step = 999999999 if step_str == "final" else int(step_str)
+            return [epoch, step]
+            
+        latest_ckpt = sorted(ckpts, key=sort_key)[-1]
         
         ckpt = torch.load(latest_ckpt, map_location=device, weights_only=False)
         raw_model = model_engine.module if hasattr(model_engine, 'module') else model_engine
