@@ -31,7 +31,7 @@ CLEANED_CSV = DATASETS[DATASET_MODE]["cleaned_csv"]
 # ---------------------------------------------------------------------------
 RESOLUTION    = 384   # ConvNeXt native resolution; 26% cheaper than 448px (scales as res²)
 BATCH_SIZE    = 384   # Phase 1 extraction + head training
-P2_BATCH_SIZE = 64    # Reduced from 128 to fit on 32GB GPU with LoRA+torch.compile
+P2_BATCH_SIZE = 192   # Max-Push for Blackwell 5090 (32GB)
 
 # ---------------------------------------------------------------------------
 # Chunked forward chunk sizes
@@ -41,12 +41,12 @@ P2_BATCH_SIZE = 64    # Reduced from 128 to fit on 32GB GPU with LoRA+torch.comp
 # ---------------------------------------------------------------------------
 EXTRACT_CHUNK_SIZE = 64   # Reduced from 384; 384 caused OOM on ConvNeXt-L
 CHUNK_SIZE         = 32
-P2_CHUNK_SIZE      = 16 # Balanced for speed and VRAM; 32 caused OOM on 32GB GPU
+P2_CHUNK_SIZE      = 16   # Balanced for speed and VRAM; 32 caused OOM on 32GB GPU
 
 # ---------------------------------------------------------------------------
 # Training schedule
 # ---------------------------------------------------------------------------
-ACCUMULATION_STEPS = 4    # Increased from 2 to keep effective batch size at 256
+ACCUMULATION_STEPS = 1    # Direct updates for maximum throughput
 
 EPOCHS_PHASE1      = 20
 EPOCHS_PHASE2      = 5    # Increased for deeper fine-tuning
