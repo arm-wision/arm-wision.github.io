@@ -85,14 +85,19 @@ def load_phase2_checkpoint(model_engine, device, tag=None):
     Load Phase 2 checkpoint. Returns (start_epoch, best_val_acc, start_step).
     Auto-discovers the latest unique checkpoint if tag is not provided.
     """
-    # 1. Try DeepSpeed auto-load if tag is provided or 'latest' exists
-    if os.path.exists(P2_CKPT_DIR):
-        _, client_state = model_engine.load_checkpoint(P2_CKPT_DIR, tag=tag)
-        if client_state is not None:
-            start_epoch  = client_state['epoch'] + 1
-            best_val_acc = client_state.get('best_val_acc', 0.0)
-            print(f"[Phase2] Resumed from DeepSpeed checkpoint epoch {start_epoch}")
-            return start_epoch, best_val_acc, 0
+    is_deepspeed = hasattr(model_engine, 'load_checkpoint')
+    
+    # 1. Try DeepSpeed auto-load if it is a DeepSpeed engine and tag/latest exists
+    if is_deepspeed and os.path.exists(P2_CKPT_DIR):
+        try:
+            _, client_state = model_engine.load_checkpoint(P2_CKPT_DIR, tag=tag)
+            if client_state is not None:
+                start_epoch  = client_state['epoch'] + 1
+                best_val_acc = client_state.get('best_val_acc', 0.0)
+                print(f"[Phase2] Resumed from DeepSpeed checkpoint epoch {start_epoch}")
+                return start_epoch, best_val_acc, 0
+        except Exception as e:
+            print(f"[Checkpoint] DeepSpeed load failed (expected if fresh): {e}")
 
     # 2. Auto-discover unique mid-epoch or per-epoch checkpoints
     import glob
