@@ -31,7 +31,7 @@ CLEANED_CSV = DATASETS[DATASET_MODE]["cleaned_csv"]
 # ---------------------------------------------------------------------------
 RESOLUTION    = 384   # ConvNeXt native resolution; 26% cheaper than 448px (scales as res²)
 BATCH_SIZE    = 384   # Phase 1 extraction + head training
-P2_BATCH_SIZE = 192   # Max-Push for Blackwell 5090 (32GB)
+P2_BATCH_SIZE = 128   # Safe "Sweet Spot" for Blackwell 5090 (32GB)
 
 # ---------------------------------------------------------------------------
 # Chunked forward chunk sizes
@@ -46,7 +46,7 @@ P2_CHUNK_SIZE      = 16   # Balanced for speed and VRAM; 32 caused OOM on 32GB G
 # ---------------------------------------------------------------------------
 # Training schedule
 # ---------------------------------------------------------------------------
-ACCUMULATION_STEPS = 1    # Direct updates for maximum throughput
+ACCUMULATION_STEPS = 4    # High-stability updates (Effective Batch = 512)
 
 EPOCHS_PHASE1      = 20
 EPOCHS_PHASE2      = 5    # Increased for deeper fine-tuning
