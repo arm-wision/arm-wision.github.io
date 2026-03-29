@@ -152,9 +152,10 @@ def train():
     del df
     torch.cuda.empty_cache()
 
-    # Logit Adjustment for 7,800-class long-tail
+    # Asymmetric Loss with Fused CUDA Kernel for multi-label long-tail
     num_classes = len(counts)
-    criterion   = LogitAdjustmentLoss(class_counts=counts)
+    logit_adj   = (1.0 * torch.log(torch.tensor(counts, dtype=torch.float32) / sum(counts))).to(DEVICE)
+    criterion   = AsymmetricLoss(logit_adjustments=logit_adj, use_fused=True)
 
     # -----------------------------------------------------------------------
     # PHASE 1: Feature Caching + Head Warmup

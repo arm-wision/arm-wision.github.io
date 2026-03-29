@@ -59,19 +59,25 @@ def validate(model, loader, criterion, num_classes, device, pca_layer=None):
                 feat_dino = chunked_backbone_forward(model.dinov2,   images, val_chunk)
                 feat_conv = chunked_backbone_forward(model.convnext, images, val_chunk)
                 
+                # Concatenate raw backbone features
+                fused_raw = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+
                 if pca_layer is not None:
-                    # Phase 1 path: apply PCA + use phase1_head
-                    # Concatenate raw backbone features (matches _build_feature_matrix)
-                    fused_raw = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+                    # Phase 1 path
                     feat_pca  = pca_layer(fused_raw)
                     outputs   = model.phase1_head(feat_pca)
                 else:
-                    # Phase 2 path: apply grouped projection + use main classifier
-                    fused_raw  = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+                    # Phase 2 path
                     fused_proj = model.proj_grouped(fused_raw)
                     outputs    = model.classifier(F.normalize(fused_proj, dim=1))
                 
-                loss = criterion(outputs, labels)
+                # Handle Asymmetric Loss (requires one-hot targets)
+                from .losses import AsymmetricLoss
+                if isinstance(criterion, AsymmetricLoss):
+                    targets = F.one_hot(labels, num_classes=num_classes).float()
+                    loss = criterion(outputs, targets)
+                else:
+                    loss = criterion(outputs, labels)
 
             val_loss += loss.item()
             _, predicted = outputs.max(1)
@@ -261,7 +267,14 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
             feat_bio_teacher = feat_bio.detach()
 
             outputs   = raw_model.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
-            hard_loss = criterion(outputs, labels)
+            
+            # Handle Asymmetric Loss (requires one-hot targets)
+            from .losses import AsymmetricLoss
+            if isinstance(criterion, AsymmetricLoss):
+                targets = F.one_hot(labels, num_classes=num_classes).float()
+                hard_loss = criterion(outputs, targets)
+            else:
+                hard_loss = criterion(outputs, labels)
 
             kd_loss_dino = (1 - F.cosine_similarity(feat_dino, feat_bio_teacher)).mean()
             kd_loss_conv = (1 - F.cosine_similarity(feat_conv, feat_bio_teacher)).mean()
