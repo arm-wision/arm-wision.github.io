@@ -11,29 +11,35 @@ except ImportError:
 class FusedASLFunction(Function):
     @staticmethod
     def forward(ctx, logits, targets, logit_adjustments, gamma_pos, gamma_neg, clip, eps):
+        # Force to float32 for CUDA kernel compatibility and numerical precision
+        logits_f32 = logits.float()
+        targets_f32 = targets.float()
+        adj_f32 = logit_adjustments.float()
+
         # fused_asl_forward returns a tensor of losses (batch_size,)
         losses = plantclef_ext.fused_asl_forward(
-            logits, targets, logit_adjustments, gamma_pos, gamma_neg, clip, eps
+            logits_f32, targets_f32, adj_f32, gamma_pos, gamma_neg, clip, eps
         )[0]
         
-        ctx.save_for_backward(logits, targets, logit_adjustments)
+        ctx.save_for_backward(logits_f32, targets_f32, adj_f32)
         ctx.gamma_pos = gamma_pos
         ctx.gamma_neg = gamma_neg
         ctx.clip = clip
         ctx.eps = eps
+        ctx.original_dtype = logits.dtype
         
-        return losses.mean()
+        return losses.mean().to(logits.dtype)
 
     @staticmethod
     def backward(ctx, grad_output):
         logits, targets, logit_adjustments = ctx.saved_tensors
         
         grad_logits = plantclef_ext.fused_asl_backward(
-            grad_output, logits, targets, logit_adjustments,
+            grad_output.float(), logits, targets, logit_adjustments,
             ctx.gamma_pos, ctx.gamma_neg, ctx.clip, ctx.eps
         )
         
-        return grad_logits, None, None, None, None, None, None
+        return grad_logits.to(ctx.original_dtype), None, None, None, None, None, None
 
 
 class LogitAdjustmentLoss(nn.Module):

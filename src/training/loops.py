@@ -176,7 +176,14 @@ def run_phase1_cached(model, cache, criterion, epoch, num_classes, device):
                 fused_raw  = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
                 fused_proj = model.proj_grouped(fused_raw)
                 outputs    = model.classifier(F.normalize(fused_proj, dim=1))
-                loss       = criterion(outputs, labels)
+                
+                # Handle Asymmetric Loss (requires one-hot targets)
+                from .losses import AsymmetricLoss
+                if isinstance(criterion, AsymmetricLoss):
+                    targets = F.one_hot(labels, num_classes=num_classes).float()
+                    loss = criterion(outputs, targets)
+                else:
+                    loss = criterion(outputs, labels)
 
             model.backward(loss)
             model.step()
