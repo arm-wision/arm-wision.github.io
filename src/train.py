@@ -20,6 +20,11 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 import gc
 
+try:
+    import plantclef_ext
+except ImportError:
+    plantclef_ext = None
+
 load_dotenv()
 
 from models.ensemble import PlantEnsemble
