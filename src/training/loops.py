@@ -272,13 +272,16 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
                     
                     raw_model.orchestrator.synchronize()
 
-                # Fused Slotted Projection
+                # Fused Slotted Projection (Optimized Blackwell Path)
                 linear = raw_model.proj_grouped[0]
                 ln     = raw_model.proj_grouped[1]
                 fused_proj = plantclef_ext.fused_projection(
-                    feat_bio_raw, feat_dino_raw, feat_conv_raw,
-                    linear.weight, linear.bias, ln.weight, ln.bias
+                    feat_bio_raw.float(), feat_dino_raw.float(), feat_conv_raw.float(),
+                    linear.weight.float(), linear.bias.float(), 
+                    ln.weight.float(), ln.bias.float()
                 )
+                # Convert back to autocast dtype for the rest of the forward pass
+                fused_proj = fused_proj.to(feat_bio_raw.dtype)
             else:
                 # Standard sequential fallback
                 with backbone_ctx:

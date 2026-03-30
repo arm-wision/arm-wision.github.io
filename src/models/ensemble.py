@@ -150,15 +150,15 @@ class PlantEnsemble(nn.Module):
             self.orchestrator.synchronize()
 
         # 2. Run Fused Slotted Projection (Eliminates 'cat' and sequential GEMM)
-        # Note: proj_grouped is a nn.Sequential(nn.Linear, nn.LayerNorm)
         linear = self.proj_grouped[0]
         ln     = self.proj_grouped[1]
         
         fused_proj = plantclef_ext.fused_projection(
-            feat_bio, feat_dino, feat_conv,
-            linear.weight, linear.bias,
-            ln.weight, ln.bias
+            feat_bio.float(), feat_dino.float(), feat_conv.float(),
+            linear.weight.float(), linear.bias.float(),
+            ln.weight.float(), ln.bias.float()
         )
+        fused_proj = fused_proj.to(feat_bio.dtype)
 
         # 3. Final Classifier
         return self.classifier(F.normalize(fused_proj, dim=1))

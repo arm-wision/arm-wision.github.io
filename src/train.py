@@ -301,18 +301,71 @@ def train():
             
             head_params = list(model.proj_grouped.parameters()) + list(model.classifier.parameters())
             warmup_opt  = optim.AdamW(head_params, lr=1e-3, weight_decay=0.01, fused=True)
-            
             model_engine_warmup, _, _, _ = deepspeed.initialize(
                 model=model, optimizer=warmup_opt, config=DS_CONFIG_P1
             )
-            
+
+            # --- CACHE VALIDATION FEATURES ---
+            print("[Warmup] Pre-extracting validation features for instant metrics...")
+            val_cache = {'bio': [], 'dino': [], 'conv': [], 'label': []}
+            model.eval()
+            with torch.no_grad():
+                for i, v_data in enumerate(tqdm(val_loader, desc="Caching Val", leave=False)):
+                    if i >= MAX_VAL_BATCHES: break
+                    v_imgs = v_data[0]['data'].to(DEVICE, memory_format=torch.channels_last)
+                    v_lbls = v_data[0]['label'].to(DEVICE).squeeze().long()
+
+                    with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+                        # Use parallel streams if available
+                        if hasattr(model, 'has_ext') and model.has_ext:
+                            s0 = torch.cuda.ExternalStream(model.orchestrator.get_stream(0))
+                            s1 = torch.cuda.ExternalStream(model.orchestrator.get_stream(1))
+                            s2 = torch.cuda.ExternalStream(model.orchestrator.get_stream(2))
+                            with torch.cuda.stream(s0): b = model.bioclip(v_imgs)
+                            with torch.cuda.stream(s1): d = model.dinov2(v_imgs)
+                            with torch.cuda.stream(s2): c = model.convnext(v_imgs)
+                            model.orchestrator.synchronize()
+                        else:
+                            b, d, c = model.bioclip(v_imgs), model.dinov2(v_imgs), model.convnext(v_imgs)
+
+                    val_cache['bio'].append(b.cpu()); val_cache['dino'].append(d.cpu())
+                    val_cache['conv'].append(c.cpu()); val_cache['label'].append(v_lbls.cpu())
+
+            val_cache = {k: torch.cat(v) for k, v in val_cache.items()}
+            print(f"[Warmup] Cached {len(val_cache['label'])} validation samples.")
+
             # 10 epochs on cached features to fully initialize the main head
             for w_epoch in range(10):
                 run_phase1_cached(model_engine_warmup, raw_cache, criterion, 
                                   f"Warmup-{w_epoch}", num_classes, DEVICE)
-            
+
+                # --- INSTANT VALIDATION ---
+                model.eval()
+                with torch.no_grad():
+                    v_b, v_d, v_c = val_cache['bio'].to(DEVICE), val_cache['dino'].to(DEVICE), val_cache['conv'].to(DEVICE)
+                    v_l = val_cache['label'].to(DEVICE)
+                    with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+                        if hasattr(model, 'has_ext') and model.has_ext:
+                            # Fused CUDA Projection (with Float32 casts)
+                            v_proj = plantclef_ext.fused_projection(
+                                v_b.float(), v_d.float(), v_c.float(), 
+                                model.proj_grouped[0].weight.float(), 
+                                model.proj_grouped[0].bias.float(), 
+                                model.proj_grouped[1].weight.float(), 
+                                model.proj_grouped[1].bias.float()
+                            )
+                            v_proj = v_proj.to(torch.bfloat16)
+                        else:
+                            v_proj = model.proj_grouped(torch.cat([v_b, v_d, v_c], dim=1))
+                        v_out = model.classifier(F.normalize(v_proj, dim=1))
+                        # Simple accuracy for warmup tracking
+                        v_acc = (v_out.argmax(1) == v_l).float().mean().item() * 100
+                print(f"Warmup-{w_epoch} Val Acc: {v_acc:.2f}%")
+
+            # Clean up warmup engine
             model = model_engine_warmup.module
-            del model_engine_warmup, warmup_opt
+            del model_engine_warmup, warmup_opt, val_cache
+
             raw_cache['features_pca'] = pca_features
             del raw_cache
             gc.collect()
