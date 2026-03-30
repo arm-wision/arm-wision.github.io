@@ -16,6 +16,7 @@ import deepspeed
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 import wandb
 import cudf
+from tqdm import tqdm
 from dotenv import load_dotenv
 import gc
 
@@ -199,7 +200,6 @@ def train():
         # Load or extract feature cache
         if os.path.exists(FEATURE_CACHE_PATH):
             print(f"[Feature Cache] Loading from {FEATURE_CACHE_PATH}...")
-            from tqdm import tqdm
             with tqdm(total=1, desc="Loading feature cache", unit="file") as pbar:
                 cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
                 pbar.update(1)
