@@ -15,6 +15,7 @@ setup(
                 os.path.join(csrc_dir, 'bindings.cpp'),
                 os.path.join(csrc_dir, 'fused_loss.cu'),
                 os.path.join(csrc_dir, 'sahi_tiling.cu'),
+                os.path.join(csrc_dir, 'fused_projection.cu'),
             ],
             extra_compile_args={
                 'cxx': ['-O3', '-mavx512f', '-mavx512dq'], # AVX-512 for fast taxonomy filtering

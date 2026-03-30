@@ -104,22 +104,63 @@ class PlantEnsemble(nn.Module):
         self._backbones_frozen = False
         self._lora_applied     = False
 
+        # Blackwell Parallel Orchestration
+        try:
+            import plantclef_ext
+            self.orchestrator = plantclef_ext.StreamOrchestrator()
+            self.has_ext = True
+        except ImportError:
+            self.has_ext = False
+
     # -----------------------------------------------------------------------
     # Forward (used during validation; training calls components directly)
     # -----------------------------------------------------------------------
 
     def forward(self, x):
+        if not self.has_ext:
+            # Slow fallback path
+            ctx = torch.no_grad() if self._backbones_frozen else torch.enable_grad()
+            with ctx:
+                feat_bio  = self.bioclip(x)
+                feat_dino = self.dinov2(x)
+                feat_conv = self.convnext(x)
+            fused_raw = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
+            fused_proj = self.proj_grouped(fused_raw)
+            return self.classifier(F.normalize(fused_proj, dim=1))
+
+        # --- OPTIMIZED BLACKWELL PATH (Parallel Streams + Fused Kernel) ---
+        import plantclef_ext
         ctx = torch.no_grad() if self._backbones_frozen else torch.enable_grad()
+        
+        # 1. Launch all 3 backbones in parallel streams
         with ctx:
-            feat_bio  = self.bioclip(x)
-            feat_dino = self.dinov2(x)
-            feat_conv = self.convnext(x)
+            # We use ExternalStream to wrap the C++ created streams
+            s0 = torch.cuda.ExternalStream(self.orchestrator.get_stream(0))
+            s1 = torch.cuda.ExternalStream(self.orchestrator.get_stream(1))
+            s2 = torch.cuda.ExternalStream(self.orchestrator.get_stream(2))
+
+            with torch.cuda.stream(s0):
+                feat_bio = self.bioclip(x)
+            with torch.cuda.stream(s1):
+                feat_dino = self.dinov2(x)
+            with torch.cuda.stream(s2):
+                feat_conv = self.convnext(x)
+
+            # Wait for all backbones to finish
+            self.orchestrator.synchronize()
+
+        # 2. Run Fused Slotted Projection (Eliminates 'cat' and sequential GEMM)
+        # Note: proj_grouped is a nn.Sequential(nn.Linear, nn.LayerNorm)
+        linear = self.proj_grouped[0]
+        ln     = self.proj_grouped[1]
         
-        # Vectorized projection
-        fused_raw = torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
-        fused_proj = self.proj_grouped(fused_raw)
-        
-        # Split for normalization if needed, but better to normalize fused space
+        fused_proj = plantclef_ext.fused_projection(
+            feat_bio, feat_dino, feat_conv,
+            linear.weight, linear.bias,
+            ln.weight, ln.bias
+        )
+
+        # 3. Final Classifier
         return self.classifier(F.normalize(fused_proj, dim=1))
 
     # -----------------------------------------------------------------------

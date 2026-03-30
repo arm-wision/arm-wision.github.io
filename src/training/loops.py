@@ -255,14 +255,39 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
             # We can skip gradient tracking for ALL backbones.
             backbone_ctx = torch.no_grad() if optimizer is not None else torch.enable_grad()
             
-            with backbone_ctx:
-                feat_bio_raw  = chunked_backbone_forward(raw_model.bioclip,  images, chunk_size)
-                feat_dino_raw = chunked_backbone_forward(raw_model.dinov2,   images, chunk_size)
-                feat_conv_raw = chunked_backbone_forward(raw_model.convnext, images, chunk_size)
+            if hasattr(raw_model, 'has_ext') and raw_model.has_ext:
+                # --- OPTIMIZED BLACKWELL PATH ---
+                import plantclef_ext
+                with backbone_ctx:
+                    s0 = torch.cuda.ExternalStream(raw_model.orchestrator.get_stream(0))
+                    s1 = torch.cuda.ExternalStream(raw_model.orchestrator.get_stream(1))
+                    s2 = torch.cuda.ExternalStream(raw_model.orchestrator.get_stream(2))
 
-            # Blackwell-native grouped projection
-            fused_raw  = torch.cat([feat_bio_raw, feat_dino_raw, feat_conv_raw], dim=1)
-            fused_proj = raw_model.proj_grouped(fused_raw)
+                    with torch.cuda.stream(s0):
+                        feat_bio_raw = chunked_backbone_forward(raw_model.bioclip, images, chunk_size)
+                    with torch.cuda.stream(s1):
+                        feat_dino_raw = chunked_backbone_forward(raw_model.dinov2, images, chunk_size)
+                    with torch.cuda.stream(s2):
+                        feat_conv_raw = chunked_backbone_forward(raw_model.convnext, images, chunk_size)
+                    
+                    raw_model.orchestrator.synchronize()
+
+                # Fused Slotted Projection
+                linear = raw_model.proj_grouped[0]
+                ln     = raw_model.proj_grouped[1]
+                fused_proj = plantclef_ext.fused_projection(
+                    feat_bio_raw, feat_dino_raw, feat_conv_raw,
+                    linear.weight, linear.bias, ln.weight, ln.bias
+                )
+            else:
+                # Standard sequential fallback
+                with backbone_ctx:
+                    feat_bio_raw  = chunked_backbone_forward(raw_model.bioclip,  images, chunk_size)
+                    feat_dino_raw = chunked_backbone_forward(raw_model.dinov2,   images, chunk_size)
+                    feat_conv_raw = chunked_backbone_forward(raw_model.convnext, images, chunk_size)
+
+                fused_raw  = torch.cat([feat_bio_raw, feat_dino_raw, feat_conv_raw], dim=1)
+                fused_proj = raw_model.proj_grouped(fused_raw)
             
             # Slice for KD distillation (each backbone still aligns to BioCLIP)
             # BioCLIP projected is 0:512, DINO is 512:1024, ConvNeXt is 1024:1536
@@ -270,9 +295,7 @@ def run_epoch(model, train_loader, criterion, epoch, num_classes, device, optimi
             feat_dino = F.normalize(fused_proj[:, 512:1024], dim=1)
             feat_conv = F.normalize(fused_proj[:, 1024:1536],dim=1)
 
-            # Teacher reference (detached BioCLIP features)
             feat_bio_teacher = feat_bio.detach()
-
             outputs   = raw_model.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
             
             # Handle Asymmetric Loss (requires one-hot targets)
