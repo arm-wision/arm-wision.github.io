@@ -29,3 +29,10 @@ models/
 wandb/
 src/wandb/
 artifacts/
+
+# C++ Extensions build artifacts
+src/extensions/build/
+src/extensions/plantclef_ext.egg-info/
+
+# Submissions
+submission_plantclef*.csv
