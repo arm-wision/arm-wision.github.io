@@ -298,9 +298,13 @@ def train():
     )
 
     # FAST WARMUP: Train main classifier on cached features if needed
-    # This reaches 90%+ accuracy in minutes instead of hours
     fast_warmup_done = False
-    if os.path.exists(FEATURE_CACHE_PATH):
+    
+    # Check if we should skip warmup (if we are already deep into Phase 2)
+    has_p2_ckpt = any(os.path.exists(os.path.join("models", f)) for f in os.listdir("models") 
+                      if f.startswith("phase2_checkpoint_ep") and "_step_final" in f)
+    
+    if os.path.exists(FEATURE_CACHE_PATH) and not has_p2_ckpt:
         print("\n--- PHASE 2A: Fast Head Warmup (Using Cache) ---")
         raw_cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
         if 'features_pca' in raw_cache:
@@ -341,12 +345,12 @@ def train():
             val_cache = {k: torch.cat(v) for k, v in val_cache.items()}
             print(f"[Warmup] Cached {len(val_cache['label'])} validation samples.")
 
-            # 30 epochs on cached features to fully initialize the main head
+            # 50 epochs on cached features to fully initialize the main head
             # Added early stopping to skip if it plateaus early
-            print("Starting Extended Fast Warmup (Target: 30 Epochs)...")
+            print("Starting Extended Fast Warmup (Target: 50 Epochs)...")
             best_w_acc = 0.0
             w_patience = 0
-            for w_epoch in range(30):
+            for w_epoch in range(50):
                 run_phase1_cached(model_engine_warmup, raw_cache, criterion, 
                                   f"Warmup-{w_epoch}", num_classes, DEVICE)
 
