@@ -341,8 +341,12 @@ def train():
             val_cache = {k: torch.cat(v) for k, v in val_cache.items()}
             print(f"[Warmup] Cached {len(val_cache['label'])} validation samples.")
 
-            # 10 epochs on cached features to fully initialize the main head
-            for w_epoch in range(10):
+            # 30 epochs on cached features to fully initialize the main head
+            # Added early stopping to skip if it plateaus early
+            print("Starting Extended Fast Warmup (Target: 30 Epochs)...")
+            best_w_acc = 0.0
+            w_patience = 0
+            for w_epoch in range(30):
                 run_phase1_cached(model_engine_warmup, raw_cache, criterion, 
                                   f"Warmup-{w_epoch}", num_classes, DEVICE)
 
@@ -353,7 +357,6 @@ def train():
                     v_l = val_cache['label'].to(DEVICE)
                     with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
                         if hasattr(model, 'has_ext') and model.has_ext:
-                            # Fused CUDA Projection (with Float32 casts)
                             v_proj = plantclef_ext.fused_projection(
                                 v_b.float(), v_d.float(), v_c.float(), 
                                 model.proj_grouped[0].weight.float(), 
@@ -365,10 +368,18 @@ def train():
                         else:
                             v_proj = model.proj_grouped(torch.cat([v_b, v_d, v_c], dim=1))
                         v_out = model.classifier(F.normalize(v_proj, dim=1))
-                        # Simple accuracy for warmup tracking
                         v_acc = (v_out.argmax(1) == v_l).float().mean().item() * 100
+
                 print(f"Warmup-{w_epoch} Val Acc: {v_acc:.2f}%")
 
+                if v_acc > best_w_acc + 0.05:
+                    best_w_acc = v_acc
+                    w_patience = 0
+                else:
+                    w_patience += 1
+                    if w_patience >= 3:
+                        print(f"Warmup plateau detected at epoch {w_epoch}. Converged at {v_acc:.2f}%.")
+                        break
             # Clean up warmup engine
             model = model_engine_warmup.module
             del model_engine_warmup, warmup_opt, val_cache
