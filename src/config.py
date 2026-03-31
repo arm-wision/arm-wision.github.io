@@ -24,29 +24,22 @@ CLEANED_CSV = DATASETS[DATASET_MODE]["cleaned_csv"]
 
 # ---------------------------------------------------------------------------
 # Resolution & batch sizes
-# Timing targets:
-#   Feature extraction : 1-2 hours
-#   Phase 1            : 1-2 hours
-#   Phase 2 (LoRA)     : < 24 hours
 # ---------------------------------------------------------------------------
-RESOLUTION    = 384   # ConvNeXt native resolution; 26% cheaper than 448px (scales as res²)
-BATCH_SIZE    = 384   # Phase 1 extraction + head training
-P2_BATCH_SIZE = 96    # Reduced from 128 to accommodate Parallel Streams + torch.compile
+RESOLUTION    = 384   
+BATCH_SIZE    = 384   # Phase 1
+P2_BATCH_SIZE = 64    # Safe stability limit for Triple-Parallel Ensemble + torch.compile
 
 # ---------------------------------------------------------------------------
 # Chunked forward chunk sizes
-# EXTRACT_CHUNK_SIZE : feature extraction  (no_grad, safe to be large -> faster)
-# CHUNK_SIZE         : Phase 1 validation  (no_grad)
-# P2_CHUNK_SIZE      : Phase 2 training    (LoRA backward is small, moderate size)
 # ---------------------------------------------------------------------------
 EXTRACT_CHUNK_SIZE = 64   
 CHUNK_SIZE         = 32
-P2_CHUNK_SIZE      = 8    # Reduced from 16 to cap peak VRAM during parallel backbone execution
+P2_CHUNK_SIZE      = 4    # Ultra-low ceiling to prevent parallel backbone collisions
 
 # ---------------------------------------------------------------------------
 # Training schedule
 # ---------------------------------------------------------------------------
-ACCUMULATION_STEPS = 6    # Increased from 4 to maintain effective batch size (~576)
+ACCUMULATION_STEPS = 8    # Effective Batch = 512 (64 * 8)
 
 EPOCHS_PHASE1      = 20
 EPOCHS_PHASE2      = 5    
@@ -64,7 +57,7 @@ LORA_ALPHA   = 128
 LORA_DROPOUT = 0.05
 
 # ---------------------------------------------------------------------------
-# Backbone selection
+# Backbone selection (Blackwell Optimized)
 # ---------------------------------------------------------------------------
 MODE = "5090"   
 
