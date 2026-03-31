@@ -17,25 +17,28 @@
 - [x] **VRAM Balancing:** Optimized Batch 128 / Accumulation 4 for 32GB 5090.
 - [x] **Inductor Max-Autotune:** `torch.compile` enabled for Blackwell native kernels.
 
-### LoRA Fine-Tuning (Phase 2 - The 80% Push)
+## Phase 2: Synthetic Complexity & The Long-Tail
 - [x] **High-Rank LoRA ($R=64$):** Increased adaptation capacity for 7,800-class discrimination.
 - [x] **Stratified Sampling:** Balanced training set (max 500/species) to boost Macro-F1.
 - [x] **Asymmetric Loss (ASL):** Fused CUDA kernel for multi-label long-tail classification.
 - [x] **Lookahead Optimizer:** Finding flatter minima for better test generalization.
 - [x] **Taxonomic Distillation:** Knowledge transfer from BioCLIP (KD_ALPHA=0.3).
-- [ ] **Phase 2C Final Convergence:** Reach 80% Validation Accuracy.
+- [ ] **Taxonomic Hierarchy Loss (CUDA):** Custom kernel to penalize cross-family misclassifications more heavily than cross-genus.
+- [ ] **Uncertainty-Aware Rare Species Detection:** C++/CUDA implementation of predictive variance to improve recall on the tail.
 
 ## Phase 3: Domain Adaptation & High-Res Tiling
 - [ ] **Pseudo-Labeling:** Teacher-Student loop on unlabeled LUCAS quadrats.
-- [x] **CUDA SAHI Engine:**
-    - [x] **extract_tiles:** VRAM-native image slicing (10x speedup).
-    - [x] **fused_max_pool:** CUDA aggregation of 7,800-class probabilities.
-- [ ] **Hybrid Attention Hotspot Pass:** (~70% compute saving by skipping empty tiles).
+- [x] **CUDA SAHI Engine:** VRAM-native image slicing and fused max-pooling (10x speedup).
+- [ ] **Test-Time Augmentation (CUDA):** Fused kernel for multi-view (flip/rotate) inference with zero-latency aggregation.
+- [ ] **Vegetation Plot Structure Modelling:** Spatial attention kernel to model the 3D layout of plants within the quadrat.
 
 ## Phase 4: Metric Optimization & Ecological Guardrails
 - [x] **C++ Taxonomic Filter:** Bitset-based co-occurrence validation (runs in <1ms).
+- [ ] **Ecological Co-occurrence Prior (C++):** Bayesian prior engine using community-wide co-occurrence matrices.
+- [ ] **Cross-Modal Phenological Reasoning:** CUDA-fused attention between visual features and seasonal/climate metadata.
+- [ ] **Metadata Integration (GPS/Soil/Altitude):** High-speed C++ lookup for geographic constraints.
+- [ ] **Logit Ensemble Weighting (CUDA):** Learnable, per-class backbone weighting for optimal ensemble blending.
 - [ ] **Threshold Optimization:** Brent's Method for per-class F1 thresholds.
-- [ ] **Ecological Filtering:** SINR or GIS-based geographic constraint lookup.
 - [ ] **Final Ensembling:** Model Soup or multi-model averaging.
 
 ---
