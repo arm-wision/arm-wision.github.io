@@ -1,9 +1,9 @@
 import os
-# ---------------------------------------------------------------------------
-# Memory allocator -- set BEFORE importing torch so the allocator is
-# initialised correctly. expandable_segments reduces fragmentation by ~2-3GB,
-# directly freeing headroom for larger batches.
-# ---------------------------------------------------------------------------
+import sys
+# Ensure src/ is on the path so local packages (training/, models/, data/)
+# take precedence over any same-named packages installed globally
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 os.environ.setdefault(
     "PYTORCH_CUDA_ALLOC_CONF",
     "expandable_segments:True,max_split_size_mb:256"
@@ -12,729 +12,518 @@ os.environ.setdefault(
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.amp import autocast
+import torch.optim as optim
 from torch.optim.lr_scheduler import OneCycleLR
-from torchmetrics.classification import MulticlassF1Score, MulticlassPrecision, MulticlassRecall, MulticlassAccuracy
 import deepspeed
 from deepspeed.ops.adam import DeepSpeedCPUAdam
 import wandb
 import cudf
-from dotenv import load_dotenv
 from tqdm import tqdm
+from dotenv import load_dotenv
 import gc
+
+try:
+    import plantclef_ext
+except ImportError:
+    plantclef_ext = None
 
 load_dotenv()
 
 from models.ensemble import PlantEnsemble
 from data.dataloader import get_dali_loaders
-from config import (RAW_CSV, IMG_DIR, CLEANED_CSV, BATCH_SIZE, RESOLUTION,
-                    MODE, BIOCLIP_NAME, DINOV2_NAME, CONVNEXT_NAME)
+from training import (
+    LogitAdjustmentLoss, AsymmetricLoss, EarlyStopping,
+    extract_and_cache_features, CachedFeatureDataset,
+    validate, run_phase1_cached, run_epoch,
+    load_phase1_checkpoint, save_phase1_checkpoint,
+    load_phase1_heads_for_phase2,
+    load_phase2_checkpoint, save_epoch_checkpoint, save_deepspeed_checkpoint,
+    phase1_is_complete, fit_and_save, load_pca, apply_pca,
+)
+from config import (
+    RAW_CSV, IMG_DIR, CLEANED_CSV, BATCH_SIZE, P2_BATCH_SIZE, P2_CHUNK_SIZE,
+    RESOLUTION, MODE, BIOCLIP_NAME, DINOV2_NAME, CONVNEXT_NAME,
+    ACCUMULATION_STEPS, EPOCHS_PHASE1, EPOCHS_PHASE2, P2_SAMPLES_PER_EPOCH,
+    VAL_EVERY_N_EPOCHS, MAX_VAL_BATCHES, PATIENCE,
+    LORA_R, LORA_ALPHA, LORA_DROPOUT,
+    FEATURE_CACHE_PATH, P1_CKPT_PATH, P2_CKPT_DIR, P2_EPOCH_CKPT,
+    PCA_TRANSFORM_PATH,
+)
 
 # ---------------------------------------------------------------------------
 # Hardware flags
 # ---------------------------------------------------------------------------
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32  = True   # ~2x matmul throughput on Blackwell
-torch.backends.cudnn.allow_tf32        = True
-torch.backends.cuda.enable_flash_sdp(True)       # FlashAttention 2 for BioCLIP + DINOv2
+torch.backends.cudnn.benchmark           = True
+torch.backends.cuda.matmul.allow_tf32    = True
+torch.backends.cudnn.allow_tf32          = True
+torch.backends.cuda.enable_flash_sdp(True)
 torch.backends.cuda.enable_math_sdp(False)
 torch.backends.cuda.enable_mem_efficient_sdp(False)
 
-# Gradient accumulation: effective batch = BATCH_SIZE * ACCUMULATION_STEPS
-ACCUMULATION_STEPS = 1  # reduced -- batch=384 is large enough without accumulation
-
-# Chunked forward: each backbone processes CHUNK_SIZE images at a time,
-# keeping peak activation memory low while the logical batch stays large.
-# Increase BATCH_SIZE and tune CHUNK_SIZE to find the best GPU utilisation.
-CHUNK_SIZE = 32    # used for extraction and Phase 1 (no_grad, lower memory)
-P2_CHUNK_SIZE = 4   # Phase 2: unfrozen backbones store full gradient graphs
-P2_BATCH_SIZE = 16  # Phase 2: smaller batch than Phase 1 to fit gradient memory
-
-# Maximum batches to evaluate during validation.
-# At batch=256, 100 batches = ~25,600 images -- statistically representative
-# of the full val set (~0.5% accuracy difference) but ~8x faster.
-MAX_VAL_BATCHES = 100
-
-# DeepSpeed config: ZeRO Stage 1 offloads optimizer states to CPU RAM,
-# freeing ~4-8GB of VRAM that would otherwise hold Adam moment tensors.
-DS_CONFIG = {
+# ---------------------------------------------------------------------------
+# DeepSpeed configs
+# ---------------------------------------------------------------------------
+# Blackwell Optimisation: Disable all CPU offloading to leverage 32GB VRAM
+DS_CONFIG_P1 = {
     "zero_optimization": {
         "stage": 1,
-        "offload_optimizer": {
-            "device": "cpu",
-            "pin_memory": True      # pinned CPU RAM for faster PCIe transfers
-        }
+        # Offload disabled for 5090 Blackwell efficiency
     },
-    "bf16": {"enabled": True},      # consistent with autocast dtype
+    "bf16": {"enabled": True},
     "gradient_accumulation_steps": ACCUMULATION_STEPS,
     "train_micro_batch_size_per_gpu": BATCH_SIZE,
     "steps_per_print": 50,
     "wall_clock_breakdown": False,
-    "distributed_backend": "nccl",  # skip MPI entirely -- not needed on single GPU
+    "distributed_backend": "nccl",
 }
 
-FEATURE_CACHE_PATH = "models/phase1_feature_cache.pt"
-
-
-# ---------------------------------------------------------------------------
-# Loss functions
-# ---------------------------------------------------------------------------
-
-class LogitAdjustmentLoss(nn.Module):
-    """
-    Logit Adjustment: shifts logits by log(prior) to demand larger margins
-    for common classes and ease requirements for rare ones.
-    """
-    def __init__(self, class_counts, tau=1.0, base_criterion=None):
-        super().__init__()
-        counts = torch.tensor(class_counts, dtype=torch.float32)
-        priors = counts / counts.sum()
-        self.adjustment = (tau * torch.log(priors + 1e-12)).to('cuda')
-        self.criterion  = base_criterion if base_criterion else nn.BCEWithLogitsLoss()
-
-    def forward(self, x, y):
-        return self.criterion(x + self.adjustment, y)
-
-
-class AsymmetricLoss(nn.Module):
-    """
-    ASL: aggressively down-weights easy negatives across 7,800 classes
-    using separate gamma values for positive and negative samples.
-    """
-    def __init__(self, gamma_neg=4, gamma_pos=1, clip=0.05, eps=1e-8):
-        super().__init__()
-        self.gamma_neg = gamma_neg
-        self.gamma_pos = gamma_pos
-        self.clip = clip
-        self.eps  = eps
-
-    def forward(self, x, y):
-        xs_pos = torch.sigmoid(x)
-        xs_neg = 1 - xs_pos
-        if self.clip > 0:
-            xs_neg = (xs_neg + self.clip).clamp(max=1)
-        los_pos = y       * torch.log(xs_pos.clamp(min=self.eps))
-        los_neg = (1 - y) * torch.log(xs_neg.clamp(min=self.eps))
-        loss = los_pos + los_neg
-        with torch.no_grad():
-            pt      = xs_pos * y + xs_neg * (1 - y)
-            weights = (1 - pt).pow(self.gamma_pos * y + self.gamma_neg * (1 - y))
-        loss *= weights
-        return -loss.mean()
-
-
-class EarlyStopping:
-    def __init__(self, patience=5, min_delta=0):
-        self.patience   = patience
-        self.min_delta  = min_delta
-        self.counter    = 0
-        self.best_score = None
-        self.early_stop = False
-
-    def __call__(self, val_acc):
-        if self.best_score is None:
-            self.best_score = val_acc
-        elif val_acc < self.best_score + self.min_delta:
-            self.counter += 1
-            print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
-            if self.counter >= self.patience:
-                self.early_stop = True
-        else:
-            self.best_score = val_acc
-            self.counter = 0
-
-
-# ---------------------------------------------------------------------------
-# Chunked backbone forward
-# ---------------------------------------------------------------------------
-
-def chunked_backbone_forward(backbone, x, chunk_size=CHUNK_SIZE):
-    """
-    Run a backbone on x in chunks of chunk_size to cap peak activation memory.
-
-    With batch=64 and chunk_size=8, only 8 images worth of activations exist
-    in VRAM at any moment, while the gradient graph still covers the full batch.
-    This allows much larger logical batch sizes without OOM.
-    """
-    return torch.cat([backbone(chunk) for chunk in x.split(chunk_size)])
-
-
-# ---------------------------------------------------------------------------
-# Phase 1 feature caching
-# ---------------------------------------------------------------------------
-
-def extract_and_cache_features(model, loader, device, cache_path):
-    """
-    One-time extraction of frozen backbone features for all 1.4M images.
-    Cached features eliminate 10x redundant backbone compute across Phase 1 epochs.
-    """
-    print("[Feature Cache] Extracting backbone features (one-time pass)...")
-    model.eval()
-    all_bio, all_dino, all_conv, all_labels = [], [], [], []
-
-    with torch.no_grad():
-        for data in tqdm(loader, desc="Extracting features"):
-            images = data[0]['data'].to(memory_format=torch.channels_last)
-            labels = data[0]['label'].squeeze().long()
-            with autocast(device_type='cuda', dtype=torch.bfloat16):
-                # Use chunked forward during extraction to keep VRAM flat
-                feat_bio  = chunked_backbone_forward(model.bioclip,  images)
-                feat_dino = chunked_backbone_forward(model.dinov2,   images)
-                feat_conv = chunked_backbone_forward(model.convnext, images)
-            all_bio.append(feat_bio.cpu())
-            all_dino.append(feat_dino.cpu())
-            all_conv.append(feat_conv.cpu())
-            all_labels.append(labels.cpu())
-
-    loader.reset()
-    cache = {
-        'bio':    torch.cat(all_bio),
-        'dino':   torch.cat(all_dino),
-        'conv':   torch.cat(all_conv),
-        'labels': torch.cat(all_labels),
-    }
-    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-    torch.save(cache, cache_path)
-    print(f"[Feature Cache] Saved {len(cache['labels']):,} samples to {cache_path}")
-    return cache
-
-
-class CachedFeatureDataset(torch.utils.data.Dataset):
-    """Wraps cached backbone features for fast Phase 1 head training."""
-    def __init__(self, cache):
-        self.bio    = cache['bio']
-        self.dino   = cache['dino']
-        self.conv   = cache['conv']
-        self.labels = cache['labels']
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        return self.bio[idx], self.dino[idx], self.conv[idx], self.labels[idx]
-
-
-# ---------------------------------------------------------------------------
-# Validation
-# ---------------------------------------------------------------------------
-
-def validate(model, loader, criterion, num_classes, device, use_cache=False):
-    """
-    GPU-accelerated validation. All torchmetrics state stays on GPU;
-    single CPU transfer happens only at .compute().
-    """
-    model.eval()
-    val_loss = 0.0
-    f1_metric        = MulticlassF1Score(num_classes=num_classes, average='macro').to(device)
-    precision_metric = MulticlassPrecision(num_classes=num_classes, average='macro').to(device)
-    recall_metric    = MulticlassRecall(num_classes=num_classes, average='macro').to(device)
-    acc_metric       = MulticlassAccuracy(num_classes=num_classes, average='micro').to(device)
-
-    # no_grad means no activation graph -- safe to use 2x chunk size vs training
-    VAL_CHUNK_SIZE = CHUNK_SIZE * 2
-    i = 0  # guard against empty loader in val_loss/(i+1)
-
-    with torch.no_grad():
-        for i, data in enumerate(tqdm(loader, desc="Validating", unit="batch", leave=False)):
-            # Subset validation: stop after MAX_VAL_BATCHES for speed.
-            # At batch=256, 100 batches = ~25,600 images which is statistically
-            # representative -- within ~0.5% of full val set accuracy.
-            if i >= MAX_VAL_BATCHES:
-                break
-
-            if use_cache:
-                feat_bio, feat_dino, feat_conv, labels = [t.to(device) for t in data]
-                labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
-                with autocast(device_type='cuda', dtype=torch.bfloat16):
-                    fb = F.normalize(model.proj_bio(feat_bio),   dim=1)
-                    fd = F.normalize(model.proj_dino(feat_dino), dim=1)
-                    fc = F.normalize(model.proj_conv(feat_conv), dim=1)
-                    outputs = model.classifier(torch.cat([fb, fd, fc], dim=1))
-                    loss    = criterion(outputs, labels_one_hot)
-            else:
-                images = data[0]['data'].to(memory_format=torch.channels_last)
-                labels = data[0]['label'].squeeze().long()
-                labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
-                with autocast(device_type='cuda', dtype=torch.bfloat16):
-                    # 2x chunk size safe here -- no gradients stored in val
-                    feat_bio  = chunked_backbone_forward(model.bioclip,  images, VAL_CHUNK_SIZE)
-                    feat_dino = chunked_backbone_forward(model.dinov2,   images, VAL_CHUNK_SIZE)
-                    feat_conv = chunked_backbone_forward(model.convnext, images, VAL_CHUNK_SIZE)
-                    feat_bio  = F.normalize(model.proj_bio(feat_bio),   dim=1)
-                    feat_dino = F.normalize(model.proj_dino(feat_dino), dim=1)
-                    feat_conv = F.normalize(model.proj_conv(feat_conv), dim=1)
-                    outputs   = model.classifier(torch.cat([feat_bio, feat_dino, feat_conv], dim=1))
-                    loss      = criterion(outputs, labels_one_hot)
-
-            val_loss += loss.item()
-            _, predicted = outputs.max(1)
-            f1_metric.update(predicted, labels)
-            precision_metric.update(predicted, labels)
-            recall_metric.update(predicted, labels)
-            acc_metric.update(predicted, labels)
-
-    f1        = f1_metric.compute().item()
-    precision = precision_metric.compute().item()
-    recall    = recall_metric.compute().item()
-    acc       = acc_metric.compute().item() * 100.0
-    for m in [f1_metric, precision_metric, recall_metric, acc_metric]:
-        m.reset()
-    if not use_cache:
-        loader.reset()
-    return {"loss": val_loss / (i + 1), "acc": acc, "f1": f1,
-            "precision": precision, "recall": recall}
-
-
-# ---------------------------------------------------------------------------
-# Phase 1: cached head training
-# ---------------------------------------------------------------------------
-
-def run_phase1_cached(model, cache, optimizer, scheduler, criterion,
-                      epoch, num_classes, device):
-    """
-    Phase 1 trains only projection heads + classifier on cached features.
-    No backbone compute -- only lightweight MLP ops each step.
-    DeepSpeed engine handles optimizer step and gradient accumulation.
-    """
-    model.train()
-    train_acc_metric = MulticlassAccuracy(num_classes=num_classes, average='micro').to(device)
-
-    dataset    = CachedFeatureDataset(cache)
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=BATCH_SIZE * 4,
-        shuffle=True, num_workers=4, pin_memory=True
-    )
-
-    running_loss = 0.0
-    pbar = tqdm(enumerate(dataloader), total=len(dataloader),
-                desc=f"Epoch {epoch} [Phase1-Cached]")
-
-    for i, (feat_bio, feat_dino, feat_conv, labels) in pbar:
-        feat_bio  = feat_bio.to(device,  non_blocking=True)
-        feat_dino = feat_dino.to(device, non_blocking=True)
-        feat_conv = feat_conv.to(device, non_blocking=True)
-        labels    = labels.to(device,    non_blocking=True)
-        labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
-
-        with autocast(device_type='cuda', dtype=torch.bfloat16):
-            fb      = F.normalize(model.proj_bio(feat_bio),   dim=1)
-            fd      = F.normalize(model.proj_dino(feat_dino), dim=1)
-            fc      = F.normalize(model.proj_conv(feat_conv), dim=1)
-            outputs = model.classifier(torch.cat([fb, fd, fc], dim=1))
-            loss    = criterion(outputs, labels_one_hot)
-
-        # DeepSpeed handles loss scaling, gradient accumulation, and optimizer step
-        model.backward(loss)
-        model.step()
-
-        _, predicted = outputs.max(1)
-        train_acc_metric.update(predicted, labels)
-        running_loss += loss.item()
-
-        if i % 10 == 0:
-            acc = train_acc_metric.compute().item() * 100.0
-            pbar.set_postfix({"Loss": f"{running_loss/(i+1):.4f}", "Acc": f"{acc:.2f}%"})
-
-    train_acc = train_acc_metric.compute().item() * 100.0
-    train_acc_metric.reset()
-    return train_acc
-
-
-# ---------------------------------------------------------------------------
-# Phase 2: full fine-tuning
-# ---------------------------------------------------------------------------
-
-def run_epoch(model, train_loader, criterion, epoch, num_classes, device):
-    """
-    Phase 2 full fine-tuning with chunked backbone forward passes.
-
-    Validation is handled by the caller every VAL_EVERY_N_EPOCHS epochs
-    rather than every epoch, saving ~2-3 hours across a 30-epoch run.
-    """
-    model.train()
-    train_acc_metric = MulticlassAccuracy(num_classes=num_classes, average='micro').to(device)
-
-    pbar = tqdm(enumerate(train_loader), total=len(train_loader),
-                desc=f"Epoch {epoch} [Train]")
-    running_loss = 0.0
-
-    for i, data in pbar:
-        images = data[0]['data'].to(memory_format=torch.channels_last)
-        labels = data[0]['label'].squeeze().long()
-        labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
-
-        with autocast(device_type='cuda', dtype=torch.bfloat16):
-            # P2_CHUNK_SIZE is smaller than CHUNK_SIZE -- unfrozen backbones
-            # store gradients so activation memory is ~2x higher than extraction
-            feat_bio  = chunked_backbone_forward(model.module.bioclip,  images, P2_CHUNK_SIZE)
-            feat_dino = chunked_backbone_forward(model.module.dinov2,   images, P2_CHUNK_SIZE)
-            feat_conv = chunked_backbone_forward(model.module.convnext, images, P2_CHUNK_SIZE)
-
-            feat_bio  = F.normalize(model.module.proj_bio(feat_bio),   dim=1)
-            feat_dino = F.normalize(model.module.proj_dino(feat_dino), dim=1)
-            feat_conv = F.normalize(model.module.proj_conv(feat_conv), dim=1)
-
-            outputs = model.module.classifier(
-                torch.cat([feat_bio, feat_dino, feat_conv], dim=1)
-            )
-            loss = criterion(outputs, labels_one_hot)
-
-        model.backward(loss)
-        model.step()
-
-        _, predicted = outputs.max(1)
-        train_acc_metric.update(predicted, labels)
-        running_loss += loss.item()
-
-        if i % 10 == 0:
-            acc = train_acc_metric.compute().item() * 100.0
-            pbar.set_postfix({"Loss": f"{running_loss/(i+1):.4f}", "Acc": f"{acc:.2f}%"})
-
-    train_loader.reset()
-
-    train_acc_final = train_acc_metric.compute().item() * 100.0
-    train_acc_metric.reset()
-
-    wandb.log({"epoch": epoch, "train_acc": train_acc_final, "lr": model.get_lr()[0]})
-    print(f"[Epoch {epoch}] Train Acc: {train_acc_final:.2f}%")
-    return train_acc_final
+# Phase 2: no CPU offload -- LoRA makes optimizer states tiny, keep on GPU
+DS_CONFIG_P2 = {
+    "zero_optimization": {
+        "stage": 1
+    },
+    "zero_allow_untested_optimizer": True,
+    "bf16": {"enabled": True},
+    "gradient_accumulation_steps": ACCUMULATION_STEPS,
+    "train_micro_batch_size_per_gpu": P2_BATCH_SIZE,
+    "steps_per_print": 50,
+    "wall_clock_breakdown": False,
+    "distributed_backend": "nccl",
+}
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
+def get_pca_module(pca, device):
+    """
+    Convert a fitted sklearn IncrementalPCA into a torch.nn.Module
+    for fast GPU-native transformation.
+    """
+    import torch.nn as nn
+    n_components = pca.n_components_
+    d_in = pca.components_.shape[1]
+    
+    layer = nn.Linear(d_in, n_components)
+    layer.weight.data = torch.from_numpy(pca.components_).float()
+    layer.bias.data   = torch.from_numpy(-pca.mean_ @ pca.components_.T).float()
+    
+    return layer.to(device)
+
+
 def train():
     """
     Progressive 2-Stage Training:
 
-    Phase 1 — Feature Caching + Head Warmup (DeepSpeed ZeRO Stage 1)
-      Backbones run once; features cached. Head trains on tensors only.
+    Phase 1 — Feature Caching + Head Warmup
+      Auto-skipped if a complete Phase 1 checkpoint already exists.
+      Backbones frozen; features extracted once (~1-1.5 hrs at 384px).
+      Only projection heads + classifier train (~30-40 min for 10 epochs).
 
-    Phase 2 — Full Fine-Tuning (DeepSpeed ZeRO Stage 1 + Chunked Forward)
-      All weights active. Chunked backbone forward caps peak VRAM, allowing
-      batch sizes far beyond what fits naively. ZeRO offloads optimizer states.
+    Phase 2 — LoRA Fine-Tuning
+      LoRA adapters on DINOv2 + ConvNeXt (~5M trainable params vs ~800M).
+      BioCLIP fully frozen throughout.
+      batch=256, 3 epochs -- target < 24 hours total.
     """
     wandb.init(
         project="plantclef-2026",
-        name=f"ensemble-optimised-{MODE.lower()}",
+        name=f"ensemble-lora-{MODE.lower()}",
         config={
-            "lr_phase1":             1e-3,
-            "lr_phase2_backbone":    5e-6,
-            "lr_phase2_head":        2e-4,
-            "architecture":          "Triple-Threat(Bio+Dino+Conv)",
-            "precision":             "bfloat16",
-            "resolution":            RESOLUTION,
-            "batch_size":            BATCH_SIZE,
-            "chunk_size":            CHUNK_SIZE,
-            "p2_chunk_size":         P2_CHUNK_SIZE,
-            "p2_batch_size":         P2_BATCH_SIZE,
-            "accumulation_steps":    ACCUMULATION_STEPS,
-            "effective_batch_size":  BATCH_SIZE * ACCUMULATION_STEPS,
-            "epochs_phase1":         10,
-            "epochs_phase2":         20,  # reduced -- OneCycleLR converges faster
-            "scheduler":             "OneCycleLR",
-            "zero_stage":            1,
-            "asl_gamma_neg":         4,
-            "asl_gamma_pos":         1,
-            "bioclip_backbone":      BIOCLIP_NAME,
-            "dinov2_backbone":       DINOV2_NAME,
-            "convnext_backbone":     CONVNEXT_NAME,
-            "feature_caching":       True,
-            "tf32_matmul":           True,
-            "flash_attention":       True,
+            "resolution":          RESOLUTION,
+            "batch_size":          BATCH_SIZE,
+            "p2_batch_size":       P2_BATCH_SIZE,
+            "epochs_phase1":       EPOCHS_PHASE1,
+            "epochs_phase2":       EPOCHS_PHASE2,
+            "lora_r":              LORA_R,
+            "lora_alpha":          LORA_ALPHA,
+            "lora_dropout":        LORA_DROPOUT,
+            "lr_phase1":           1e-3,
+            "lr_phase2_lora":      1e-4,
+            "lr_phase2_head":      2e-4,
+            "patience":            PATIENCE,
+            "bioclip_backbone":    BIOCLIP_NAME,
+            "dinov2_backbone":     DINOV2_NAME,
+            "convnext_backbone":   CONVNEXT_NAME,
+            "phase2_strategy":     "LoRA(DINOv2+ConvNeXt)+FrozenBioCLIP",
         }
     )
     config = wandb.config
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     csv_path = CLEANED_CSV if os.path.exists(CLEANED_CSV) else RAW_CSV
+    os.makedirs("models", exist_ok=True)
 
+    # Load class counts for Logit Adjustment then free GPU RAM immediately
     df     = cudf.read_csv(csv_path, sep=';')
     counts = df['species_id'].value_counts().sort_index().to_arrow().to_pylist()
     del df
     torch.cuda.empty_cache()
 
-    asl       = AsymmetricLoss(gamma_neg=config.asl_gamma_neg, gamma_pos=config.asl_gamma_pos)
-    criterion = LogitAdjustmentLoss(class_counts=counts, base_criterion=asl)
-
-    os.makedirs("models", exist_ok=True)
+    # Asymmetric Loss with Fused CUDA Kernel for multi-label long-tail
+    num_classes = len(counts)
+    logit_adj   = (1.0 * torch.log(torch.tensor(counts, dtype=torch.float32) / sum(counts))).to(DEVICE)
+    criterion   = AsymmetricLoss(logit_adjustments=logit_adj, use_fused=True)
 
     # -----------------------------------------------------------------------
     # PHASE 1: Feature Caching + Head Warmup
+    # Auto-skipped if Phase 1 already completed (checkpoint covers all epochs)
     # -----------------------------------------------------------------------
-    print("\n--- PHASE 1: Feature Caching + Head Warmup ---")
-    model_engine_p1 = None
-    train_loader, val_loader, num_classes = get_dali_loaders(
-        csv_path, IMG_DIR, batch_size=config.batch_size, sampling_mode='natural'
-    )
-
-    model = PlantEnsemble(
-        num_classes=num_classes,
-        input_res=config.resolution,
-        bioclip_name=config.bioclip_backbone,
-        dinov2_name=config.dinov2_backbone,
-        convnext_name=config.convnext_backbone
-    ).to(DEVICE).to(memory_format=torch.channels_last)
-
-    model.set_grad_checkpointing(True)
-    model.freeze_backbones()
-
-    if os.path.exists(FEATURE_CACHE_PATH):
-        print(f"[Feature Cache] Loading from {FEATURE_CACHE_PATH}...")
-        with tqdm(total=1, desc="Loading feature cache", unit="file") as pbar:
-            cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
-            pbar.update(1)
-    else:
-        cache = extract_and_cache_features(model, train_loader, DEVICE, FEATURE_CACHE_PATH)
-
-    # torch.compile removed -- incompatible with chunked forward + gradient
-    # checkpointing + DeepSpeed. Caused CUDAGraph overwrites, key prefix
-    # mismatches on checkpoint load, and inductor OOM in Phase 2.
-    # Re-evaluate only after training is confirmed stable end-to-end.
-
-    # Phase 1: only head params -- ZeRO Stage 1 for optimizer state offload
-    phase1_params = (
-        list(model.proj_bio.parameters())  +
-        list(model.proj_dino.parameters()) +
-        list(model.proj_conv.parameters()) +
-        list(model.classifier.parameters())
-    )
-    # DeepSpeedCPUAdam is required for ZeRO offload -- it runs the optimizer
-    # step directly on CPU RAM where the states live, avoiding PCIe round-trips.
-    optimizer_p1 = DeepSpeedCPUAdam(phase1_params, lr=config.lr_phase1,
-                                    weight_decay=0.05)
-
-    cache_dataset      = CachedFeatureDataset(cache)
-    steps_per_epoch_p1 = len(cache_dataset) // (BATCH_SIZE * 4 * ACCUMULATION_STEPS)
-    # +5 buffer per epoch avoids off-by-one where DataLoader drops remainders
-    # unevenly and DeepSpeed steps the scheduler slightly more than expected
-    total_steps_p1     = (steps_per_epoch_p1 + 5) * config.epochs_phase1
-
-    scheduler_p1 = OneCycleLR(optimizer_p1, max_lr=config.lr_phase1,
-                               total_steps=total_steps_p1, pct_start=0.3,
-                               anneal_strategy='cos')
-
-    # Wrap with DeepSpeed for ZeRO optimizer state offload
-    model_engine_p1, optimizer_p1, _, scheduler_p1 = deepspeed.initialize(
-        model=model,
-        optimizer=optimizer_p1,
-        lr_scheduler=scheduler_p1,
-        config=DS_CONFIG,
-    )
-
-    best_val_acc = 0.0
-
-    # Resume Phase 1 from checkpoint if one exists
-    P1_CKPT_PATH = "models/phase1_checkpoint.pth"
-    start_epoch_p1 = 0
-    if os.path.exists(P1_CKPT_PATH):
-        p1_ckpt = torch.load(P1_CKPT_PATH, map_location=DEVICE, weights_only=False)
-        # Strip _orig_mod. prefix if checkpoint was saved while torch.compile was active
-        saved_state = p1_ckpt['model_state']
-        if any('_orig_mod.' in k for k in saved_state.keys()):
-            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
-        model_engine_p1.module.load_state_dict(saved_state)
-        start_epoch_p1 = p1_ckpt['epoch'] + 1
-        best_val_acc   = p1_ckpt.get('best_val_acc', 0.0)
-        print(f"[Phase1] Resuming from epoch {start_epoch_p1} "
-              f"(best val acc so far: {best_val_acc:.2f}%)")
-
-    for epoch in range(start_epoch_p1, config.epochs_phase1):
-        train_acc = run_phase1_cached(
-            model_engine_p1, cache, optimizer_p1, scheduler_p1,
-            criterion, epoch, num_classes, DEVICE
-        )
-        metrics = validate(model_engine_p1.module, val_loader, criterion,
-                           num_classes, DEVICE, use_cache=False)
-        print(f"\n[Phase1 Epoch {epoch}] Train Acc: {train_acc:.2f}%  "
-              f"Val Acc: {metrics['acc']:.2f}%  F1: {metrics['f1']:.4f}")
-        wandb.log({"epoch": epoch, "train_acc": train_acc,
-                   **{f"val_{k}": v for k, v in metrics.items()}})
-
-        # Save Phase 1 checkpoint after every epoch
-        if metrics['acc'] > best_val_acc:
-            best_val_acc = metrics['acc']
-        torch.save({
-            'epoch':        epoch,
-            'model_state':  model_engine_p1.module.state_dict(),
-            'best_val_acc': best_val_acc,
-        }, P1_CKPT_PATH)
-        print(f"[Phase1] Checkpoint saved (epoch {epoch})")
-
-    # -----------------------------------------------------------------------
-    # PHASE 2: Full Fine-Tuning with Differential LR + Chunked Forward
-    # -----------------------------------------------------------------------
-    print("\n--- PHASE 2: Full Fine-Tuning (Long-Tail Calibration) ---")
-
-    # Free Phase 1 resources before Phase 2 allocates new ones.
-    # cache_dataset holds tensor refs into cache so must be deleted first.
-    if model_engine_p1 is not None:
-        raw_model = model_engine_p1.module
-        del model_engine_p1
-        del optimizer_p1
-        del scheduler_p1
-    else:
-        raw_model = model
-
-    del cache_dataset
-    del cache
-    del train_loader
-    del val_loader
-    gc.collect()
-    torch.cuda.empty_cache()
+    skip_phase1 = phase1_is_complete()
     
-    DS_CONFIG["train_micro_batch_size_per_gpu"] = P2_BATCH_SIZE
+    # Load model and apply Blackwell-native compilation
+    model = PlantEnsemble(
+        num_classes=num_classes, 
+        input_res=RESOLUTION,
+        bioclip_name=BIOCLIP_NAME,
+        dinov2_name=DINOV2_NAME,
+        convnext_name=CONVNEXT_NAME,
+    ).to(DEVICE).to(memory_format=torch.channels_last)
+    
+    # Blackwell Optimisation: max-autotune uses Triton for specialized Blackwell kernels
+    if getattr(config, 'USE_COMPILE', False):
+        print("[Blackwell] Applying torch.compile(model, mode='max-autotune')...")
+        model = torch.compile(model, mode="max-autotune")
+
+    if skip_phase1:
+        print(f"\n[Phase1] Complete checkpoint found -- skipping Phase 1.")
+        # Need to initialize loaders to get total samples etc, though we skip P1
+        _t_loader, _v_loader, _ = get_dali_loaders(csv_path, IMG_DIR, batch_size=BATCH_SIZE)
+        model.set_grad_checkpointing(True)
+        model.freeze_backbones()
+        del _t_loader, _v_loader
+        gc.collect()
+        torch.cuda.empty_cache()
+    else:
+        print("\n--- PHASE 1: Feature Caching + Head Warmup ---")
+        train_loader, val_loader, _ = get_dali_loaders(
+            csv_path, IMG_DIR, batch_size=BATCH_SIZE,
+            resolution=RESOLUTION, sampling_mode='natural'
+        )
+        
+        model.set_grad_checkpointing(True)
+        model.freeze_backbones()
+
+        # Load or extract feature cache
+        if os.path.exists(FEATURE_CACHE_PATH):
+            print(f"[Feature Cache] Loading from {FEATURE_CACHE_PATH}...")
+            with tqdm(total=1, desc="Loading feature cache", unit="file") as pbar:
+                cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
+                pbar.update(1)
+            
+            # Blackwell: Load entire 22.5GB cache to GPU to eliminate PCIe bottlenecks
+            # The 5090 has 32GB VRAM, plenty for the 22.5GB cache + model weights.
+            if getattr(config, 'LOAD_CACHE_TO_GPU', False):
+                print("[Blackwell] Moving feature cache to GPU memory...")
+                for k in cache:
+                    if torch.is_tensor(cache[k]):
+                        cache[k] = cache[k].to(DEVICE, non_blocking=True)
+        else:
+            cache = extract_and_cache_features(model, train_loader, DEVICE, FEATURE_CACHE_PATH)
+
+        # Fit PCA on cached features (or load existing transform)
+        if 'features_pca' not in cache:
+            if os.path.exists(PCA_TRANSFORM_PATH):
+                print("[PCA] Loading existing transform...")
+                pca   = load_pca(PCA_TRANSFORM_PATH)
+                cache = apply_pca(cache, pca)
+            else:
+                print("[PCA] Fitting PCA on cached features...")
+                cache, pca = fit_and_save(cache)
+            torch.save(cache, FEATURE_CACHE_PATH)
+            print("[PCA] Cache updated with PCA features.")
+        else:
+            # Need the PCA object to build the validation module
+            pca = load_pca(PCA_TRANSFORM_PATH)
+
+        # GPU-native PCA for validation
+        pca_module = get_pca_module(pca, DEVICE)
+
+        # Phase 1 trains only the phase1_head (linear probe on PCA features).
+        # Much faster than training proj heads on raw features (~3x smaller input).
+        # Phase 2 still uses full proj heads + ensemble (unaffected by this).
+        phase1_params  = list(model.phase1_head.parameters())
+        optimizer_p1   = optim.AdamW(phase1_params, lr=config.lr_phase1,
+                                     weight_decay=0.05, fused=True)
+
+        from training import CachedPCADataset
+        cache_dataset      = CachedPCADataset(cache) if 'features_pca' in cache else CachedFeatureDataset(cache)
+        steps_per_epoch_p1 = len(cache_dataset) // (BATCH_SIZE * 4 * ACCUMULATION_STEPS)
+        total_steps_p1     = (steps_per_epoch_p1 + 5) * EPOCHS_PHASE1
+
+        scheduler_p1 = OneCycleLR(optimizer_p1, max_lr=config.lr_phase1,
+                                   total_steps=total_steps_p1, pct_start=0.3,
+                                   anneal_strategy='cos')
+
+        model_engine_p1, optimizer_p1, _, scheduler_p1 = deepspeed.initialize(
+            model=model, optimizer=optimizer_p1,
+            lr_scheduler=scheduler_p1, config=DS_CONFIG_P1,
+        )
+
+        best_val_acc   = 0.0
+        start_epoch_p1, best_val_acc = load_phase1_checkpoint(model_engine_p1, DEVICE)
+
+        for epoch in range(start_epoch_p1, EPOCHS_PHASE1):
+            train_acc = run_phase1_cached(
+                model_engine_p1, cache, criterion, epoch, num_classes, DEVICE
+            )
+            # Use pca_module during Phase 1 validation to evaluate the correct head
+            metrics = validate(model_engine_p1.module, val_loader, criterion,
+                               num_classes, DEVICE, pca_layer=pca_module)
+            print(f"\n[Phase1 Epoch {epoch}] Train: {train_acc:.2f}%  "
+                  f"Val: {metrics['acc']:.2f}%  F1: {metrics['f1']:.4f}")
+            wandb.log({"epoch": epoch, "train_acc": train_acc,
+                       **{f"val_{k}": v for k, v in metrics.items()}})
+
+            if metrics['acc'] > best_val_acc:
+                best_val_acc = metrics['acc']
+            save_phase1_checkpoint(model_engine_p1, epoch, best_val_acc)
+
+        # Free Phase 1 engine + data before Phase 2
+        model = model_engine_p1.module
+        del model_engine_p1, optimizer_p1, scheduler_p1
+        del cache_dataset, cache, train_loader, val_loader
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    # -----------------------------------------------------------------------
+    # PHASE 2: LoRA Fine-Tuning
+    # -----------------------------------------------------------------------
+    print("\n--- PHASE 2: LoRA Fine-Tuning (Long-Tail Calibration) ---")
 
     train_loader, val_loader, _ = get_dali_loaders(
-        csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE, sampling_mode='sqrt'
+        csv_path, IMG_DIR, batch_size=P2_BATCH_SIZE,
+        resolution=RESOLUTION, sampling_mode='natural',
+        samples_per_epoch=P2_SAMPLES_PER_EPOCH
     )
 
-    # Reload best Phase 1 checkpoint before Phase 2 -- the final Phase 1 epoch
-    # trains at near-zero LR (end of OneCycleLR) so may be slightly worse than
-    # the best epoch. Always start Phase 2 from the best Phase 1 weights.
-    if os.path.exists(P1_CKPT_PATH):
-        print("[Phase2] Loading best Phase 1 weights before fine-tuning...")
-        p1_best = torch.load(P1_CKPT_PATH, map_location=DEVICE, weights_only=False)
-        # Strip _orig_mod. prefix if checkpoint was saved while torch.compile was active
-        saved_state = p1_best['model_state']
-        if any('_orig_mod.' in k for k in saved_state.keys()):
-            saved_state = {k.replace('._orig_mod.', '.'): v for k, v in saved_state.items()}
-        raw_model.load_state_dict(saved_state)
-        print(f"[Phase2] Loaded Phase 1 best (epoch {p1_best['epoch']}, "
-              f"val acc: {p1_best.get('best_val_acc', 0.0):.2f}%)")
+    # FAST WARMUP: Train main classifier on cached features if needed
+    fast_warmup_done = False
+    
+    # Check if we should skip warmup (if we are already deep into Phase 2)
+    has_p2_ckpt = any(os.path.exists(os.path.join("models", f)) for f in os.listdir("models") 
+                      if f.startswith("phase2_checkpoint_ep") and "_step_final" in f)
+    
+    if os.path.exists(FEATURE_CACHE_PATH) and not has_p2_ckpt:
+        print("\n--- PHASE 2A: Fast Head Warmup (Using Cache) ---")
+        raw_cache = torch.load(FEATURE_CACHE_PATH, weights_only=False)
+        if 'features_pca' in raw_cache:
+            pca_features = raw_cache.pop('features_pca')
+            
+            head_params = list(model.proj_grouped.parameters()) + list(model.classifier.parameters())
+            warmup_opt  = optim.AdamW(head_params, lr=1e-3, weight_decay=0.01, fused=True)
+            model_engine_warmup, _, _, _ = deepspeed.initialize(
+                model=model, optimizer=warmup_opt, config=DS_CONFIG_P1
+            )
 
-    # Reset best_val_acc so Phase 2 tracks its own best independently.
-    # Without this, early stopping could fire after 3 validations if Phase 2
-    # never beats Phase 1's val acc -- and no best checkpoint would be saved.
-    best_val_acc = 0.0
-    raw_model.unfreeze_backbones()
+            # --- CACHE VALIDATION FEATURES ---
+            print("[Warmup] Pre-extracting validation features for instant metrics...")
+            val_cache = {'bio': [], 'dino': [], 'conv': [], 'label': []}
+            model.eval()
+            with torch.no_grad():
+                for i, v_data in enumerate(tqdm(val_loader, desc="Caching Val", leave=False)):
+                    if i >= MAX_VAL_BATCHES: break
+                    v_imgs = v_data[0]['data'].to(DEVICE, memory_format=torch.channels_last)
+                    v_lbls = v_data[0]['label'].to(DEVICE).squeeze().long()
 
-    # Differential LR: backbones at 5e-6, heads at 2e-4
-    optimizer_p2 = DeepSpeedCPUAdam([
-        {'params': raw_model.bioclip.parameters(),    'lr': config.lr_phase2_backbone},
-        {'params': raw_model.dinov2.parameters(),     'lr': config.lr_phase2_backbone},
-        {'params': raw_model.convnext.parameters(),   'lr': config.lr_phase2_backbone},
-        {'params': raw_model.proj_bio.parameters(),   'lr': config.lr_phase2_head},
-        {'params': raw_model.proj_dino.parameters(),  'lr': config.lr_phase2_head},
-        {'params': raw_model.proj_conv.parameters(),  'lr': config.lr_phase2_head},
-        {'params': raw_model.classifier.parameters(), 'lr': config.lr_phase2_head},
-    ], weight_decay=0.01)
+                    with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+                        # Use parallel streams if available
+                        if hasattr(model, 'has_ext') and model.has_ext:
+                            s0 = torch.cuda.ExternalStream(model.orchestrator.get_stream(0))
+                            s1 = torch.cuda.ExternalStream(model.orchestrator.get_stream(1))
+                            s2 = torch.cuda.ExternalStream(model.orchestrator.get_stream(2))
+                            with torch.cuda.stream(s0): b = model.bioclip(v_imgs)
+                            with torch.cuda.stream(s1): d = model.dinov2(v_imgs)
+                            with torch.cuda.stream(s2): c = model.convnext(v_imgs)
+                            model.orchestrator.synchronize()
+                        else:
+                            b, d, c = model.bioclip(v_imgs), model.dinov2(v_imgs), model.convnext(v_imgs)
+
+                    val_cache['bio'].append(b.cpu()); val_cache['dino'].append(d.cpu())
+                    val_cache['conv'].append(c.cpu()); val_cache['label'].append(v_lbls.cpu())
+
+            val_cache = {k: torch.cat(v) for k, v in val_cache.items()}
+            print(f"[Warmup] Cached {len(val_cache['label'])} validation samples.")
+
+            # 50 epochs on cached features to fully initialize the main head
+            # Added early stopping to skip if it plateaus early
+            print("Starting Extended Fast Warmup (Target: 50 Epochs)...")
+            best_w_acc = 0.0
+            w_patience = 0
+            for w_epoch in range(50):
+                run_phase1_cached(model_engine_warmup, raw_cache, criterion, 
+                                  f"Warmup-{w_epoch}", num_classes, DEVICE)
+
+                # --- INSTANT VALIDATION ---
+                model.eval()
+                with torch.no_grad():
+                    v_b, v_d, v_c = val_cache['bio'].to(DEVICE), val_cache['dino'].to(DEVICE), val_cache['conv'].to(DEVICE)
+                    v_l = val_cache['label'].to(DEVICE)
+                    with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+                        if hasattr(model, 'has_ext') and model.has_ext:
+                            v_proj = plantclef_ext.fused_projection(
+                                v_b.float(), v_d.float(), v_c.float(), 
+                                model.proj_grouped[0].weight.float(), 
+                                model.proj_grouped[0].bias.float(), 
+                                model.proj_grouped[1].weight.float(), 
+                                model.proj_grouped[1].bias.float()
+                            )
+                            v_proj = v_proj.to(torch.bfloat16)
+                        else:
+                            v_proj = model.proj_grouped(torch.cat([v_b, v_d, v_c], dim=1))
+                        v_out = model.classifier(F.normalize(v_proj, dim=1))
+                        v_acc = (v_out.argmax(1) == v_l).float().mean().item() * 100
+
+                print(f"Warmup-{w_epoch} Val Acc: {v_acc:.2f}%")
+
+                if v_acc > best_w_acc + 0.05:
+                    best_w_acc = v_acc
+                    w_patience = 0
+                else:
+                    w_patience += 1
+                    if w_patience >= 3:
+                        print(f"Warmup plateau detected at epoch {w_epoch}. Converged at {v_acc:.2f}%.")
+                        break
+            # Clean up warmup engine
+            model = model_engine_warmup.module
+            del model_engine_warmup, warmup_opt, val_cache
+
+            raw_cache['features_pca'] = pca_features
+            del raw_cache
+            gc.collect()
+            torch.cuda.empty_cache()
+            fast_warmup_done = True
+            print("Fast Warmup Complete. Classifier is now fully initialized.")
+            
+            # Validate after warmup to see real progress
+            print("[Warmup] Running validation...")
+            metrics = validate(model, val_loader, criterion, num_classes, DEVICE)
+            print(f"Post-Warmup Accuracy: {metrics['acc']:.2f}%")
+
+    # Note: load_phase1_heads_for_phase2 removed because it was overwriting 
+    # the Fast Warmup with untrained random weights from the P1 probe checkpoint.
+
+    # -----------------------------------------------------------------------
+    # PHASE 2 - Part A: Head Warmup (Frozen Backbones)
+    # -----------------------------------------------------------------------
+    # Resume check BEFORE warmup
+    resumed_epoch, _, resumed_step = load_phase2_checkpoint(model, DEVICE, tag="checkpoint_latest")
+    
+    if (resumed_epoch is None or resumed_epoch < EPOCHS_PHASE1) and not fast_warmup_done:
+        print("\n--- PHASE 2A: Head Warmup (Frozen Backbones) ---")
+        model.freeze_backbones()
+        
+        warmup_optimizer = optim.AdamW(
+            [p for p in model.parameters() if p.requires_grad],
+            lr=2e-4, weight_decay=0.01
+        )
+        
+        # One warmup epoch (Epoch -1)
+        start_step = resumed_step if (resumed_epoch == -1 or resumed_epoch == EPOCHS_PHASE1 - 1) else 0
+        run_epoch(model, train_loader, criterion, -1, num_classes, DEVICE, 
+                  optimizer=warmup_optimizer, start_step=start_step, 
+                  p2_chunk_size=P2_BATCH_SIZE)
+        print("Warmup complete. Classifier is now initialized.")
+    else:
+        print(f"\n[Phase2A] Skipping warmup (Already at epoch {resumed_epoch})")
+
+    # -----------------------------------------------------------------------
+    # PHASE 2 - Part B: LoRA Fine-Tuning
+    # -----------------------------------------------------------------------
+    print("\n--- PHASE 2B: LoRA Fine-Tuning (Long-Tail Calibration) ---")
+    
+    # Apply LoRA to DINOv2 + ConvNeXt; BioCLIP stays frozen
+    model.apply_lora(r=LORA_R, lora_alpha=LORA_ALPHA, lora_dropout=LORA_DROPOUT)
+
+    # Separate optimizer param groups: lower LR for LoRA, higher for heads
+    lora_params = [p for name, p in model.named_parameters()
+                   if 'lora_' in name and p.requires_grad]
+    head_params = [p for name, p in model.named_parameters()
+                   if 'lora_' not in name and p.requires_grad]
+
+    # Freeze BioCLIP explicitly (LoRA was not applied to it)
+    for param in model.bioclip.parameters():
+        param.requires_grad = False
+
+    # Phase 2 optimizer
+    optimizer_p2 = optim.AdamW([
+        {'params': lora_params, 'lr': config.lr_phase2_lora},
+        {'params': head_params, 'lr': config.lr_phase2_head},
+    ], weight_decay=0.01, fused=True)
+
+    # Wrap with Lookahead to find flatter minima
+    from timm.optim import Lookahead
+    optimizer_p2 = Lookahead(optimizer_p2, alpha=0.5, k=6)
 
     steps_per_epoch_p2 = len(train_loader)
-    # +5 buffer per epoch -- same fix as Phase 1, prevents OneCycleLR ValueError
-    # when DeepSpeed steps the scheduler one extra time beyond total_steps
-    total_steps_p2     = (steps_per_epoch_p2 + 5) * config.epochs_phase2
+    total_steps_p2     = (steps_per_epoch_p2 + 5) * EPOCHS_PHASE2
 
     scheduler_p2 = OneCycleLR(
         optimizer_p2,
-        max_lr=[config.lr_phase2_backbone] * 3 + [config.lr_phase2_head] * 4,
+        max_lr=[config.lr_phase2_lora, config.lr_phase2_head],
         total_steps=total_steps_p2,
         pct_start=0.1,
         anneal_strategy='cos',
     )
 
     model_engine_p2, optimizer_p2, _, scheduler_p2 = deepspeed.initialize(
-        model=raw_model,
-        optimizer=optimizer_p2,
-        lr_scheduler=scheduler_p2,
-        config=DS_CONFIG,
+        model=model, optimizer=optimizer_p2,
+        lr_scheduler=scheduler_p2, config=DS_CONFIG_P2,
     )
 
-    # Validate every N epochs rather than every epoch.
-    VAL_EVERY_N_EPOCHS = 5
-    early_stopping = EarlyStopping(patience=3, min_delta=0.001)
+    early_stopping = EarlyStopping(patience=PATIENCE, min_delta=0.001)
+    best_val_acc   = 0.0
+    start_epoch    = EPOCHS_PHASE1
+    final_epoch    = EPOCHS_PHASE1 + EPOCHS_PHASE2 - 1
 
-    # Checkpoint paths -- defined here so resume logic below can reference them
-    P2_CKPT_DIR   = "models/phase2_checkpoint"
-    P2_EPOCH_CKPT = "models/phase2_epoch_checkpoint.pth"
+    # Resume from checkpoint if one exists
+    resumed_epoch, resumed_acc, resumed_step = load_phase2_checkpoint(model_engine_p2, DEVICE, tag="checkpoint_latest")
+    if resumed_epoch is not None:
+        # If the checkpoint is from the warmup (e.g. -1), we start at the 
+        # actual Phase 2 start epoch (EPOCHS_PHASE1). 
+        # If it's a real Phase 2 epoch (e.g. 10+), we resume there.
+        start_epoch  = max(EPOCHS_PHASE1, resumed_epoch)
+        best_val_acc = resumed_acc
 
-    # Resume Phase 2 from DeepSpeed checkpoint if one exists.
-    # DeepSpeed saves model + optimizer + scheduler states together so
-    # training resumes exactly where it left off including LR schedule.
-    start_epoch  = config.epochs_phase1
-    final_epoch  = start_epoch + config.epochs_phase2 - 1
+    for epoch in range(start_epoch, EPOCHS_PHASE1 + EPOCHS_PHASE2):
+        # Only use resumed_step for the very first epoch we resume into
+        current_start_step = resumed_step if epoch == resumed_epoch else 0
+        run_epoch(model_engine_p2, train_loader, criterion, epoch, num_classes, DEVICE, 
+                  start_step=current_start_step)
 
-    if os.path.exists(P2_CKPT_DIR):
-        # Full DeepSpeed checkpoint -- includes optimizer + scheduler states
-        _, client_state = model_engine_p2.load_checkpoint(P2_CKPT_DIR)
-        if client_state is not None:
-            start_epoch  = client_state['epoch'] + 1
-            best_val_acc = client_state.get('best_val_acc', 0.0)
-            print(f"[Phase2] Resuming from DeepSpeed checkpoint epoch {start_epoch} "
-                  f"(best val acc: {best_val_acc:.2f}%)")
-    elif os.path.exists(P2_EPOCH_CKPT):
-        # Lightweight per-epoch checkpoint -- model weights only, no optimizer state.
-        # LR schedule restarts but at least no epochs are lost.
-        p2_ckpt = torch.load(P2_EPOCH_CKPT, map_location=DEVICE, weights_only=False)
-        model_engine_p2.module.load_state_dict(p2_ckpt['model_state'])
-        start_epoch  = p2_ckpt['epoch'] + 1
-        best_val_acc = p2_ckpt.get('best_val_acc', 0.0)
-        print(f"[Phase2] Resuming from epoch checkpoint {start_epoch} "
-              f"(optimizer state reset, best val acc: {best_val_acc:.2f}%)")
+        # Lightweight per-epoch checkpoint every epoch
+        save_epoch_checkpoint(model_engine_p2, epoch, best_val_acc)
 
-    for epoch in range(start_epoch, config.epochs_phase1 + config.epochs_phase2):
-        run_epoch(
-            model_engine_p2, train_loader,
-            criterion, epoch, num_classes, DEVICE
-        )
-
-        # Save lightweight per-epoch checkpoint after every epoch.
-        # Faster than full DeepSpeed checkpoint -- just model weights + epoch.
-        torch.save({
-            'epoch':     epoch,
-            'model_state': model_engine_p2.module.state_dict(),
-            'best_val_acc': best_val_acc,
-        }, P2_EPOCH_CKPT)
-
-        # Validate on scheduled epochs and always on the final epoch
         if epoch % VAL_EVERY_N_EPOCHS == 0 or epoch == final_epoch:
             metrics = validate(
                 model_engine_p2.module, val_loader, criterion, num_classes, DEVICE
             )
             val_acc = metrics['acc']
 
-            print(f"\n[Epoch {epoch}] Validation Results:")
-            print(f" - Validation Loss:      {metrics['loss']:.4f}")
-            print(f" - Validation Accuracy:  {metrics['acc']:.2f}%")
-            print(f" - Macro-F1 Score:       {metrics['f1']:.4f}")
-            print(f" - Macro-Precision:      {metrics['precision']:.4f}")
-            print(f" - Macro-Recall:         {metrics['recall']:.4f}")
+            print(f"\n[Epoch {epoch}] Val Loss: {metrics['loss']:.4f}  "
+                  f"Acc: {metrics['acc']:.2f}%  F1: {metrics['f1']:.4f}  "
+                  f"Prec: {metrics['precision']:.4f}  Rec: {metrics['recall']:.4f}")
 
-            wandb.log({
-                "epoch":         epoch,
-                "val_acc":       metrics['acc'],
-                "val_loss":      metrics['loss'],
-                "val_f1":        metrics['f1'],
-                "val_precision": metrics['precision'],
-                "val_recall":    metrics['recall'],
-            })
+            wandb.log({"epoch": epoch, **{f"val_{k}": v for k, v in metrics.items()}})
 
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                model_engine_p2.save_checkpoint(
-                    "models/", tag="best_calibrated",
-                    client_state={'epoch': epoch, 'best_val_acc': best_val_acc}
+                save_deepspeed_checkpoint(
+                    model_engine_p2, "models/", "best_calibrated", epoch, best_val_acc
                 )
-                print(f"--> Saved New Best Ensemble (Acc: {val_acc:.2f}%)")
+                print(f"--> New Best (Acc: {val_acc:.2f}%)")
 
-            # Save per-epoch checkpoint for resumption -- overwrites previous
-            # so only one checkpoint is kept on disk at a time (saves storage)
-            model_engine_p2.save_checkpoint(
-                P2_CKPT_DIR,
-                client_state={'epoch': epoch, 'best_val_acc': best_val_acc}
+            save_deepspeed_checkpoint(
+                model_engine_p2, P2_CKPT_DIR, "checkpoint_latest", epoch, best_val_acc
             )
-            print(f"[Phase2] Checkpoint saved (epoch {epoch})")
 
             early_stopping(val_acc)
             if early_stopping.early_stop:
-                print(f"Early stopping triggered at epoch {epoch}. "
-                      f"Best val acc: {best_val_acc:.2f}%")
+                print(f"Early stopping at epoch {epoch}. Best: {best_val_acc:.2f}%")
                 break
 
-    model_engine_p2.save_checkpoint(
-        "models/", tag="final",
-        client_state={'epoch': epoch, 'best_val_acc': best_val_acc}
+    save_deepspeed_checkpoint(
+        model_engine_p2, "models/", "final", epoch, best_val_acc
     )
     wandb.finish()
 
