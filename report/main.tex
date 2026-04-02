@@ -1,604 +1,254 @@
-%% The first command in your LaTeX source must be the \documentclass command.
-%%
-%% Options:
-%% twocolumn : Two column layout. Do not use twocolumn for papers submitted to CEUR-WS!
-%% hf: enable header and footer.
-\documentclass[
-% twocolumn,
-% hf,
-]{ceurart}
+%% PlantCLEF 2026 Working Note - LifeCLEF / CLEF 2026
+\documentclass[]{ceurart}
 
-%%
-%% One can fix some overfulls
 \sloppy
 
-%%
-%% Minted listings support 
-%% Need pygment <http://pygments.org/> <http://pypi.python.org/pypi/Pygments>
 \usepackage{listings}
-%% auto break lines
 \lstset{breaklines=true}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
 
-%%
-%% end of the preamble, start of the body of the document source.
 \begin{document}
 
-%%
-%% Rights management information.
-%% CC-BY is default license.
-\copyrightyear{2022}
+\copyrightyear{2026}
 \copyrightclause{Copyright for this paper by its authors.
   Use permitted under Creative Commons License Attribution 4.0
   International (CC BY 4.0).}
 
-%%
-%% This command is for the conference information
-\conference{Woodstock'22: Symposium on the irreproducible science,
-  June 07--11, 2022, Woodstock, NY}
+\conference{CLEF 2026 -- Conference and Labs of the Evaluation Forum,
+  September 21--24, 2026, Jena, Germany}
+
+\title{Multi-Backbone Ensemble with LoRA Adaptation for Multi-Label Plant Species Identification in Vegetation Plots: ANU at PlantCLEF 2026}
 
 %%
-%% The "title" command
-\title{A better way to format your document for CEUR-WS using LaTeX}
-
-\tnotemark[1]
-\tnotetext[1]{You can use this document as the template for preparing your
-  publication. We recommend using the latest version of the ceurart style.}
-
-%%
-%% The "author" command and its associated commands are used to define
-%% the authors and their affiliations.
+%% Authors
 \author[1]{Arjun Raj}[%
-email=7526852@anu.edu.au,
+email=u7526852@anu.edu.au,
 ]
-\cormark[0]
 \fnmark[1]
-\address[1]{The Australian National University, [address]}
+\address[1]{The Australian National University, Canberra, ACT 2601, Australia}
 
 \author[1]{Manindra de Mel}[%
-% orcid=0000-0001-7116-9338,
-% email=i.tiddi@vu.nl,
-% url=https://kmitd.github.io/ilaria/,
+email=u7543337@anu.edu.au,
 ]
-\cormark[0]
 \fnmark[1]
-% \address[3]{Vrije Universiteit Amsterdam, De Boelelaan 1105, 1081 HV Amsterdam, The Netherlands}
 
 \author[1]{Razeen Wasif}[%
-% orcid=0000-0002-9421-8566,
-% email=Manfred.Jeusfeld@acm.org,
-% url=http://conceptbase.sourceforge.net/mjf/,
+email=u7619822@anu.edu.au,
 ]
-\cormark[0]
 \fnmark[1]
-% \address[1]{University of Skövde, Högskolevägen 1, 541 28 Skövde, Sweden}
 
-%% Footnotes
-\cortext[1]{Corresponding author.}
 \fntext[1]{These authors contributed equally.}
 
 %%
-%% The abstract is a short summary of the work to be presented in the
-%% article.
+%% Abstract
 \begin{abstract}
-  A clear and well-documented \LaTeX{} document is presented as an
-  article formatted for publication by CEUR-WS in a conference
-  proceedings. Based on the ``ceurart'' document class, this article
-  presents and explains many of the common variations, as well as many
-  of the formatting elements an author may use in the preparation of
-  the documentation of their work.
+This paper describes the system submitted by the Australian National University team to the PlantCLEF 2026 challenge, which tasks participants with predicting all plant species present in high-resolution vegetation quadrat images. The core difficulty lies in the domain shift between the training data, comprising individually photographed single-plant specimens, and the test data, consisting of dense multi-species vegetation plots. We address this with a triple-backbone feature fusion ensemble combining BioCLIP (a biology-aligned Vision Transformer), DINOv2, and ConvNeXt-V2, each contributing complementary representations: taxonomic, geometric, and local texture features respectively. BioCLIP is kept fully frozen to preserve its Tree-of-Life alignment, while DINOv2 and ConvNeXt-V2 are adapted through high-rank Low-Rank Adaptation (LoRA, $R\!=\!64$) to reduce trainable parameters from ${\sim}800$M to ${\sim}5$M. Training proceeds in two phases: a fast head warmup on PCA-compressed cached features, followed by LoRA fine-tuning with Asymmetric Loss, logit adjustment for long-tail class frequencies, and BioCLIP-guided feature distillation. The entire data pipeline is GPU-resident, using NVIDIA DALI for image decoding and augmentation and DeepSpeed ZeRO-1 for memory-efficient training. At inference, we employ test-time query expansion over multiple augmented views and sigmoid-based multi-label thresholding to produce per-quadrat species lists.
 \end{abstract}
 
-%%
-%% Keywords. The author(s) should pick words that accurately describe
-%% the work being presented. Separate the keywords with commas.
 \begin{keywords}
-  LaTeX class \sep
-  paper template \sep
-  paper formatting \sep
-  CEUR-WS
+  plant identification \sep
+  multi-label classification \sep
+  ensemble learning \sep
+  LoRA fine-tuning \sep
+  BioCLIP \sep
+  DINOv2 \sep
+  vegetation plot analysis \sep
+  PlantCLEF 2026
 \end{keywords}
 
-%%
-%% This command processes the author and affiliation and title
-%% information and builds the first part of the formatted document.
 \maketitle
 
+%% =========================================================================
 \section{Introduction}
+\label{sec:introduction}
+%% =========================================================================
 
-CEUR-WS's article template provides a consistent \LaTeX{} style for
-use across CEUR-WS publications, and incorporates accessibility and
-metadata-extraction functionality. This document will explain the
-major features of the document class.
+Monitoring plant biodiversity at scale is essential for understanding ecosystem health, tracking the effects of climate change, and informing conservation policy. Traditionally, vegetation surveys require expert botanists to visit field sites, place standardised quadrats (typically 50$\times$50\,cm sampling frames), and manually identify every plant species visible within the frame. This process is labour-intensive, difficult to scale, and constrained by the availability of trained taxonomists~\cite{joly2024overview}.
 
-If you are new to publishing with CEUR-WS, this document is a valuable
-guide to the process of preparing your work for publication.
+The PlantCLEF 2026 challenge~\cite{plantclef2026} seeks to automate this task by framing it as a multi-label classification problem: given a high-resolution photograph of a vegetation quadrat, predict the set of all plant species present. The challenge draws from a taxonomy of approximately 7,800 candidate species, and submissions are evaluated using a macro-averaged F1 score computed per sample and then aggregated across transects.
 
-The ``\verb|ceurart|'' document class can be used to prepare articles
-for any CEUR-WS publication, and for any stage of publication, from
-review to final ``camera-ready'' copy with {\itshape very} few changes
-to the source.
+A central difficulty of this challenge is the \emph{domain shift} between the available training data and the target test data. The training set consists of over one million single-plant images from the PlantCLEF 2024 corpus, each depicting an individual specimen with a single species label. In contrast, the test images are dense, complex vegetation scenes where multiple species overlap, occlude one another, and appear at varying scales and growth stages. Models trained exclusively on isolated specimens tend to perform poorly when confronted with these multi-species scenes, as they have never encountered the visual complexity of real-world vegetation during training.
 
-This class depends on the following packages
-for its proper functioning:
+A second major challenge is the \emph{long-tail distribution} of the training data. While common species may have thousands of training images, rare species---which are often the most ecologically important---can have fewer than ten. Standard cross-entropy training causes models to overwhelmingly predict common classes, yielding high micro-accuracy but poor macro-F1.
 
-\begin{itemize}
-\item \verb|natbib.sty| for citation processing;
-\item \verb|geometry.sty| for margin settings;
-\item \verb|graphicx.sty| for graphics inclusion;
-\item \verb|hyperref.sty| optional package if hyperlinking is required in
-  the document;
-\item \verb|fontawesome5.sty| optional package for bells and whistles.
-\end{itemize}
+In this paper, we present the system submitted by the Australian National University (ANU) team. Our approach centres on three key design decisions:
 
-All the above packages are part of any
-standard \LaTeX{} installation.
-For the TexLive package, you should however make sure that the
-Libertinus font family is included. For Debian/Ubuntu, the command is:
-\begin{verbatim}
-    sudo apt install texlive-fonts-extra
-\end{verbatim}
-
-
-\section{Modifications}
-
-Modifying the template --- including but not limited to: adjusting
-margins, typeface sizes, line spacing, paragraph and list definitions,
-and the use of the \verb|\vspace| command to manually adjust the
-vertical spacing between elements of your work --- is not allowed.
-
-\section{Template parameters}
-
-There are a number of template
-parameters which modify some part of the \verb|ceurart| document class.
-This parameters are enclosed in square
-brackets and are a part of the \verb|\documentclass| command:
-\begin{lstlisting}
-  \documentclass[parameter]{ceurart}
-\end{lstlisting}
-
-Frequently-used parameters, or combinations of parameters, include:
-\begin{itemize}
-\item \verb|twocolumn| : Two column layout. This option is not supported bey CEUR-WS, hence only use it for papers not to be submitted to CEUR-WS.
-\item \verb|hf| : Enable header and footer\footnote{You can enable
-    the display of page numbers in the final version of the entire
-    collection. In this case, you should adhere to the end-to-end
-    pagination of individual papers.}.  This option shall also not be used for papers to be published by CEUR-WS.
-\end{itemize}
-
-\section{Front matter}
-
-\subsection{Title Information}
-
-The titles of papers should be either all use the emphasizing
-capitalized style or they should all use the regular English (or
-native language) style. It does not make a good impression if you or
-your authors mix the styles.
-
-Use the \verb|\title| command to define the title of your work. Do not
-insert line breaks in your title.
-
-\subsection{Title variants}
-
-\verb|\title| command have the below options:
-\begin{itemize}
-\item \verb|title|: Document title. This is default option. 
-\begin{lstlisting}
-\title[mode=title]{This is a title}
-\end{lstlisting}
-You can just omit it, like as follows:
-\begin{lstlisting}
-\title{This is a title}
-\end{lstlisting}
-
-\item \verb|alt|: Alternate title.
-\begin{lstlisting}
-\title[mode=alt]{This is a alternate title}
-\end{lstlisting}
-
-\item \verb|sub|: Sub title.
-\begin{lstlisting}
-\title[mode=sub]{This is a sub title}
-\end{lstlisting}
-You can just use \verb|\subtitle| command, as follows:
-\begin{lstlisting}
-\subtitle{This is a sub title}
-\end{lstlisting}
-
-\item \verb|trans|: Translated title.
-\begin{lstlisting}
-\title[mode=trans]{This is a translated title}
-\end{lstlisting}
-
-\item \verb|transsub|: Translated sub title.
-\begin{lstlisting}
-\title[mode=transsub]{This is a translated sub title}
-\end{lstlisting}
-\end{itemize}
-
-\subsection{Authors and Affiliations}
-
-Each author must be defined separately for accurate metadata
-identification. Multiple authors may share one affiliation. Authors'
-names should not be abbreviated; use full first names wherever
-possible. Include authors' e-mail addresses whenever possible.
-
-\verb|\author| command have the below options: 
-
-\begin{itemize}
-\item \verb|style| : Style of author name (chinese)
-\item \verb|prefix| : Prefix
-\item \verb|suffix| : Suffix
-\item \verb|degree| : Degree
-\item \verb|role| : Role
-\item \verb|orcid| : ORCID
-\item \verb|email| : E-mail
-\item \verb|url| : URL
-\end{itemize}
-
-Author names can have some kinds of marks and notes:
-\begin{itemize}
-\item affiliation mark: \verb|\author[<num>]|.
-\end{itemize}
-
-The author names and affiliations could be formatted in two ways:
 \begin{enumerate}
-\item Group the authors per affiliation.
-\item Use an explicit mark to indicate the affiliations.
+    \item \textbf{Multi-backbone ensemble with complementary representations.} We fuse features from three pretrained foundation models---BioCLIP~\cite{stevens2024bioclip}, DINOv2~\cite{oquab2024dinov2}, and ConvNeXt-V2~\cite{woo2023convnextv2}---into a shared representation space. BioCLIP provides taxonomically-aligned features from its Tree-of-Life pretraining, DINOv2 contributes view-invariant geometric representations via self-supervised learning, and ConvNeXt-V2 captures local texture and spatial patterns through its convolutional architecture.
+
+    \item \textbf{Parameter-efficient fine-tuning via LoRA.} Rather than fine-tuning all ${\sim}800$M backbone parameters, we apply Low-Rank Adaptation (LoRA)~\cite{hu2022lora} with rank $R\!=\!64$ to DINOv2 and ConvNeXt-V2, while keeping BioCLIP fully frozen. This reduces the trainable parameter count to ${\sim}5$M and enables training on a single GPU without sacrificing adaptation capacity.
+
+    \item \textbf{Long-tail-aware training.} We combine Asymmetric Loss (ASL)~\cite{ridnik2021asymmetric} with per-class logit adjustments computed from training class frequencies. ASL applies asymmetric focusing parameters to positive and negative samples, preventing the thousands of absent-class negatives from dominating the gradient signal. A BioCLIP-guided feature distillation loss further regularises the adapted backbones.
 \end{enumerate}
 
-Author block example:
-\begin{lstlisting}
-\author[1,2]{Author Name}[%
-    prefix=Prof.,
-    degree=D.Sc.,
-    role=Researcher,
-    orcid=0000-0000-000-0000,
-    email=name@example.com,
-    url=https://name.example.com
-]
+The remainder of this paper is organised as follows. Section~\ref{sec:related} reviews related work on plant identification, foundation model adaptation, and multi-label classification. Section~\ref{sec:method} describes our system architecture and training procedure in detail. Section~\ref{sec:experiments} presents our experimental setup and results. Section~\ref{sec:conclusion} concludes with a discussion of limitations and directions for future work.
 
-\address[1]{Affiliation #1}
-\address[2]{Affiliation #2}
-\end{lstlisting}
+%% =========================================================================
+\section{Related Work}
+\label{sec:related}
+%% =========================================================================
 
-\subsection{Abstract and Keywords}
+\subsection{Automated Plant Identification}
 
-Abstract shall be entered in an environment that starts
-with \verb|\begin{abstract}| and ends with
-\verb|\end{abstract}|. 
+Large-scale plant identification has been driven by the LifeCLEF series of evaluation campaigns~\cite{joly2024overview}, which have progressively increased in scale and difficulty. Early systems relied on hand-crafted features such as leaf shape descriptors and colour histograms~\cite{goeau2013pl}. The advent of deep convolutional networks brought substantial improvements, with Inception and ResNet architectures achieving competitive results on single-specimen classification~\cite{lee2017deep}. More recent work has shifted toward Vision Transformers (ViTs), which excel at capturing long-range spatial dependencies within images~\cite{dosovitskiy2021image}.
 
-\begin{lstlisting}
-\begin{abstract}
-  This is an abstract.
-\end{abstract}
-\end{lstlisting}
+The PlantCLEF 2024 and 2025 editions introduced the vegetation plot setting, highlighting the domain gap between specimen-level training data and plot-level test data~\cite{goeau2024plantclef}. Top-performing systems in those editions employed strategies such as tiled inference (SAHI-style slicing), test-time augmentation, and ensemble methods to bridge this gap.
 
-The key words are enclosed in a \verb|keywords|
-environment. Use \verb|\sep| to separate keywords.
+\subsection{Foundation Models for Biodiversity}
 
-\begin{lstlisting}
-\begin{keywords}
-  First keyword \sep 
-  Second keyword \sep 
-  Third keyword \sep 
-  Fourth keyword
-\end{keywords}
-\end{lstlisting}
+BioCLIP~\cite{stevens2024bioclip} is a contrastive vision-language model trained on the BIOSCAN and TreeOfLife-10M datasets, which encompass millions of organism images annotated with hierarchical taxonomic labels. Unlike general-purpose CLIP models, BioCLIP aligns visual features with the Linnaean taxonomy, making its feature space inherently suited for biological classification tasks. Studies have shown that BioCLIP features outperform ImageNet-pretrained features for species identification, particularly for morphologically similar species~\cite{stevens2024bioclip}.
 
-At the end of front matter add \verb|\maketitle| command.
+DINOv2~\cite{oquab2024dinov2} is a self-supervised ViT trained with a student-teacher distillation objective on a curated dataset of 142 million images. Its features are highly transferable across domains and exhibit strong spatial correspondence, making them effective for fine-grained recognition tasks.
 
-\subsection{Various Marks in the Front Matter}
+ConvNeXt-V2~\cite{woo2023convnextv2} modernises the convolutional neural network paradigm by incorporating design elements from Transformers (e.g., larger kernel sizes, LayerNorm, GELU activations) alongside a Fully Convolutional Masked Autoencoder (FCMAE) pretraining strategy. ConvNeXt-V2 retains the inductive biases of CNNs---translation equivariance and locality---while achieving performance competitive with ViTs.
 
-The front matter becomes complicated due to various kinds
-of notes and marks to the title and author names. Marks in
-the title will be denoted by a star ($\star$) mark;
-footnotes are denoted by super scripted Arabic numerals,
-corresponding author by an Conformal asterisk (*) mark.
+\subsection{Parameter-Efficient Fine-Tuning}
 
-\subsubsection{Title marks}
+Fine-tuning all parameters of large pretrained models is often impractical due to memory constraints and the risk of catastrophic forgetting, particularly when training data is limited or noisy. Low-Rank Adaptation (LoRA)~\cite{hu2022lora} addresses this by injecting trainable low-rank matrices into the attention and feedforward layers of a frozen model. At rank $R$, LoRA introduces only $2 \times R \times d$ parameters per adapted layer, where $d$ is the layer dimension. Higher ranks (e.g., $R\!=\!64$) have been shown to improve performance on tasks with many output classes, as the adaptation has sufficient capacity to model fine-grained distinctions~\cite{hu2022lora}.
 
-Title mark can be entered by the command, \verb|\tnotemark[<num>]|
-and the corresponding text can be entered with the command
-\verb|\tnotetext[<num>]{<text>}|. An example will be:
+\subsection{Multi-Label Classification and Long-Tail Learning}
 
-\begin{lstlisting}
-\title{A better way to format your document for CEUR-WS}
+Multi-label classification requires predicting a set of labels per input, typically using sigmoid activations and binary cross-entropy. Asymmetric Loss (ASL)~\cite{ridnik2021asymmetric} extends focal loss~\cite{lin2017focal} to the multi-label setting by applying separate focusing parameters $\gamma_+$ and $\gamma_-$ for positive and negative samples. By setting $\gamma_- > \gamma_+$, ASL aggressively down-weights easy negatives, which dominate in settings with thousands of classes.
 
-\tnotemark[1]
-\tnotetext[1]{You can use this document as the template for preparing your
-  publication. We recommend using the latest version of the ceurart style.}
-\end{lstlisting}
+Logit adjustment~\cite{menon2021longtail} provides a complementary approach by shifting logits based on class prior probabilities, effectively requiring the model to produce larger margins for common classes and smaller margins for rare ones.
 
-\verb|\tnotemark| and \verb|\tnotetext| can be anywhere in
-the front matter, but should be before \verb|\maketitle| command.
+%% =========================================================================
+\section{Method}
+\label{sec:method}
+%% =========================================================================
 
-\subsubsection{Author marks}
+Our system consists of a triple-backbone ensemble with a two-phase training procedure, as illustrated in Figure~\ref{fig:architecture}. We describe each component below.
 
-Author names can have some kinds of marks and notes:
+\subsection{Backbone Ensemble}
+\label{sec:backbones}
+
+We extract features from three complementary pretrained models at an input resolution of $384 \times 384$ pixels:
+
 \begin{itemize}
-\item footnote mark : \verb|\fnmark[<num>]|
-\item footnote text : \verb|\fntext[<num>]{<text>}|
-\item corresponding author mark : \verb|\cormark[<num>]|
-\item corresponding author text : \verb|\cortext[<num>]{<text>}|
+    \item \textbf{BioCLIP} (ViT-L/14): Provides a 512-dimensional feature vector. The positional embeddings are interpolated via bicubic interpolation from the native 224\,px resolution to 384\,px to maintain spatial coherence at higher resolution. BioCLIP is kept \emph{fully frozen} throughout training to preserve its taxonomically-aligned feature space.
+
+    \item \textbf{DINOv2} (ViT-L/14): Provides a 1024-dimensional feature vector. Adapted via LoRA ($R\!=\!64$, $\alpha\!=\!128$) targeting the attention projections (QKV, output) and MLP layers (fc1, fc2) of each Transformer block.
+
+    \item \textbf{ConvNeXt-V2} (Large): Provides a 1536-dimensional feature vector. Pretrained with FCMAE on ImageNet-22K and fine-tuned on ImageNet-1K at 384\,px. Adapted via LoRA ($R\!=\!64$, $\alpha\!=\!128$) on the MLP layers (fc1, fc2) of each convolutional block.
 \end{itemize}
 
-\subsubsection{Other marks}
+\subsection{Feature Fusion and Classification}
+\label{sec:fusion}
 
-At times, authors want footnotes which leave no marks in
-the author names. The note text shall be listed as part of
-the front matter notes. Class files provides
-\verb|\nonumnote| for this purpose. The usage
-\begin{lstlisting}
-\nonumnote{<text>}
-\end{lstlisting}
-and should be entered anywhere before the \verb|\maketitle|
-command for this to take effect. 
+The raw backbone features are concatenated into a 3,072-dimensional vector ($512 + 1024 + 1536$) and projected through a single grouped linear layer followed by LayerNorm into a 1,536-dimensional fused space ($512 \times 3$). Using a single projection matrix rather than three independent projections enables more efficient GPU utilisation. The fused features are L2-normalised and passed through a deep classifier:
 
-\section{Sectioning Commands}
+\begin{equation}
+\hat{y} = \text{Classifier}\!\left(\frac{\mathbf{W}_{\text{proj}} \cdot [\mathbf{f}_{\text{bio}}; \mathbf{f}_{\text{dino}}; \mathbf{f}_{\text{conv}}] + \mathbf{b}}{\| \mathbf{W}_{\text{proj}} \cdot [\mathbf{f}_{\text{bio}}; \mathbf{f}_{\text{dino}}; \mathbf{f}_{\text{conv}}] + \mathbf{b} \|_2}\right)
+\label{eq:projection}
+\end{equation}
 
-Your work should use standard \LaTeX{} sectioning commands:
-\verb|\section|, \verb|\subsection|,
-\verb|\subsubsection|, and
-\verb|\paragraph|. They should be numbered; do not remove
-the numbering from the commands.
+The classifier is a three-layer MLP with architecture $1536 \rightarrow 2048 \rightarrow 1024 \rightarrow C$, where $C = 7{,}800$ is the number of species. Each hidden layer uses LayerNorm, GELU activation, and dropout ($p = 0.3$ and $p = 0.2$ for the first and second layers respectively).
 
-Simulating a sectioning command by setting the first word or words of
-a paragraph in boldface or italicized text is not allowed.
+\subsection{Two-Phase Training}
+\label{sec:training}
 
-\section{Tables}
+\subsubsection{Phase 1: Feature Caching and Head Warmup}
 
-The ``\verb|ceurart|'' document class includes the ``\verb|booktabs|''
-package --- \url{https://ctan.org/pkg/booktabs} --- for preparing
-high-quality tables.
+In Phase~1, all three backbones are frozen. We perform a single forward pass over the training set to extract and cache the concatenated 3,072-dimensional features for every training image. These cached features are then compressed to 1,024 dimensions using PCA, preserving fine-grained discriminative signals while reducing the input dimensionality for the warmup head.
 
-Table captions are placed \textit{above} the table.
+A Residual MLP head with Multi-Sample Dropout~\cite{inoue2019multisample} is trained on the PCA-compressed features for up to 20 epochs with early stopping (patience of 3). Multi-Sample Dropout averages logits from five independent dropout masks during training, providing implicit ensemble regularisation. This phase converges rapidly since it operates on cached features rather than running the full backbone forward pass.
 
-Because tables cannot be split across pages, the best placement for
-them is typically the top of the page nearest their initial cite.  To
-ensure this proper ``floating'' placement of tables, use the
-environment \verb|table| to enclose the table's contents and the
-table caption. The contents of the table itself must go in the
-\verb|tabular| environment, to be aligned properly in rows and
-columns, with the desired horizontal and vertical rules.
+\subsubsection{Phase 2: LoRA Fine-Tuning with Distillation}
 
-Immediately following this sentence is the point at which
-Table~\ref{tab:freq} is included in the input file; compare the
-placement of the table here with the table in the printed output of
-this document.
+In Phase~2, we apply LoRA adapters to DINOv2 and ConvNeXt-V2 and train the full pipeline end-to-end. The loss function combines a hard label loss with a feature distillation loss:
 
-\begin{table*}
-  \caption{Frequency of Special Characters}
-  \label{tab:freq}
-  \begin{tabular}{ccl}
+\begin{equation}
+\mathcal{L} = (1 - \alpha) \cdot \mathcal{L}_{\text{ASL}} + \alpha \cdot \mathcal{L}_{\text{KD}}
+\label{eq:total_loss}
+\end{equation}
+
+where $\alpha = 0.3$. The hard loss $\mathcal{L}_{\text{ASL}}$ is an Asymmetric Loss~\cite{ridnik2021asymmetric} with logit adjustments computed from training class frequencies (Laplace-smoothed log-priors), $\gamma_+ = 1$, $\gamma_- = 4$, and probability clipping at 0.05. The distillation loss $\mathcal{L}_{\text{KD}}$ aligns the projected DINOv2 and ConvNeXt features with the frozen BioCLIP features using cosine similarity:
+
+\begin{equation}
+\mathcal{L}_{\text{KD}} = \frac{1}{2}\!\left[\left(1 - \cos(\mathbf{f}'_{\text{dino}}, \mathbf{f}'_{\text{bio}})\right) + \left(1 - \cos(\mathbf{f}'_{\text{conv}}, \mathbf{f}'_{\text{bio}})\right)\right]
+\label{eq:kd_loss}
+\end{equation}
+
+where $\mathbf{f}'_{\cdot}$ denotes the L2-normalised projected features in the shared 512-d subspace. This distillation encourages the adapted backbones to preserve taxonomic consistency with BioCLIP's Tree-of-Life feature space.
+
+Phase~2 uses AdamW with Lookahead~\cite{zhang2019lookahead} and a OneCycleLR schedule, with separate learning rates for LoRA parameters ($1 \times 10^{-4}$) and classifier heads ($2 \times 10^{-4}$). Training runs for 5 epochs with gradient accumulation (effective batch size of 512) under DeepSpeed ZeRO Stage~1 and BF16 mixed precision.
+
+\subsection{Data Pipeline}
+\label{sec:data}
+
+The training data consists of approximately 1.4 million single-plant images from the PlantCLEF 2024 training corpus, stratified to a maximum of 500 images per species to mitigate class imbalance. Images are loaded and augmented entirely on the GPU using NVIDIA DALI~\cite{nvidia2018dali}, which performs JPEG decoding via the hardware NVDEC decoder, followed by random resized cropping ($384 \times 384$), horizontal flipping, and CLIP-standard normalisation --- all in GPU memory. Metadata processing uses cuDF for GPU-accelerated DataFrame operations. A blur detection filter based on Laplacian variance is applied during preprocessing to remove low-quality images.
+
+\subsection{Inference}
+\label{sec:inference}
+
+At test time, we employ query expansion~\cite{chum2007total}: each test image is processed under three views (original, horizontal flip, and 75\% center crop resized back to full resolution) and the logits are averaged across views. The averaged logits are passed through a sigmoid activation, and species with probability exceeding a threshold $\tau$ are included in the prediction. This multi-label prediction strategy directly targets the competition evaluation metric.
+
+%% =========================================================================
+\section{Experiments}
+\label{sec:experiments}
+%% =========================================================================
+
+\subsection{Experimental Setup}
+
+All experiments were conducted on a single NVIDIA RTX 5090 GPU (32\,GB VRAM) with Blackwell architecture. The full configuration is summarised in Table~\ref{tab:hyperparams}.
+
+\begin{table}[t]
+  \caption{Hyperparameter configuration.}
+  \label{tab:hyperparams}
+  \begin{tabular}{ll}
     \toprule
-    Non-English or Math&Frequency&Comments\\
+    Parameter & Value \\
     \midrule
-    \O & 1 in 1,000& For Swedish names\\
-    $\pi$ & 1 in 5& Common in math\\
-    \$ & 4 in 5 & Used in business\\
-    $\Psi^2_1$ & 1 in 40,000& Unexplained usage\\
-  \bottomrule
-\end{tabular}
-\end{table*}
-
-To set a wider table, which takes up the whole width of the page's
-live area, use the environment \verb|table*| to enclose the table's
-contents and the table caption.  As with a single-column table, this
-wide table will ``float'' to a location deemed more
-desirable. Immediately following this sentence is the point at which
-Table~\ref{tab:commands} is included in the input file; again, it is
-instructive to compare the placement of the table here with the table
-in the printed output of this document.
-
-\begin{table}
-  \caption{Some Typical Commands}
-  \label{tab:commands}
-  \begin{tabular}{ccl}
-    \toprule
-    Command &A Number & Comments\\
-    \midrule
-    \texttt{{\char'134}author} & 100& Author \\
-    \texttt{{\char'134}table}& 300 & For tables\\
-    \texttt{{\char'134}table*}& 400& For wider tables\\
+    Input resolution & $384 \times 384$ \\
+    Phase 1 batch size & 384 (cached features) \\
+    Phase 2 micro-batch & 64 \\
+    Effective batch size & 512 (accum.\ steps = 8) \\
+    Phase 1 epochs & 20 (early stop, patience 3) \\
+    Phase 2 epochs & 5 \\
+    LoRA rank $R$ & 64 \\
+    LoRA $\alpha$ & 128 \\
+    LoRA dropout & 0.05 \\
+    ASL $\gamma_+$ / $\gamma_-$ & 1 / 4 \\
+    ASL clip & 0.05 \\
+    Distillation $\alpha$ & 0.3 \\
+    PCA components & 1,024 \\
+    Optimiser & AdamW + Lookahead \\
+    LR (LoRA / heads) & $1 \times 10^{-4}$ / $2 \times 10^{-4}$ \\
+    Schedule & OneCycleLR \\
+    Precision & BF16 (DeepSpeed ZeRO-1) \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\section{Math Equations}
+\subsection{Results}
 
-You may want to display math equations in three distinct styles:
-inline, numbered or non-numbered display.  Each of the three are
-discussed in the next sections.
+% TODO: Add competition results once available
+% Include validation metrics, leaderboard scores, and ablation studies
 
-\subsection{Inline (In-text) Equations}
+%% =========================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%% =========================================================================
 
-A formula that appears in the running text is called an inline or
-in-text formula.  It is produced by the \verb|math| environment,
-which can be invoked with the usual
-\verb|\begin| \ldots \verb|\end| construction or with
-the short form \verb|$| \ldots \verb|$|. You can use any of the symbols
-and structures, from $\alpha$ to $\omega$, available in
-\LaTeX~\cite{Lamport:LaTeX};
-this section will simply show a few
-examples of in-text equations in context. Notice how this equation:
-\begin{math}
-  \lim_{n\rightarrow \infty} \frac{1}{n} = 0,
-\end{math}
-set here in in-line math style, looks slightly different when
-set in display style.  (See next section).
+We presented the ANU team's submission to PlantCLEF 2026, a triple-backbone ensemble combining BioCLIP, DINOv2, and ConvNeXt-V2 with parameter-efficient LoRA adaptation and long-tail-aware training. Our two-phase training strategy---fast head warmup on cached PCA features followed by LoRA fine-tuning with taxonomic feature distillation---enables efficient adaptation of large foundation models on a single GPU. The system addresses the domain shift between single-plant training images and multi-species quadrat test images through complementary backbone representations, multi-label Asymmetric Loss, and test-time query expansion.
 
-\subsection{Display Equations}
-
-A numbered display equation---one set off by vertical space from the
-text and centered horizontally---is produced by the \verb|equation|
-environment. An unnumbered display equation is produced by the
-\verb|displaymath| environment.
-
-Again, in either environment, you can use any of the symbols and
-structures available in \LaTeX{}; this section will just give a couple
-of examples of display equations in context.  First, consider the
-equation, shown as an inline equation above:
-\begin{equation}
-  \lim_{n\rightarrow \infty} \frac{1}{n} = 0.
-\end{equation}
-Notice how it is formatted somewhat differently in
-the \verb|displaymath|
-environment.  Now, we'll enter an unnumbered equation:
-\begin{displaymath}
-  S_{n} = \sum_{i=1}^{n} x_{i} ,
-\end{displaymath}
-and follow it with another numbered equation:
-\begin{equation}
-  \lim_{x \to 0} (1 + x)^{1/x} = e
-\end{equation}
-just to demonstrate \LaTeX's able handling of numbering.
-
-\section{Figures}
-
-The ``\verb|figure|'' environment should be used for figures. One or
-more images can be placed within a figure. If your figure contains
-third-party material, you must clearly identify it as such, as shown
-in the example below.
-\begin{figure}
-  \centering
-  \includegraphics[width=\linewidth-80pt]{wikidata_stmnt}
-  \caption{Chart about Wikidata (source: freesvg.org/1438642735, license: public domain).}
-\end{figure}
-
-Your figures should contain a caption which describes the figure to
-the reader. Figure captions go below the figure. Your figures should
-also include a description suitable for screen readers, to
-assist the visually-challenged to better understand your work.
-
-Figure captions are placed below the figure.
-
-\section{Citations and Bibliographies}
-
-The use of Bib\TeX{} for the preparation and formatting of one's
-references is strongly recommended. Authors' names should be complete
---- use full first names (``Donald E. Knuth'') not initials
-(``D. E. Knuth'') --- and the salient identifying features of a
-reference should be included: title, year, volume, number, pages,
-article DOI, etc.
-
-The bibliography is included in your source document with these two
-commands, placed just before the \verb|\end{document}|
-command:
-\begin{lstlisting}
-\bibliography{bibfile}
-\end{lstlisting}
-where ``\verb|bibfile|'' is the name, without the ``\verb|.bib|''
-suffix, of the Bib\TeX{} file.
-
-
-\subsection{Some examples}
-
-A paginated journal article \cite{Abril07}, an enumerated journal
-article \cite{Cohen07}, a reference to an entire issue
-\cite{JCohen96}, a monograph (whole book) \cite{Kosiur01}, a
-monograph/whole book in a series (see 2a in spec. document)
-\cite{Harel79}, a divisible-book such as an anthology or compilation
-\cite{Editor00} followed by the same example, however we only output
-the series if the volume number is given \cite{Editor00a} (so series
-should not be present since it has no vol. no.), a chapter in a
-divisible book \cite{Spector90}, a chapter in a divisible book in a
-series \cite{Douglass98}, a multi-volume work as book \cite{Knuth97},
-an article in a proceedings (of a conference, symposium, workshop for
-example) (paginated proceedings article) \cite{Andler79}, a
-proceedings article with all possible elements \cite{Smith10}, an
-example of an enumerated proceedings article \cite{VanGundy07}, an
-informally published work \cite{Harel78}, a doctoral dissertation
-\cite{Clarkson85}, a master's thesis: \cite{anisi03}, an online
-document / world wide web resource \cite{Thornburg01, Ablamowicz07,
-  Poker06}, a video game (Case 1) \cite{Obama08} and (Case 2)
-\cite{Novak03} and \cite{Lee05} and (Case 3) a patent
-\cite{JoeScientist001}, work accepted for publication \cite{rous08},
-prolific author \cite{SaeediMEJ10} and \cite{SaeediJETC10}. Other
-cites might contain `duplicate' DOI and URLs (some SIAM articles)
-\cite{Kirschmer:2010:AEI:1958016.1958018}. Multi-volume works as books
-\cite{MR781536} and \cite{MR781537}. A couple of citations with DOIs:
-\cite{2004:ITE:1009386.1010128,Kirschmer:2010:AEI:1958016.1958018}. Online
-citations: \cite{TUGInstmem, Thornburg01, R, UMassCitations}.
-
-\section{Acknowledgments}
-
-Identification of funding sources and other support, and thanks to
-individuals and groups that assisted in the research and the
-preparation of the work should be included in an acknowledgment
-section, which is placed just before the reference section in your
-document.
-
-This section has a special environment:
-\begin{lstlisting}
-\begin{acknowledgments}
-  These are different acknowledgments.
-\end{acknowledgments}
-\end{lstlisting}
-so that the information contained therein can be more easily collected
-during the article metadata extraction phase, and to ensure
-consistency in the spelling of the section heading.
-
-Authors should not prepare this section as a numbered or unnumbered
-\verb|\section|; please use the ``\verb|acknowledgments|'' environment.
-
-\section{Appendices}
-
-If your work needs an appendix, add it before the
-``\verb|\end{document}|'' command at the conclusion of your source
-document.
-
-Start the appendix with the ``\verb|\appendix|'' command:
-\begin{lstlisting}
-\appendix
-\end{lstlisting}
-and note that in the appendix, sections are lettered, not
-numbered. 
+% TODO: Discuss results and limitations once competition results are finalised
 
 %%
-%% The acknowledgments section is defined using the "acknowledgments" environment
-%% (and NOT an unnumbered section). This ensures the proper
-%% identification of the section in the article metadata, and the
-%% consistent spelling of the heading.
+%% Acknowledgments
 \begin{acknowledgments}
-  Thanks to the developers of ACM consolidated LaTeX styles
-  \url{https://github.com/borisveytsman/acmart} and to the developers
-  of Elsevier updated \LaTeX{} templates
-  \url{https://www.ctan.org/tex-archive/macros/latex/contrib/els-cas-templates}.  
+  This work was conducted as part of the COMP3710 Deep Learning course at the Australian National University. We thank the PlantCLEF 2026 organisers for providing the datasets and evaluation infrastructure.
 \end{acknowledgments}
 
-%% The declaration on generative AI comes in effect
-%% in Janary 2025. See also
-%% https://ceur-ws.org/GenAI/Policy.html
 \section*{Declaration on Generative AI}
-  {\em Either:}\newline
-  The author(s) have not employed any Generative AI tools.
-  \newline
-  
- \noindent{\em Or (by using the activity taxonomy in ceur-ws.org/genai-tax.html):\newline}
- During the preparation of this work, the author(s) used X-GPT-4 and Gramby in order to: Grammar and spelling check. Further, the author(s) used X-AI-IMG for figures 3 and 4 in order to: Generate images. After using these tool(s)/service(s), the author(s) reviewed and edited the content as needed and take(s) full responsibility for the publication’s content. 
+During the preparation of this work, the author(s) used Claude (Anthropic) in order to: assist with code development and drafting of the manuscript. After using these tool(s)/service(s), the author(s) reviewed and edited the content as needed and take(s) full responsibility for the publication's content.
 
 %%
-%% Define the bibliography file to be used
-\bibliography{sample-ceur}
-
-%%
-%% If your work has an appendix, this is the place to put it.
-\appendix
-
-\section{Online Resources}
-
-
-The sources for the ceur-art style are available via
-\begin{itemize}
-\item \href{https://github.com/yamadharma/ceurart}{GitHub},
-% \item \href{https://www.overleaf.com/project/5e76702c4acae70001d3bc87}{Overleaf},
-\item
-  \href{https://www.overleaf.com/latex/templates/template-for-submissions-to-ceur-workshop-proceedings-ceur-ws-dot-org/pkfscdkgkhcq}{Overleaf
-    template}.
-\end{itemize}
+%% Bibliography
+\bibliography{plantclef-refs}
 
 \end{document}
-
-%%
-%% End of file
-
