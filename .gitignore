@@ -36,3 +36,5 @@ src/extensions/plantclef_ext.egg-info/
 
 # Submissions
 submission_plantclef*.csv
+results.txt
+tasks.txt
