@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.3.6)  2 APR 2026 19:26
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.3.6)  2 APR 2026 19:27
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1526,12 +1526,12 @@ Package natbib Warning: Citation `chum2007total' on page 4 undefined on input li
 [4]
 LaTeX Font Info:    Font shape `T1/LibertinusSans-TLF/b/n' will be
 (Font)              scaled to size 10.0pt on input line 200.
- [5]
+
 No file main.bbl.
 
 Package natbib Warning: There were undefined citations.
 
-[6] (main.aux)
+[5] (main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
@@ -1542,17 +1542,17 @@ LaTeX Warning: There were undefined references.
 
  ) 
 Here is how much of TeX's memory you used:
- 30498 strings out of 474486
- 574322 string characters out of 5743756
+ 30497 strings out of 474486
+ 574316 string characters out of 5743756
  1951542 words of memory out of 5000000
  51892 multiletter control sequences out of 15000+600000
  706216 words of font info for 312 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  122i,21n,121p,11291b,2548s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/fontawesome5/FontAwesome5Free-Regular.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/libertinus-type1/LibertinusSans-Bold.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/libertinus-type1/LibertinusSans-Regular.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/libertinus-type1/LibertinusSerif-Bold.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/libertinus-type1/LibertinusSerif-Italic.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/libertinus-type1/LibertinusSerif-Regular.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi9.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr9.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy5.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/manin/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy9.pfb>
-Output written on main.pdf (6 pages, 681017 bytes).
+Output written on main.pdf (5 pages, 679631 bytes).
 PDF statistics:
- 229 PDF objects out of 1000 (max. 8388607)
- 32 named destinations out of 1000 (max. 500000)
+ 225 PDF objects out of 1000 (max. 8388607)
+ 31 named destinations out of 1000 (max. 500000)
  91318 words of extra memory for PDF output out of 106986 (max. 10000000)
 
