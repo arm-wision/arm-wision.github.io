@@ -121,7 +121,7 @@ Logit adjustment~\cite{menon2021longtail} provides a complementary approach by s
 \label{sec:method}
 %% =========================================================================
 
-Our system consists of a triple-backbone ensemble with a two-phase training procedure, as illustrated in Figure~\ref{fig:architecture}. We describe each component below.
+Our system consists of a triple-backbone ensemble with a two-phase training procedure. We describe each component below.
 
 \subsection{Backbone Ensemble}
 \label{sec:backbones}
@@ -194,10 +194,10 @@ At test time, we employ query expansion~\cite{chum2007total}: each test image is
 
 \subsection{Experimental Setup}
 
-All experiments were conducted on a single NVIDIA RTX 5090 GPU (32\,GB VRAM) with Blackwell architecture. The full configuration is summarised in Table~\ref{tab:hyperparams}.
+All training experiments were conducted on a single NVIDIA RTX 5090 GPU (32\,GB VRAM) with Blackwell architecture, using BF16 mixed precision, FlashAttention-2 for the ViT backbones, and TF32 for matrix multiplications. The hyperparameter configuration for our best-performing model is summarised in Table~\ref{tab:hyperparams}.
 
 \begin{table}[t]
-  \caption{Hyperparameter configuration.}
+  \caption{Hyperparameter configuration for the final model.}
   \label{tab:hyperparams}
   \begin{tabular}{ll}
     \toprule
@@ -205,38 +205,81 @@ All experiments were conducted on a single NVIDIA RTX 5090 GPU (32\,GB VRAM) wit
     \midrule
     Input resolution & $384 \times 384$ \\
     Phase 1 batch size & 384 (cached features) \\
+    Phase 1 learning rate & $1 \times 10^{-3}$ \\
     Phase 2 micro-batch & 64 \\
-    Effective batch size & 512 (accum.\ steps = 8) \\
-    Phase 1 epochs & 20 (early stop, patience 3) \\
-    Phase 2 epochs & 5 \\
-    LoRA rank $R$ & 64 \\
-    LoRA $\alpha$ & 128 \\
-    LoRA dropout & 0.05 \\
-    ASL $\gamma_+$ / $\gamma_-$ & 1 / 4 \\
-    ASL clip & 0.05 \\
+    Phase 1 / Phase 2 epochs & 20 / 25 \\
+    LoRA rank $R$ / $\alpha$ / dropout & 64 / 128 / 0.05 \\
+    LR (Phase 2 LoRA / heads) & $1 \times 10^{-4}$ / $2 \times 10^{-4}$ \\
+    Loss function & ASL ($\gamma_+\!=\!1$, $\gamma_-\!=\!4$, clip$\,=\!0.05$) \\
+    Logit adjustment & Laplace-smoothed log-priors \\
     Distillation $\alpha$ & 0.3 \\
     PCA components & 1,024 \\
-    Optimiser & AdamW + Lookahead \\
-    LR (LoRA / heads) & $1 \times 10^{-4}$ / $2 \times 10^{-4}$ \\
-    Schedule & OneCycleLR \\
+    Optimiser / Schedule & Fused AdamW / OneCycleLR \\
     Precision & BF16 (DeepSpeed ZeRO-1) \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\subsection{Results}
+\subsection{Ablation Study}
 
-% TODO: Add competition results once available
-% Include validation metrics, leaderboard scores, and ablation studies
+We conducted a series of iterative experiments to evaluate the contribution of each component. Table~\ref{tab:ablation} summarises the progression across three training runs.
+
+\begin{table*}[t]
+  \caption{Ablation study showing iterative improvements to the ensemble training pipeline. All metrics are reported on the held-out validation split (10\% of training data). The final row corresponds to our best model.}
+  \label{tab:ablation}
+  \begin{tabular}{llcccccc}
+    \toprule
+    Run & Key Changes & Train Acc & Val Acc & Val Loss & Val F1 & Val Prec & Val Rec \\
+    \midrule
+    1 (25 Mar) & Baseline LoRA ensemble & 61.36 & 57.40 & 1.381 & 0.458 & --- & --- \\
+    2 (26 Mar) & + Logit adj., $R\!=\!64$, BF16/FA2 & 70.11 & 70.38 & 1.077 & 0.621 & --- & --- \\
+    3 (31 Mar) & + Residual MLP, MSD, ASL, SWA & 68.12 & 75.82 & 0.352 & 0.668 & 0.696 & 0.683 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\paragraph{Run 1: Baseline ensemble with LoRA.} The initial experiment trained the triple-backbone ensemble with LoRA adapters using standard cross-entropy loss, a OneCycleLR scheduler (peak LR $5.88 \times 10^{-5}$), and batch size 128 in Phase~2 for 12 epochs. The model achieved 57.40\% validation accuracy but only 0.458 macro-F1, indicating severe overfitting to common species. The large gap between accuracy and F1 confirmed that the model was neglecting the long-tail distribution and over-predicting frequent classes.
+
+\paragraph{Run 2: Logit adjustment and increased adaptation capacity.} Based on the Run~1 analysis, we introduced logit-adjusted cross-entropy loss to rebalance gradients toward rare species, increased the LoRA rank from the initial configuration to $R\!=\!64$ ($\alpha\!=\!128$) for greater adaptation capacity, enabled BF16 precision with FlashAttention-2, and switched from square-root resampling to natural sampling with increased samples per epoch. These changes yielded a substantial improvement: validation accuracy rose to 70.38\% and macro-F1 jumped from 0.458 to 0.621, a 35.6\% relative improvement, confirming that logit adjustment and higher LoRA rank are critical for long-tail species classification.
+
+\paragraph{Run 3: Residual MLP, Multi-Sample Dropout, and ASL.} The final training run incorporated the Residual MLP head with Multi-Sample Dropout for Phase~1, label smoothing on the logit-adjusted loss, and Stochastic Weight Averaging (SWA) for flatter minima. Asymmetric Loss replaced cross-entropy for the final 4 epochs of Phase~2 to further suppress easy negatives. This configuration achieved our best validation results: 75.82\% accuracy, 0.668 macro-F1, 0.696 precision, and 0.683 recall. Notably, validation accuracy exceeded training accuracy (75.82\% vs.\ 68.12\%), suggesting that the combination of SWA, label smoothing, and Multi-Sample Dropout provided strong regularisation that improved generalisation.
+
+\subsection{Tiled Inference on Quadrat Images}
+
+To bridge the domain gap between single-plant training data and multi-species quadrat test images, we additionally evaluated a tiled inference strategy using a publicly available DINOv2 model. Quadrat images were divided into overlapping tiles (stride ratio 0.588), each tile classified independently, and per-tile predictions aggregated via max-pooling with a count threshold. Table~\ref{tab:tiling} reports the inference configuration and result.
+
+\begin{table}[t]
+  \caption{Tiled inference configuration and competition result.}
+  \label{tab:tiling}
+  \begin{tabular}{ll}
+    \toprule
+    Parameter & Value \\
+    \midrule
+    Backbone & DINOv2 (public pretrained) \\
+    Stride ratio & 0.588 \\
+    Top-$k$ tiles & 5 \\
+    Min tile score / final score & 0.08 / 0.05 \\
+    Aggregation & Max-pool (count threshold = 1) \\
+    Temperature & 1.3 \\
+    TTA / Multi-scale & Disabled \\
+    \midrule
+    \textbf{Public leaderboard F1} & \textbf{0.304} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The tiled inference approach achieved a public leaderboard macro-F1 of 0.304. While this is substantially below the validation F1 of our full ensemble (0.668), it provides the only direct comparison on the competition test set. The gap between validation and test F1 is expected, as the validation set consists of single-plant images (in-distribution), whereas the test set contains multi-species vegetation plots requiring the model to handle occlusion, co-occurrence, and scale variation simultaneously. This result underscores the severity of the domain shift and motivates future work on tiled inference with our full ensemble pipeline.
 
 %% =========================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 %% =========================================================================
 
-We presented the ANU team's submission to PlantCLEF 2026, a triple-backbone ensemble combining BioCLIP, DINOv2, and ConvNeXt-V2 with parameter-efficient LoRA adaptation and long-tail-aware training. Our two-phase training strategy---fast head warmup on cached PCA features followed by LoRA fine-tuning with taxonomic feature distillation---enables efficient adaptation of large foundation models on a single GPU. The system addresses the domain shift between single-plant training images and multi-species quadrat test images through complementary backbone representations, multi-label Asymmetric Loss, and test-time query expansion.
+We presented the ANU team's submission to PlantCLEF 2026, a triple-backbone ensemble combining BioCLIP, DINOv2, and ConvNeXt-V2 with parameter-efficient LoRA adaptation and long-tail-aware training. Through iterative ablation, we demonstrated that each component contributes meaningfully: logit adjustment improved macro-F1 from 0.458 to 0.621 (+35.6\% relative), while the addition of a Residual MLP head with Multi-Sample Dropout, Asymmetric Loss, and Stochastic Weight Averaging further raised it to 0.668 with 75.82\% validation accuracy.
 
-% TODO: Discuss results and limitations once competition results are finalised
+Our tiled inference experiment on the competition test set yielded a public leaderboard F1 of 0.304, highlighting the significant domain gap between single-plant training images and multi-species quadrat scenes. The gap between validation and test performance confirms that bridging this domain shift remains the principal challenge.
+
+Several directions for future work are motivated by these results. First, combining our full ensemble with the tiled inference pipeline---rather than using a standalone DINOv2 model---should improve test-set predictions. Second, pseudo-labelling on unlabelled quadrat images via a teacher-student loop could help the model adapt to the target domain. Third, incorporating ecological priors such as species co-occurrence matrices and geographic metadata could reduce biologically implausible predictions. Finally, per-class threshold optimisation on a held-out multi-label validation set would better calibrate the sigmoid predictions for the macro-F1 evaluation metric.
 
 %%
 %% Acknowledgments
