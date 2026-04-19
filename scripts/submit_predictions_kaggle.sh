@@ -69,18 +69,20 @@ ensure_output_file() {
 }
 
 already_recorded() {
-    local file="$1"
+    local desc_key="$1"
     [[ -f "$OUT" ]] || return 1
 
-    awk -F',' -v target="$file" '
+    awk -F',' -v target="$desc_key" '
         NR == 1 { next }
         {
-            first = $1
-            gsub(/\r/, "", first)
-            gsub(/^"/, "", first)
-            gsub(/"$/, "", first)
-            gsub(/""/, "\"", first)
-            if (first == target) {
+            msg = $2
+            gsub(/\r/, "", msg)
+            gsub(/^"/, "", msg)
+            gsub(/"$/, "", msg)
+            gsub(/""/, "\"", msg)
+
+            # Match either exact key or key followed by timestamp suffix
+            if (msg == target || index(msg, target "__") == 1) {
                 found = 1
                 exit
             }
@@ -90,7 +92,7 @@ already_recorded() {
 }
 
 list_files() {
-    find "$INPUT_DIR" -maxdepth 1 -type f -name "$PATTERN" -print0 | sort -zV
+    find "$INPUT_DIR" -type f -name "$PATTERN" -print0 | sort -zV
 }
 
 submit_with_retries() {
@@ -310,14 +312,19 @@ main() {
     local failures=0
 
     for file in "${files[@]}"; do
-        local base stem safe_stem message
+        local base abs_path safe_path message desc_key
         base="$(basename "$file")"
-        stem="${base%.csv}"
-        safe_stem="${stem//[^A-Za-z0-9_.-]/_}"
-        message="${safe_stem}__$(date -u +%Y%m%dT%H%M%SZ)"
 
-        if (( FORCE == 0 )) && already_recorded "$base"; then
-            log "Skipping already recorded file: $base"
+        abs_path="$(realpath "$file")"
+
+        safe_path="${abs_path//\//__}"
+        safe_path="${safe_path//[^A-Za-z0-9_.-]/_}"
+
+        desc_key="$safe_path"
+        message="${desc_key}__$(date -u +%Y%m%dT%H%M%SZ)"
+
+        if (( FORCE == 0 )) && already_recorded "$desc_key"; then
+            log "Skipping already recorded description: $desc_key"
             continue
         fi
 
