@@ -1,0 +1,293 @@
+%% PlantCLEF 2026 Working Note - LifeCLEF / CLEF 2026
+\documentclass[]{ceurart}
+
+\sloppy
+
+\usepackage{listings}
+\lstset{breaklines=true}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\begin{document}
+
+\copyrightyear{2026}
+\copyrightclause{Copyright for this paper by its authors.
+  Use permitted under Creative Commons License Attribution 4.0
+  International (CC BY 4.0).}
+
+\conference{CLEF 2026 -- Conference and Labs of the Evaluation Forum,
+  September 21--24, 2026, Jena, Germany}
+
+\title{Multi-Backbone Ensemble with LoRA Adaptation for Multi-Label Plant Species Identification in Vegetation Plots: ANU at PlantCLEF 2026}
+
+%%
+%% Authors
+\author[1]{Arjun Raj}[%
+email=u7526852@anu.edu.au,
+]
+\fnmark[1]
+\address[1]{The Australian National University, Canberra, ACT 2601, Australia}
+
+\author[1]{Manindra de Mel}[%
+email=u7543337@anu.edu.au,
+]
+\fnmark[1]
+
+\author[1]{Razeen Wasif}[%
+email=u7619822@anu.edu.au,
+]
+\fnmark[1]
+
+\fntext[1]{These authors contributed equally.}
+
+%%
+%% Abstract
+\begin{abstract}
+This paper describes the system submitted by the Australian National University team to the PlantCLEF 2026 challenge, which tasks participants with predicting all plant species present in high-resolution vegetation quadrat images. The core difficulty lies in the domain shift between the training data, comprising individually photographed single-plant specimens, and the test data, consisting of dense multi-species vegetation plots. We address this with a triple-backbone feature fusion ensemble combining BioCLIP (a biology-aligned Vision Transformer), DINOv2, and ConvNeXt-V2, each contributing complementary representations: taxonomic, geometric, and local texture features respectively. BioCLIP is kept fully frozen to preserve its Tree-of-Life alignment, while DINOv2 and ConvNeXt-V2 are adapted through high-rank Low-Rank Adaptation (LoRA, $R\!=\!64$) to reduce trainable parameters from ${\sim}800$M to ${\sim}5$M. Training proceeds in two phases: a fast head warmup on PCA-compressed cached features, followed by LoRA fine-tuning with Asymmetric Loss, logit adjustment for long-tail class frequencies, and BioCLIP-guided feature distillation. The entire data pipeline is GPU-resident, using NVIDIA DALI for image decoding and augmentation and DeepSpeed ZeRO-1 for memory-efficient training. At inference, we employ test-time query expansion over multiple augmented views and sigmoid-based multi-label thresholding to produce per-quadrat species lists.
+\end{abstract}
+
+\begin{keywords}
+  plant identification \sep
+  multi-label classification \sep
+  ensemble learning \sep
+  LoRA fine-tuning \sep
+  BioCLIP \sep
+  DINOv2 \sep
+  vegetation plot analysis \sep
+  PlantCLEF 2026
+\end{keywords}
+
+\maketitle
+
+%% =========================================================================
+\section{Introduction}
+\label{sec:introduction}
+%% =========================================================================
+
+Monitoring plant biodiversity at scale is essential for understanding ecosystem health, tracking the effects of climate change, and informing conservation policy. Traditionally, vegetation surveys require expert botanists to visit field sites, place standardised quadrats (typically 50$\times$50\,cm sampling frames), and manually identify every plant species visible within the frame. This process is labour-intensive, difficult to scale, and constrained by the availability of trained taxonomists~\cite{joly2024overview}.
+
+The PlantCLEF 2026 challenge~\cite{plantclef2026} seeks to automate this task by framing it as a multi-label classification problem: given a high-resolution photograph of a vegetation quadrat, predict the set of all plant species present. The challenge draws from a taxonomy of approximately 7,800 candidate species, and submissions are evaluated using a macro-averaged F1 score computed per sample and then aggregated across transects.
+
+A central difficulty of this challenge is the \emph{domain shift} between the available training data and the target test data. The training set consists of over one million single-plant images from the PlantCLEF 2024 corpus, each depicting an individual specimen with a single species label. In contrast, the test images are dense, complex vegetation scenes where multiple species overlap, occlude one another, and appear at varying scales and growth stages. Models trained exclusively on isolated specimens tend to perform poorly when confronted with these multi-species scenes, as they have never encountered the visual complexity of real-world vegetation during training.
+
+A second major challenge is the \emph{long-tail distribution} of the training data. While common species may have thousands of training images, rare species---which are often the most ecologically important---can have fewer than ten. Standard cross-entropy training causes models to overwhelmingly predict common classes, yielding high micro-accuracy but poor macro-F1.
+
+In this paper, we present the system submitted by the Australian National University (ANU) team. Our approach centres on three key design decisions:
+
+\begin{enumerate}
+    \item \textbf{Multi-backbone ensemble with complementary representations.} We fuse features from three pretrained foundation models---BioCLIP~\cite{stevens2024bioclip}, DINOv2~\cite{oquab2024dinov2}, and ConvNeXt-V2~\cite{woo2023convnextv2}---into a shared representation space. BioCLIP provides taxonomically-aligned features from its Tree-of-Life pretraining, DINOv2 contributes view-invariant geometric representations via self-supervised learning, and ConvNeXt-V2 captures local texture and spatial patterns through its convolutional architecture.
+
+    \item \textbf{Parameter-efficient fine-tuning via LoRA.} Rather than fine-tuning all ${\sim}800$M backbone parameters, we apply Low-Rank Adaptation (LoRA)~\cite{hu2022lora} with rank $R\!=\!64$ to DINOv2 and ConvNeXt-V2, while keeping BioCLIP fully frozen. This reduces the trainable parameter count to ${\sim}5$M and enables training on a single GPU without sacrificing adaptation capacity.
+
+    \item \textbf{Long-tail-aware training.} We combine Asymmetric Loss (ASL)~\cite{ridnik2021asymmetric} with per-class logit adjustments computed from training class frequencies. ASL applies asymmetric focusing parameters to positive and negative samples, preventing the thousands of absent-class negatives from dominating the gradient signal. A BioCLIP-guided feature distillation loss further regularises the adapted backbones.
+\end{enumerate}
+
+The remainder of this paper is organised as follows. Section~\ref{sec:related} reviews related work on plant identification, foundation model adaptation, and multi-label classification. Section~\ref{sec:method} describes our system architecture and training procedure in detail. Section~\ref{sec:experiments} presents our experimental setup and results. Section~\ref{sec:conclusion} concludes with a discussion of limitations and directions for future work.
+
+%% =========================================================================
+\section{Related Work}
+\label{sec:related}
+%% =========================================================================
+
+\subsection{Automated Plant Identification}
+
+Large-scale plant identification has been driven by the LifeCLEF series of evaluation campaigns~\cite{joly2024overview}, which have progressively increased in scale and difficulty. Early systems relied on hand-crafted features such as leaf shape descriptors and colour histograms~\cite{goeau2013pl}. The advent of deep convolutional networks brought substantial improvements, with Inception and ResNet architectures achieving competitive results on single-specimen classification~\cite{lee2017deep}. More recent work has shifted toward Vision Transformers (ViTs), which excel at capturing long-range spatial dependencies within images~\cite{dosovitskiy2021image}.
+
+The PlantCLEF 2024 and 2025 editions introduced the vegetation plot setting, highlighting the domain gap between specimen-level training data and plot-level test data~\cite{goeau2024plantclef}. Top-performing systems in those editions employed strategies such as tiled inference (SAHI-style slicing), test-time augmentation, and ensemble methods to bridge this gap.
+
+\subsection{Foundation Models for Biodiversity}
+
+BioCLIP~\cite{stevens2024bioclip} is a contrastive vision-language model trained on the BIOSCAN and TreeOfLife-10M datasets, which encompass millions of organism images annotated with hierarchical taxonomic labels. Unlike general-purpose CLIP models, BioCLIP aligns visual features with the Linnaean taxonomy, making its feature space inherently suited for biological classification tasks. Studies have shown that BioCLIP features outperform ImageNet-pretrained features for species identification, particularly for morphologically similar species~\cite{stevens2024bioclip}.
+
+DINOv2~\cite{oquab2024dinov2} is a self-supervised ViT trained with a student-teacher distillation objective on a curated dataset of 142 million images. Its features are highly transferable across domains and exhibit strong spatial correspondence, making them effective for fine-grained recognition tasks.
+
+ConvNeXt-V2~\cite{woo2023convnextv2} modernises the convolutional neural network paradigm by incorporating design elements from Transformers (e.g., larger kernel sizes, LayerNorm, GELU activations) alongside a Fully Convolutional Masked Autoencoder (FCMAE) pretraining strategy. ConvNeXt-V2 retains the inductive biases of CNNs---translation equivariance and locality---while achieving performance competitive with ViTs.
+
+\subsection{Parameter-Efficient Fine-Tuning}
+
+Fine-tuning all parameters of large pretrained models is often impractical due to memory constraints and the risk of catastrophic forgetting, particularly when training data is limited or noisy. Low-Rank Adaptation (LoRA)~\cite{hu2022lora} addresses this by injecting trainable low-rank matrices into the attention and feedforward layers of a frozen model. At rank $R$, LoRA introduces only $2 \times R \times d$ parameters per adapted layer, where $d$ is the layer dimension. Higher ranks (e.g., $R\!=\!64$) have been shown to improve performance on tasks with many output classes, as the adaptation has sufficient capacity to model fine-grained distinctions~\cite{hu2022lora}.
+
+\subsection{Multi-Label Classification and Long-Tail Learning}
+
+Multi-label classification requires predicting a set of labels per input, typically using sigmoid activations and binary cross-entropy. Asymmetric Loss (ASL)~\cite{ridnik2021asymmetric} extends focal loss~\cite{lin2017focal} to the multi-label setting by applying separate focusing parameters $\gamma_+$ and $\gamma_-$ for positive and negative samples. By setting $\gamma_- > \gamma_+$, ASL aggressively down-weights easy negatives, which dominate in settings with thousands of classes.
+
+Logit adjustment~\cite{menon2021longtail} provides a complementary approach by shifting logits based on class prior probabilities, effectively requiring the model to produce larger margins for common classes and smaller margins for rare ones.
+
+%% =========================================================================
+\section{Method}
+\label{sec:method}
+%% =========================================================================
+
+Our system consists of a triple-backbone ensemble with a two-phase training procedure. We describe each component below.
+
+\subsection{Backbone Ensemble}
+\label{sec:backbones}
+
+We extract features from three complementary pretrained models at an input resolution of $384 \times 384$ pixels:
+
+\begin{itemize}
+    \item \textbf{BioCLIP} (ViT-L/14): Provides a 512-dimensional feature vector. The positional embeddings are interpolated via bicubic interpolation from the native 224\,px resolution to 384\,px to maintain spatial coherence at higher resolution. BioCLIP is kept \emph{fully frozen} throughout training to preserve its taxonomically-aligned feature space.
+
+    \item \textbf{DINOv2} (ViT-L/14): Provides a 1024-dimensional feature vector. Adapted via LoRA ($R\!=\!64$, $\alpha\!=\!128$) targeting the attention projections (QKV, output) and MLP layers (fc1, fc2) of each Transformer block.
+
+    \item \textbf{ConvNeXt-V2} (Large): Provides a 1536-dimensional feature vector. Pretrained with FCMAE on ImageNet-22K and fine-tuned on ImageNet-1K at 384\,px. Adapted via LoRA ($R\!=\!64$, $\alpha\!=\!128$) on the MLP layers (fc1, fc2) of each convolutional block.
+\end{itemize}
+
+\subsection{Feature Fusion and Classification}
+\label{sec:fusion}
+
+The raw backbone features are concatenated into a 3,072-dimensional vector ($512 + 1024 + 1536$) and projected through a single grouped linear layer followed by LayerNorm into a 1,536-dimensional fused space ($512 \times 3$). Using a single projection matrix rather than three independent projections enables more efficient GPU utilisation. The fused features are L2-normalised and passed through a deep classifier:
+
+\begin{equation}
+\hat{y} = \text{Classifier}\!\left(\frac{\mathbf{W}_{\text{proj}} \cdot [\mathbf{f}_{\text{bio}}; \mathbf{f}_{\text{dino}}; \mathbf{f}_{\text{conv}}] + \mathbf{b}}{\| \mathbf{W}_{\text{proj}} \cdot [\mathbf{f}_{\text{bio}}; \mathbf{f}_{\text{dino}}; \mathbf{f}_{\text{conv}}] + \mathbf{b} \|_2}\right)
+\label{eq:projection}
+\end{equation}
+
+The classifier is a three-layer MLP with architecture $1536 \rightarrow 2048 \rightarrow 1024 \rightarrow C$, where $C = 7{,}800$ is the number of species. Each hidden layer uses LayerNorm, GELU activation, and dropout ($p = 0.3$ and $p = 0.2$ for the first and second layers respectively).
+
+\subsection{Two-Phase Training}
+\label{sec:training}
+
+\subsubsection{Phase 1: Feature Caching and Head Warmup}
+
+In Phase~1, all three backbones are frozen. We perform a single forward pass over the training set to extract and cache the concatenated 3,072-dimensional features for every training image. These cached features are then compressed to 1,024 dimensions using PCA, preserving fine-grained discriminative signals while reducing the input dimensionality for the warmup head.
+
+A Residual MLP head with Multi-Sample Dropout~\cite{inoue2019multisample} is trained on the PCA-compressed features for up to 20 epochs with early stopping (patience of 3). Multi-Sample Dropout averages logits from five independent dropout masks during training, providing implicit ensemble regularisation. This phase converges rapidly since it operates on cached features rather than running the full backbone forward pass.
+
+\subsubsection{Phase 2: LoRA Fine-Tuning with Distillation}
+
+In Phase~2, we apply LoRA adapters to DINOv2 and ConvNeXt-V2 and train the full pipeline end-to-end. The loss function combines a hard label loss with a feature distillation loss:
+
+\begin{equation}
+\mathcal{L} = (1 - \alpha) \cdot \mathcal{L}_{\text{ASL}} + \alpha \cdot \mathcal{L}_{\text{KD}}
+\label{eq:total_loss}
+\end{equation}
+
+where $\alpha = 0.3$. The hard loss $\mathcal{L}_{\text{ASL}}$ is an Asymmetric Loss~\cite{ridnik2021asymmetric} with logit adjustments computed from training class frequencies (Laplace-smoothed log-priors), $\gamma_+ = 1$, $\gamma_- = 4$, and probability clipping at 0.05. The distillation loss $\mathcal{L}_{\text{KD}}$ aligns the projected DINOv2 and ConvNeXt features with the frozen BioCLIP features using cosine similarity:
+
+\begin{equation}
+\mathcal{L}_{\text{KD}} = \frac{1}{2}\!\left[\left(1 - \cos(\mathbf{f}'_{\text{dino}}, \mathbf{f}'_{\text{bio}})\right) + \left(1 - \cos(\mathbf{f}'_{\text{conv}}, \mathbf{f}'_{\text{bio}})\right)\right]
+\label{eq:kd_loss}
+\end{equation}
+
+where $\mathbf{f}'_{\cdot}$ denotes the L2-normalised projected features in the shared 512-d subspace. This distillation encourages the adapted backbones to preserve taxonomic consistency with BioCLIP's Tree-of-Life feature space.
+
+Phase~2 uses AdamW with Lookahead~\cite{zhang2019lookahead} and a OneCycleLR schedule, with separate learning rates for LoRA parameters ($1 \times 10^{-4}$) and classifier heads ($2 \times 10^{-4}$). Training runs for 5 epochs with gradient accumulation (effective batch size of 512) under DeepSpeed ZeRO Stage~1 and BF16 mixed precision.
+
+\subsection{Data Pipeline}
+\label{sec:data}
+
+The training data consists of approximately 1.4 million single-plant images from the PlantCLEF 2024 training corpus, stratified to a maximum of 500 images per species to mitigate class imbalance. Images are loaded and augmented entirely on the GPU using NVIDIA DALI~\cite{nvidia2018dali}, which performs JPEG decoding via the hardware NVDEC decoder, followed by random resized cropping ($384 \times 384$), horizontal flipping, and CLIP-standard normalisation --- all in GPU memory. Metadata processing uses cuDF for GPU-accelerated DataFrame operations. A blur detection filter based on Laplacian variance is applied during preprocessing to remove low-quality images.
+
+\subsection{Inference}
+\label{sec:inference}
+
+At test time, we employ query expansion~\cite{chum2007total}: each test image is processed under three views (original, horizontal flip, and 75\% center crop resized back to full resolution) and the logits are averaged across views. The averaged logits are passed through a sigmoid activation, and species with probability exceeding a threshold $\tau$ are included in the prediction. This multi-label prediction strategy directly targets the competition evaluation metric.
+
+%% =========================================================================
+\section{Experiments}
+\label{sec:experiments}
+%% =========================================================================
+
+\subsection{Experimental Setup}
+
+All training experiments were conducted on a single NVIDIA RTX 5090 GPU (32\,GB VRAM) with Blackwell architecture, using BF16 mixed precision, FlashAttention-2 for the ViT backbones, and TF32 for matrix multiplications. The hyperparameter configuration for our best-performing model is summarised in Table~\ref{tab:hyperparams}.
+
+\begin{table}[t]
+  \caption{Hyperparameter configuration for the final model.}
+  \label{tab:hyperparams}
+  \begin{tabular}{ll}
+    \toprule
+    Parameter & Value \\
+    \midrule
+    Input resolution & $384 \times 384$ \\
+    Phase 1 batch size & 384 (cached features) \\
+    Phase 1 learning rate & $1 \times 10^{-3}$ \\
+    Phase 2 micro-batch & 64 \\
+    Phase 1 / Phase 2 epochs & 20 / 25 \\
+    LoRA rank $R$ / $\alpha$ / dropout & 64 / 128 / 0.05 \\
+    LR (Phase 2 LoRA / heads) & $1 \times 10^{-4}$ / $2 \times 10^{-4}$ \\
+    Loss function & ASL ($\gamma_+\!=\!1$, $\gamma_-\!=\!4$, clip$\,=\!0.05$) \\
+    Logit adjustment & Laplace-smoothed log-priors \\
+    Distillation $\alpha$ & 0.3 \\
+    PCA components & 1,024 \\
+    Optimiser / Schedule & Fused AdamW / OneCycleLR \\
+    Precision & BF16 (DeepSpeed ZeRO-1) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Ablation Study}
+
+We conducted a series of iterative experiments to evaluate the contribution of each component. Table~\ref{tab:ablation} summarises the progression across three training runs.
+
+\begin{table*}[t]
+  \caption{Ablation study showing iterative improvements to the ensemble training pipeline. All metrics are reported on the held-out validation split (10\% of training data). The final row corresponds to our best model.}
+  \label{tab:ablation}
+  \begin{tabular}{llcccccc}
+    \toprule
+    Run & Key Changes & Train Acc & Val Acc & Val Loss & Val F1 & Val Prec & Val Rec \\
+    \midrule
+    1 (25 Mar) & Baseline LoRA ensemble & 61.36 & 57.40 & 1.381 & 0.458 & --- & --- \\
+    2 (26 Mar) & + Logit adj., $R\!=\!64$, BF16/FA2 & 70.11 & 70.38 & 1.077 & 0.621 & --- & --- \\
+    3 (31 Mar) & + Residual MLP, MSD, ASL, SWA & 68.12 & 75.82 & 0.352 & 0.668 & 0.696 & 0.683 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\paragraph{Run 1: Baseline ensemble with LoRA.} The initial experiment trained the triple-backbone ensemble with LoRA adapters using standard cross-entropy loss, a OneCycleLR scheduler (peak LR $5.88 \times 10^{-5}$), and batch size 128 in Phase~2 for 12 epochs. The model achieved 57.40\% validation accuracy but only 0.458 macro-F1, indicating severe overfitting to common species. The large gap between accuracy and F1 confirmed that the model was neglecting the long-tail distribution and over-predicting frequent classes.
+
+\paragraph{Run 2: Logit adjustment and increased adaptation capacity.} Based on the Run~1 analysis, we introduced logit-adjusted cross-entropy loss to rebalance gradients toward rare species, increased the LoRA rank from the initial configuration to $R\!=\!64$ ($\alpha\!=\!128$) for greater adaptation capacity, enabled BF16 precision with FlashAttention-2, and switched from square-root resampling to natural sampling with increased samples per epoch. These changes yielded a substantial improvement: validation accuracy rose to 70.38\% and macro-F1 jumped from 0.458 to 0.621, a 35.6\% relative improvement, confirming that logit adjustment and higher LoRA rank are critical for long-tail species classification.
+
+\paragraph{Run 3: Residual MLP, Multi-Sample Dropout, and ASL.} The final training run incorporated the Residual MLP head with Multi-Sample Dropout for Phase~1, label smoothing on the logit-adjusted loss, and Stochastic Weight Averaging (SWA) for flatter minima. Asymmetric Loss replaced cross-entropy for the final 4 epochs of Phase~2 to further suppress easy negatives. This configuration achieved our best validation results: 75.82\% accuracy, 0.668 macro-F1, 0.696 precision, and 0.683 recall. Notably, validation accuracy exceeded training accuracy (75.82\% vs.\ 68.12\%), suggesting that the combination of SWA, label smoothing, and Multi-Sample Dropout provided strong regularisation that improved generalisation.
+
+\subsection{Tiled Inference on Quadrat Images}
+
+To bridge the domain gap between single-plant training data and multi-species quadrat test images, we additionally evaluated a tiled inference strategy using a publicly available DINOv2 model. Quadrat images were divided into overlapping tiles (stride ratio 0.588), each tile classified independently, and per-tile predictions aggregated via max-pooling with a count threshold. Table~\ref{tab:tiling} reports the inference configuration and result.
+
+\begin{table}[t]
+  \caption{Tiled inference configuration and competition result.}
+  \label{tab:tiling}
+  \begin{tabular}{ll}
+    \toprule
+    Parameter & Value \\
+    \midrule
+    Backbone & DINOv2 (public pretrained) \\
+    Stride ratio & 0.588 \\
+    Top-$k$ tiles & 5 \\
+    Min tile score / final score & 0.08 / 0.05 \\
+    Aggregation & Max-pool (count threshold = 1) \\
+    Temperature & 1.3 \\
+    TTA / Multi-scale & Disabled \\
+    \midrule
+    \textbf{Public leaderboard F1} & \textbf{0.304} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The tiled inference approach achieved a public leaderboard macro-F1 of 0.304. While this is substantially below the validation F1 of our full ensemble (0.668), it provides the only direct comparison on the competition test set. The gap between validation and test F1 is expected, as the validation set consists of single-plant images (in-distribution), whereas the test set contains multi-species vegetation plots requiring the model to handle occlusion, co-occurrence, and scale variation simultaneously. This result underscores the severity of the domain shift and motivates future work on tiled inference with our full ensemble pipeline.
+
+%% =========================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%% =========================================================================
+
+We presented the ANU team's submission to PlantCLEF 2026, a triple-backbone ensemble combining BioCLIP, DINOv2, and ConvNeXt-V2 with parameter-efficient LoRA adaptation and long-tail-aware training. Through iterative ablation, we demonstrated that each component contributes meaningfully: logit adjustment improved macro-F1 from 0.458 to 0.621 (+35.6\% relative), while the addition of a Residual MLP head with Multi-Sample Dropout, Asymmetric Loss, and Stochastic Weight Averaging further raised it to 0.668 with 75.82\% validation accuracy.
+
+Our tiled inference experiment on the competition test set yielded a public leaderboard F1 of 0.304, highlighting the significant domain gap between single-plant training images and multi-species quadrat scenes. The gap between validation and test performance confirms that bridging this domain shift remains the principal challenge.
+
+Several directions for future work are motivated by these results. First, combining our full ensemble with the tiled inference pipeline---rather than using a standalone DINOv2 model---should improve test-set predictions. Second, pseudo-labelling on unlabelled quadrat images via a teacher-student loop could help the model adapt to the target domain. Third, incorporating ecological priors such as species co-occurrence matrices and geographic metadata could reduce biologically implausible predictions. Finally, per-class threshold optimisation on a held-out multi-label validation set would better calibrate the sigmoid predictions for the macro-F1 evaluation metric.
+
+%%
+%% Acknowledgments
+\begin{acknowledgments}
+  This work was conducted as part of the COMP3710 Deep Learning course at the Australian National University. We thank the PlantCLEF 2026 organisers for providing the datasets and evaluation infrastructure.
+\end{acknowledgments}
+%%
+%% Bibliography
+\bibliography{plantclef-refs}
+
+\end{document}
