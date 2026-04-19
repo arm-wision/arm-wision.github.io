@@ -89,10 +89,25 @@ else:
 USE_REGION_FEATURES = True
 PCA_COMPONENTS      = 1024  
 # ---------------------------------------------------------------------------
-# Checkpoint paths 
+# Checkpoint paths
 # ---------------------------------------------------------------------------
-FEATURE_CACHE_PATH = "models/blackwell_v2/phase1_feature_cache.pt" 
+FEATURE_CACHE_PATH = "models/blackwell_v2/phase1_feature_cache.pt"
 P1_CKPT_PATH       = "models/blackwell_v2/phase1_checkpoint.pth"
 P2_CKPT_DIR        = "models/blackwell_v2/phase2_checkpoint"
 P2_EPOCH_CKPT      = "models/blackwell_v2/phase2_epoch_checkpoint.pth"
-PCA_TRANSFORM_PATH  = "models/blackwell_v2/pca_transform.pkl" 
+PCA_TRANSFORM_PATH  = "models/blackwell_v2/pca_transform.pkl"
+
+# ---------------------------------------------------------------------------
+# DINOv3 experiment (src_experiments/005_dinov3_multilabel/)
+# ---------------------------------------------------------------------------
+DINOV3_NAME        = "vit_large_patch16_dinov3.lvd1689m"  # 300M, 1024-d, patch-16
+DINOV3_RES         = 384                                   # multiple of 16
+DINOV3_LORA_R      = 32
+DINOV3_LORA_ALPHA  = 64
+DINOV3_LORA_DROPOUT = 0.05
+# Probability of K=1..5 plants per synthetic mosaic; matches typical quadrat density
+MOSAIC_K_DIST      = [0.30, 0.30, 0.20, 0.12, 0.08]
+
+DINOV3_FEATURE_CACHE_PATH = "models/dinov3_v1/phase1_feature_cache.pt"
+DINOV3_P1_HEAD_PATH       = "models/dinov3_v1/phase1_head.pth"
+DINOV3_P2_CKPT_PATH       = "models/dinov3_v1/phase2_lora.pth"
