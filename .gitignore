@@ -4,6 +4,9 @@ __pycache__/
 .venv/
 venv/
 
+# Local AI assistant project notes (machine-specific)
+CLAUDE.md
+
 # IDEs / editors
 .vscode/
 .idea/
