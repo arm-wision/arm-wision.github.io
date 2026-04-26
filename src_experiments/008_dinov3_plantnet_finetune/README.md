@@ -4,7 +4,7 @@
 
 The 007 PlantNet-DINOv2 baseline (`plantnet_collage_v1`) scored **0.17476** on the
 Kaggle leaderboard — better than 005 DINOv3 (0.13) but behind 006 BioCLIP-2.5
-(0.222). The gap between 007 and 005 is *not* the DINOv3 architecture (which is
+(0.31). The gap between 007 and 005 is *not* the DINOv3 architecture (which is
 strictly more expressive thanks to Gram-anchored patch tokens) — it's the
 **plant prior**. PlantNet released DINOv2-B after weeks of GPU time fine-tuning
 on the 1.4M PC24 single-plant corpus (76.16% PC24 top-1). DINOv3-L's own
