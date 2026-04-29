@@ -32,10 +32,26 @@ models/
 wandb/
 src/wandb/
 artifacts/
+*.log
+errors.log
+scores.csv
 
 # C++ Extensions build artifacts
 src/extensions/build/
 src/extensions/plantclef_ext.egg-info/
+
+# LaTeX build artifacts
+*.aux
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.toc
+*.out
+*.bbl
+*.blg
+
+# Local scratch / comparison images
+tmp_compare/
 
 # Submissions
 submission_plantclef*.csv
