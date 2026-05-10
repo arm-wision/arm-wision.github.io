@@ -57,3 +57,12 @@ tmp_compare/
 submission_plantclef*.csv
 results.txt
 tasks.txt
+
+# Per-experiment run artifacts (CSVs, logs, npz, ckpts) — keep code and summaries
+src_experiments/**/outputs/
+src_experiments/**/inference/
+src_experiments/**/logs/
+src_experiments/**/scores*.csv
+
+# Claude Code session artifacts
+.claude/scheduled_tasks.lock
