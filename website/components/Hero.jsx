@@ -1,0 +1,79 @@
+import { TEAM } from "@/lib/team";
+
+const CELLS = [
+  { src: "/quadrats/CBN-PdlC-A1-20130807.jpg",                        id: "CBN PdlC A1" },
+  { src: "/quadrats/CBN-Pla-A1-20130808.jpg",                          id: "CBN Pla A1"  },
+  { src: "/quadrats/GUARDEN-CBNMed-10-1-16-34-20240429.jpg",           id: "GUARDEN 10"  },
+  { src: "/quadrats/LISAH-JAS-0-1-20220505.jpg",                       id: "LISAH JAS"   },
+  { src: "/quadrats/OPTMix-0108-P1-312-20231006.jpg",                  id: "OPTMix 0108" },
+  { src: "/quadrats/RNNB-1-1-20230512.jpg",                            id: "RNNB 1 1"    },
+];
+
+export default function Hero() {
+  return (
+    <section className="hero" id="top">
+      <div className="hero-inner">
+        <div className="badges">
+          <span className="badge-pill">PlantCLEF · 2026</span>
+          <span className="badge-pill">Submission recap</span>
+          <span className="badge-pill">CLEF 2026</span>
+        </div>
+
+        <h1>
+          Our submission to <em>PlantCLEF&nbsp;2026</em>:<br />
+          multi species identification in 1m² quadrats.
+        </h1>
+
+        <p className="subhead">
+          A recap of how we approached the 7th LifeCLEF plant identification
+          challenge. Best public Kaggle F1 of <b>0.41826</b>, private F1 of
+          <b> 0.40283</b>.
+        </p>
+
+        <div className="cta-row">
+          <a className="btn" href="#paper">Read the paper <span className="arrow">→</span></a>
+          <a className="btn btn--outline" href="https://github.com/ManindraDeMel/PlantCLEF2026">GitHub</a>
+          <a className="btn btn--outline" href="https://www.imageclef.org/PlantCLEF2026">
+            Competition page&nbsp;<span className="arrow">↗</span>
+          </a>
+        </div>
+      </div>
+
+      <div className="hero-strip">
+        <div className="hero-strip-inner">
+          <div className="hero-strip-head">
+            <span className="label">Sample LUCAS quadrats · 1m²</span>
+            <span className="cap">Figure 1 · real test images, 1 to 10 species per scene</span>
+          </div>
+          <div className="hero-strip-row">
+            {CELLS.map((c, i) => (
+              <div key={i} className="hero-cell">
+                <img src={c.src} alt={`LUCAS quadrat ${c.id}`} loading="lazy" />
+                <div className="label">
+                  <span style={{ color: "var(--muted)" }}>{String(i + 1).padStart(2, "0")}</span>
+                  <em>{c.id}</em>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="authors-strip">
+        <div className="authors-inner">
+          <div className="lbl">Team</div>
+          <div>
+            <div className="au-line">
+              {TEAM.map((a, i) => (
+                <span key={a.name}>
+                  <span className="au">{a.name}</span>
+                  {i < TEAM.length - 1 && <span className="sep">·</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

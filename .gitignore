@@ -50,6 +50,14 @@ src/extensions/plantclef_ext.egg-info/
 *.bbl
 *.blg
 
+node_modules/
+.next/
+out/
+.env*.local
+*.log
+.DS_Store
+
+
 # Local scratch / comparison images
 tmp_compare/
 
