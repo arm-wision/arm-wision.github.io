@@ -40,9 +40,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build (static export with Pages basePath)
-        env:
-          PAGES: "true"
+      - name: Build (static export)
+        # Hosted at arm-wision.github.io (org root), so no BASE_PATH is set.
+        # Set BASE_PATH=/foo here if we ever need to deploy under a subpath.
         run: npm run build
 
       - name: Disable Jekyll on Pages

@@ -1,102 +1,83 @@
-# PlantCLEF 2026 — Website (Next.js 14)
+# PlantCLEF 2026 Website (Next.js 14)
 
 Next.js 14 App Router app for the team's PlantCLEF 2026 submission recap.
-Static export, no backend. Hostable on GitHub Pages, Cloudflare Pages, Vercel,
-or any static file server.
-
-The sibling folder `../plantclef/` is the original static-React design
-reference (Babel-standalone, no build step) — kept for diffing the
-original design while we evolve this app.
+Static export, no backend. Lives at **arm-wision.github.io** (org root
+site, served from the domain root with no subpath).
 
 ## Quick start
 
 ```bash
-cd website/plantclef-next
+cd website
 npm install
 npm run dev          # localhost:3000
 npm run build        # static export to ./out/
 ```
 
-The build produces a fully static `out/` directory. Push it to a static
-host, no Node runtime needed.
+The build produces a fully static `out/` directory.
 
 ## Layout
 
 ```
-plantclef-next/
+website/
 ├── app/
 │   ├── layout.jsx          # html shell, Google Fonts
 │   ├── page.jsx            # composes the section components
 │   └── globals.css         # design tokens, layout, charts
 ├── components/
-│   ├── Topbar.jsx          ("use client") — scroll-aware nav
-│   ├── Hero.jsx
+│   ├── Topbar.jsx          ("use client") scroll-aware nav
+│   ├── Hero.jsx            real LUCAS quadrat thumbnails
 │   ├── Stats.jsx
 │   ├── Abstract.jsx
-│   ├── Tasks.jsx           ("use client") — tabbed task description
+│   ├── Tasks.jsx           ("use client") tabbed task description
 │   ├── Dataset.jsx
-│   ├── ChartsSection.jsx   — wrapper for the five charts
+│   ├── ChartsSection.jsx   wrapper for the five Recharts figures
 │   ├── Timeline.jsx
-│   ├── Leaderboard.jsx     ("use client") — sortable per-experiment table
+│   ├── Leaderboard.jsx     ("use client") sortable per-experiment table
 │   ├── Baselines.jsx
 │   ├── TeamBlock.jsx
-│   ├── BibTeX.jsx          ("use client") — copy-to-clipboard
+│   ├── BibTeX.jsx          ("use client") copy-to-clipboard
+│   ├── Reveal.jsx          ("use client") scroll-reveal animations
 │   ├── Footer.jsx
 │   └── charts/
-│       ├── primitives.jsx        — YAxis, XAxis, Gridlines
-│       ├── ScoreProgression.jsx  — Figure 1
-│       ├── UnfreezeSweep.jsx     — Figure 2 (val/Kaggle inversion)
-│       ├── ValVsKaggle.jsx       — Figure 3 (scatter + Pearson r)
-│       ├── E015PerEpoch.jsx      — Figure 4
-│       └── SpeciesLongTail.jsx   — Figure 5 (i003 cap histogram)
+│       ├── theme.js                shared Recharts color tokens
+│       ├── ScoreProgression.jsx    Figure 1 (line)
+│       ├── UnfreezeSweep.jsx       Figure 2 (val vs Kaggle dual axis)
+│       ├── ValVsKaggle.jsx         Figure 3 (scatter + Pearson r)
+│       ├── E015PerEpoch.jsx        Figure 4 (per-epoch lines)
+│       └── SpeciesLongTail.jsx     Figure 5 (cap histogram)
 ├── lib/
-│   ├── team.js             — single source of truth for the team list
-│   └── chart_data.js       — five chart datasets, regenerated from CSVs
+│   ├── team.js             single source of truth for the team list
+│   ├── paths.js            asset() helper that respects optional BASE_PATH
+│   └── chart_data.js       five chart datasets, regenerated from CSVs
 └── public/
-    └── data/               — JSON copies for ad-hoc fetches
-        ├── experiments.json
-        ├── submissions.json
-        └── ...
+    ├── data/               JSON copies of the submission + experiment data
+    └── quadrats/           six real LUCAS test images (480x480 jpgs)
 ```
 
-## Where the data comes from
+## Deploy
 
-`website/plantclef/data/build_data.py` walks the project's local
-`src_experiments/**/scores*.csv` files and the Kaggle CLI dump
-(`kaggle competitions submissions plantclef-2026 -v`) and produces the seven
-JSON files mirrored under `public/data/`. The chart components import the
-same numbers verbatim from `lib/chart_data.js` so charts work even when
-opened straight from the filesystem.
+GitHub Actions workflow at `.github/workflows/deploy.yml` builds the
+static export on every push to main that touches `website/**`, then
+uploads `website/out/` to GitHub Pages.
 
-To refresh:
+The site is served at `https://arm-wision.github.io/` because the repo
+inside the `arm-wision` org is named `arm-wision.github.io` (root site,
+no subpath).
+
+## Refreshing the Kaggle data
 
 ```bash
-cd ../plantclef/data
-kaggle competitions submissions plantclef-2026 -v --page-size 200 > kaggle_submissions.csv
-PYTHONIOENCODING=utf-8 python build_data.py
-cp *.json ../../plantclef-next/public/data/
-# Then update the inline literals in plantclef-next/lib/chart_data.js
+kaggle competitions submissions plantclef-2026 -v --page-size 200 \
+    > public/data/kaggle_submissions.csv
+# then re-run the aggregator script (originally in
+# website/plantclef/data/build_data.py before the move) and paste the
+# updated literals back into lib/chart_data.js
 ```
 
-## Static export + hosting
+## Optional subpath deploy
 
-`next.config.mjs` already has `output: 'export'` + `trailingSlash: true`.
-After `npm run build`, the static site is in `./out/`. If you ever host
-under a subpath (e.g. `*.github.io/PlantCLEF2026`), uncomment the
-`basePath` line in `next.config.mjs` and rebuild.
-
-## Migration history
-
-This app was scaffolded from the design reference at `../plantclef/` per
-`../MIGRATION_PLAN.md`. The migration:
-
-1. Ported `sections.jsx` + `results.jsx` + `charts.jsx` into individual
-   typed components under `components/`.
-2. Replaced the placeholder leaderboard (12 fake competitor teams) with
-   our real per-experiment best submissions.
-3. Updated all dataset stats from the design-template placeholders
-   (14,206 species → 7,806; 2,800 plots → 2,105; 3 tracks → 1 track).
-4. Added five SVG charts derived from the project's actual training
-   metrics and Kaggle submission scores.
-
-`../MIGRATION_PLAN.md` documents what was done and what's still open.
+If we ever need to host under a subpath again (e.g. legacy
+`*.github.io/PlantCLEF2026`), set `BASE_PATH=/<repo>` in the build env
+and `next.config.mjs` will flip basePath + assetPrefix automatically.
+The `asset()` helper in `lib/paths.js` keeps raw `<img src>` values
+working under any subpath.

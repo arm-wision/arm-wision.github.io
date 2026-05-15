@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 
-// GitHub Pages serves project sites under /<repo>. The Pages workflow sets
-// PAGES=true so basePath only kicks in during the deploy build; local
-// `next dev` keeps serving at root.
-const isPages = process.env.PAGES === "true";
-const REPO = "PlantCLEF2026";
-const basePath = isPages ? `/${REPO}` : "";
+// We host on arm-wision.github.io (an org root site), so the app is served
+// from the domain root, no basePath needed. The BASE_PATH env var stays as
+// an escape hatch in case we ever deploy under a subpath again (set it to
+// e.g. "/PlantCLEF2026" in that case).
+const basePath = process.env.BASE_PATH || "";
 
 const nextConfig = {
   output: "export",
@@ -15,8 +14,8 @@ const nextConfig = {
   basePath:    basePath || undefined,
   assetPrefix: basePath ? basePath + "/" : undefined,
 
-  // Expose basePath to client code so plain <img src> can be prefixed via
-  // lib/paths.asset(). Next.js does not auto-rewrite raw <img> srcs.
+  // Exposed so client code (lib/paths.asset) can prefix raw <img src> values.
+  // When basePath is empty the helper is a no-op.
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
   },
