@@ -14,8 +14,7 @@ export default function Footer() {
           </p>
         </div>
         <div className="foot-links">
-          <a href="#paper">Paper</a>
-          <a href="https://github.com/ManindraDeMel/PlantCLEF2026">GitHub</a>
+          <a href="https://github.com/arm-wision/arm-wision.github.io">GitHub</a>
           <a href="https://www.imageclef.org/PlantCLEF2026">Competition page ↗</a>
           <a href="#cite">Cite</a>
         </div>
