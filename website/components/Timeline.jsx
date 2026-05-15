@@ -11,7 +11,7 @@ const TIMELINE = [
   { date: "2026 05 04",  ev: "i002 long tail cap plus extra data, single model at 0.41165" },
   { date: "2026 05 06",  ev: "i002 224 plus 336 px ensemble, team best at 0.41826 (private 0.40283)", tag: "milestone" },
   { date: "2026 05 07",  ev: "i003 500 cap variant, 0.40041" },
-  { date: "30 May 2026",  ev: "Submission deadline", tag: "competition" },
+  { date: "07 May 2026",  ev: "Submission deadline", tag: "competition" },
   { date: "Sep 2026",         ev: "CLEF 2026", tag: "venue" },
 ];
 
