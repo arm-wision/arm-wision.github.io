@@ -11,13 +11,13 @@ export default function ChartsSection() {
       <div className="shell">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Results in five charts</p>
-            <h2>What 240 submissions told us.</h2>
+            <p className="eyebrow">Results</p>
+            <h2>Figures</h2>
           </div>
           <p className="lede">
-            All numbers pulled from the Kaggle public API for
+            Scores pulled from the Kaggle public API for
             <code className="k-mono"> plantclef-2026</code> and merged with
-            our local submission logs.
+            our local submission logs (240 submissions across 18 experiments).
           </p>
         </div>
 

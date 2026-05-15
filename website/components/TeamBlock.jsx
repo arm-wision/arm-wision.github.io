@@ -8,7 +8,7 @@ export default function TeamBlock() {
         <div className="section-head">
           <div>
             <p className="eyebrow">Team</p>
-            <h2>The four of us.</h2>
+            <h2>Authors</h2>
           </div>
           <p className="lede">ANU Deep Learning, Semester 1 2026.</p>
         </div>

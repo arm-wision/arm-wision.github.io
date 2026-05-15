@@ -21,14 +21,13 @@ export default function Hero() {
         </div>
 
         <h1>
-          Our submission to <em>PlantCLEF&nbsp;2026</em>:<br />
-          multi species identification in 1m² quadrats.
+          <em>PlantCLEF&nbsp;2026</em><br />
+          multi species identification in 1m² quadrats
         </h1>
 
         <p className="subhead">
-          A recap of how we approached the 7th LifeCLEF plant identification
-          challenge. Best public Kaggle F1 of <b>0.41826</b>, private F1 of
-          <b> 0.40283</b>.
+          Submission to the 7th LifeCLEF plant identification challenge.
+          Best public Kaggle F1 <b>0.41826</b>, private F1 <b>0.40283</b>.
         </p>
 
         <div className="cta-row">
@@ -43,8 +42,8 @@ export default function Hero() {
       <div className="hero-strip">
         <div className="hero-strip-inner">
           <div className="hero-strip-head">
-            <span className="label">Sample LUCAS quadrats · 1m²</span>
-            <span className="cap">Figure 1 · real test images, 1 to 10 species per scene</span>
+            <span className="label">LUCAS test quadrats · 1m²</span>
+            <span className="cap">Sample of the 2,105 image evaluation set</span>
           </div>
           <div className="hero-strip-row">
             {CELLS.map((c, i) => (

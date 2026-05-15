@@ -37,7 +37,7 @@ export default function Dataset() {
         <div className="section-head">
           <div>
             <p className="eyebrow">Datasets</p>
-            <h2>Four sources, one taxonomy.</h2>
+            <h2>Data sources</h2>
           </div>
           <p className="lede">
             All splits share the canonical 7,806 species axis. Taxonomy joins

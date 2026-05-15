@@ -101,8 +101,8 @@ export default function Leaderboard() {
       <div className="shell">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Top submissions</p>
-            <h2>Where each experiment landed.</h2>
+            <p className="eyebrow">Submissions</p>
+            <h2>Per experiment ranking</h2>
           </div>
           <p className="lede">
             Ranked by public F1. Private scores shown where the submission

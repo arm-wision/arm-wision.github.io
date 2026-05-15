@@ -68,12 +68,12 @@ export default function Tasks() {
         <div className="section-head">
           <div>
             <p className="eyebrow">The task</p>
-            <h2>One catalogue. One leaderboard. A hard domain gap.</h2>
+            <h2>Task overview</h2>
           </div>
           <p className="lede">
             PlantCLEF 2026 is a single multi label track over 7,806 species.
-            The hard part is the train versus test geometry shift, same
-            species, very different visual statistics.
+            Training images are single plant close ups; test images are
+            multi species LUCAS quadrats.
           </p>
         </div>
 

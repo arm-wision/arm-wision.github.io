@@ -29,8 +29,8 @@ export default function Baselines() {
       <div className="shell">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Method and code</p>
-            <h2>What we built.</h2>
+            <p className="eyebrow">Resources</p>
+            <h2>Paper and code</h2>
           </div>
           <p className="lede">
             Paper, code, and per experiment writeups. Every numbered
