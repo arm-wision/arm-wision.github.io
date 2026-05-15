@@ -22,6 +22,9 @@ concurrency:
 
 jobs:
   build:
+    # Only deploy from the arm-wision/arm-wision.github.io mirror so the
+    # original ManindraDeMel/PlantCLEF2026 repo no longer publishes a site.
+    if: github.repository == 'arm-wision/arm-wision.github.io'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -55,6 +58,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.repository == 'arm-wision/arm-wision.github.io'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
