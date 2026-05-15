@@ -1,4 +1,5 @@
 import { TEAM } from "@/lib/team";
+import { asset } from "@/lib/paths";
 
 const CELLS = [
   { src: "/quadrats/CBN-PdlC-A1-20130807.jpg",                        id: "CBN PdlC A1" },
@@ -48,7 +49,7 @@ export default function Hero() {
           <div className="hero-strip-row">
             {CELLS.map((c, i) => (
               <div key={i} className="hero-cell">
-                <img src={c.src} alt={`LUCAS quadrat ${c.id}`} loading="lazy" />
+                <img src={asset(c.src)} alt={`LUCAS quadrat ${c.id}`} loading="lazy" />
                 <div className="label">
                   <span style={{ color: "var(--muted)" }}>{String(i + 1).padStart(2, "0")}</span>
                   <em>{c.id}</em>
