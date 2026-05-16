@@ -56,7 +56,7 @@ out/
 .env*.local
 *.log
 .DS_Store
-
+.claude/
 
 # Local scratch / comparison images
 tmp_compare/

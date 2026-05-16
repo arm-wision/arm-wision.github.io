@@ -24,18 +24,16 @@ export default function UnfreezeSweep() {
           distribution, not capacity.
         </p>
       </div>
-      <div style={{ width: "100%", height: 380 }}>
+      <div style={{ width: "100%", height: 360, minWidth: 0 }}>
         <ResponsiveContainer>
-          <ComposedChart data={data} margin={{ top: 24, right: 56, left: 8, bottom: 56 }}>
+          <ComposedChart data={data} margin={{ top: 24, right: 8, left: 0, bottom: 24 }}>
             <CartesianGrid stroke={COLORS.hairlineSoft} strokeDasharray="2 4" vertical={false} />
             <XAxis
               dataKey="label"
               tick={AXIS_STYLE}
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
-            >
-              <Label value="unfreeze_n" position="insideBottom" offset={-30} style={LABEL_STYLE} />
-            </XAxis>
+            />
             <YAxis
               yAxisId="left"
               domain={[0.15, 0.45]}
@@ -43,9 +41,8 @@ export default function UnfreezeSweep() {
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
               tickFormatter={(v) => v.toFixed(2)}
-            >
-              <Label value="Kaggle F1" angle={-90} position="insideLeft" offset={10} style={LABEL_STYLE} />
-            </YAxis>
+              width={36}
+            />
             <YAxis
               yAxisId="right"
               orientation="right"
@@ -54,9 +51,8 @@ export default function UnfreezeSweep() {
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
               tickFormatter={(v) => v.toFixed(2)}
-            >
-              <Label value="val top 5" angle={90} position="insideRight" offset={10} style={LABEL_STYLE} />
-            </YAxis>
+              width={36}
+            />
             <Tooltip
               {...TOOLTIP_STYLE}
               formatter={(v, n) => [Number(v).toFixed(3), n === "kaggle" ? "Kaggle F1" : "val top 5"]}

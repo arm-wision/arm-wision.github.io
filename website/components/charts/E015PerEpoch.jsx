@@ -2,10 +2,10 @@
 
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, ReferenceLine, Label,
+  CartesianGrid, Tooltip, Legend,
 } from "recharts";
 import { E015_PER_EPOCH } from "@/lib/chart_data";
-import { COLORS, AXIS_STYLE, LABEL_STYLE, TOOLTIP_STYLE } from "./theme";
+import { COLORS, AXIS_STYLE, TOOLTIP_STYLE } from "./theme";
 
 const SERIES = [
   { key: "top1",   label: "species top 1", color: COLORS.ink },
@@ -31,9 +31,9 @@ export default function E015PerEpoch() {
           without iNat. Adding capacity to the wrong distribution.
         </p>
       </div>
-      <div style={{ width: "100%", height: 380 }}>
+      <div style={{ width: "100%", height: 360, minWidth: 0 }}>
         <ResponsiveContainer>
-          <LineChart data={data} margin={{ top: 24, right: 32, left: 8, bottom: 64 }}>
+          <LineChart data={data} margin={{ top: 24, right: 16, left: 0, bottom: 56 }}>
             <CartesianGrid stroke={COLORS.hairlineSoft} strokeDasharray="2 4" vertical={false} />
             <XAxis
               dataKey="epochLabel"
@@ -47,9 +47,8 @@ export default function E015PerEpoch() {
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
               tickFormatter={(v) => v.toFixed(2)}
-            >
-              <Label value="accuracy" angle={-90} position="insideLeft" offset={10} style={LABEL_STYLE} />
-            </YAxis>
+              width={36}
+            />
             <Tooltip
               {...TOOLTIP_STYLE}
               formatter={(v, n) => {
@@ -76,15 +75,10 @@ export default function E015PerEpoch() {
                 animationDuration={900}
               />
             ))}
-            {/* Kaggle annotations at ep1 and ep5 */}
-            <ReferenceLine x="ep 1" stroke={COLORS.hairline} strokeDasharray="2 2">
-              <Label value="Kaggle 0.375" position="bottom" offset={20}
-                     style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11, fill: COLORS.muted }} />
-            </ReferenceLine>
-            <ReferenceLine x="ep 5" stroke={COLORS.hairline} strokeDasharray="2 2">
-              <Label value="Kaggle 0.380" position="bottom" offset={20}
-                     style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 11, fill: COLORS.muted }} />
-            </ReferenceLine>
+            {/* The ep1/ep5 Kaggle scores are quoted directly in the chart
+                caption above; we previously had reference-line annotations
+                here, but they clipped on narrow viewports without adding
+                anything the caption did not already say. */}
           </LineChart>
         </ResponsiveContainer>
       </div>

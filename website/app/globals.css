@@ -55,7 +55,13 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body {
+  margin: 0; padding: 0;
+  /* Prevent any rogue child (charts, tables, long URLs) from pushing the
+     viewport sideways on mobile. */
+  overflow-x: clip;
+  max-width: 100%;
+}
 
 body {
   background: var(--canvas);
@@ -68,6 +74,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+img, svg { max-width: 100%; }
 
 /* ── Typography ─────────────────────────────────────────────────────────── */
 
@@ -1301,3 +1309,62 @@ section.white { background: var(--surface-card); }
   transition: transform .15s;
 }
 .lb-more .btn:hover .arrow { transform: translateY(2px); }
+
+/* ── Mobile tightening ──────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  :root {
+    --sp-section: 64px;
+  }
+  .shell { padding: 0 var(--sp-base); }
+
+  /* Charts */
+  .chart-card { padding: var(--sp-md) var(--sp-base); }
+  .chart-head h4 { font-size: 19px; line-height: 1.25; }
+  .chart-cap { font-size: 13px; line-height: 1.5; }
+  .chart-svg { font-size: 11px; }
+  .chart-axis text { font-size: 11px; }
+  .chart-axis-label { font-size: 10px; letter-spacing: 0.4px; }
+  .chart-legend text { font-size: 11px; }
+  .chart-value, .chart-point-label, .chart-note { font-size: 10px; }
+
+  /* Leaderboard */
+  .lb-controls { flex-direction: column; align-items: stretch; }
+  .lb-filter {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    border-radius: var(--r-md);
+  }
+  .lb-filter button { padding: 6px 10px; font-size: 12px; }
+  .lb-search {
+    min-width: 0;
+    width: 100%;
+    height: 40px;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+  .lb-search:focus { padding: 7px 11px; }
+
+  .lb-card { overflow-x: auto; }
+  .lb-table { font-size: 13px; min-width: 560px; }
+  .lb-table thead th { padding: 12px 10px; font-size: 10px; }
+  .lb-table tbody td { padding: 12px 10px; }
+  .lb-table tbody td[data-num="1"] { font-size: 12px; }
+  .lb-table .rank { width: 28px; font-size: 11px; }
+  .lb-bar { display: none; }
+  .lb-more { margin-top: var(--sp-md); }
+  .lb-more .btn { font-size: 13px; padding: 10px 16px; height: auto; }
+}
+
+@media (max-width: 480px) {
+  .hero-inner { padding-top: 56px; padding-bottom: 32px; }
+  .hero h1 { font-size: 36px; letter-spacing: -1px; max-width: 16ch; }
+  .hero .subhead { font-size: 16px; max-width: 32ch; }
+  .stats-section { padding: var(--sp-xl) 0; }
+  .stat .k { font-size: 30px; }
+
+  /* Hide private F1 on the tightest screens so the table breathes */
+  .lb-table thead th:nth-child(5),
+  .lb-table tbody td:nth-child(5) { display: none; }
+  .lb-table { min-width: 0; }
+}

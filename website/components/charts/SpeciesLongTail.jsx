@@ -30,26 +30,24 @@ export default function SpeciesLongTail() {
           under 100 images</b> unchanged.
         </p>
       </div>
-      <div style={{ width: "100%", height: 380 }}>
+      <div style={{ width: "100%", height: 360, minWidth: 0 }}>
         <ResponsiveContainer>
-          <BarChart data={data} margin={{ top: 24, right: 24, left: 40, bottom: 56 }}>
+          <BarChart data={data} margin={{ top: 24, right: 8, left: 0, bottom: 32 }}>
             <CartesianGrid stroke={COLORS.hairlineSoft} strokeDasharray="2 4" vertical={false} />
             <XAxis
               dataKey="bin"
               tick={AXIS_STYLE}
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
-            >
-              <Label value="images per species" position="insideBottom" offset={-24} style={LABEL_STYLE} />
-            </XAxis>
+              interval={0}
+            />
             <YAxis
               tick={AXIS_STYLE}
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
               tickFormatter={(v) => v.toLocaleString()}
-            >
-              <Label value="num species" angle={-90} position="insideLeft" offset={-12} style={LABEL_STYLE} />
-            </YAxis>
+              width={44}
+            />
             <Tooltip
               {...TOOLTIP_STYLE}
               formatter={(v, n) => [Number(v).toLocaleString(), n === "before" ? "i002 raw" : "i003 after 500 cap"]}

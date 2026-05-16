@@ -68,9 +68,9 @@ export default function ValVsKaggle() {
           and the worst Kaggle.
         </p>
       </div>
-      <div style={{ width: "100%", height: 420 }}>
+      <div style={{ width: "100%", height: 420, minWidth: 0 }}>
         <ResponsiveContainer>
-          <ScatterChart margin={{ top: 24, right: 32, left: 8, bottom: 96 }}>
+          <ScatterChart margin={{ top: 24, right: 16, left: 0, bottom: 88 }}>
             <CartesianGrid stroke={COLORS.hairlineSoft} strokeDasharray="2 4" />
             <XAxis
               type="number"
@@ -92,6 +92,7 @@ export default function ValVsKaggle() {
               axisLine={{ stroke: COLORS.hairline }}
               tickFormatter={(v) => v.toFixed(2)}
               name="Kaggle public F1"
+              width={36}
             />
             <Tooltip content={<CustomTip />} cursor={TOOLTIP_STYLE.cursor} />
             <Legend

@@ -25,9 +25,9 @@ export default function ScoreProgression() {
           selection.
         </p>
       </div>
-      <div style={{ width: "100%", height: 420 }}>
+      <div style={{ width: "100%", height: 380, minWidth: 0 }}>
         <ResponsiveContainer>
-          <ComposedChart data={data} margin={{ top: 24, right: 32, left: 8, bottom: 80 }}>
+          <ComposedChart data={data} margin={{ top: 24, right: 16, left: 0, bottom: 70 }}>
             <CartesianGrid stroke={COLORS.hairlineSoft} strokeDasharray="2 4" vertical={false} />
             <XAxis
               dataKey="label"
@@ -35,7 +35,7 @@ export default function ScoreProgression() {
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
               interval={0}
-              height={70}
+              height={64}
             />
             <YAxis
               domain={[0, 0.45]}
@@ -43,15 +43,8 @@ export default function ScoreProgression() {
               tickLine={false}
               axisLine={{ stroke: COLORS.hairline }}
               tickFormatter={(v) => v.toFixed(2)}
-            >
-              <Label
-                value="Kaggle public F1"
-                angle={-90}
-                position="insideLeft"
-                offset={10}
-                style={LABEL_STYLE}
-              />
-            </YAxis>
+              width={36}
+            />
             <Tooltip
               {...TOOLTIP_STYLE}
               formatter={(v, n) => [Number(v).toFixed(5), n === "this" ? "this experiment" : "best so far"]}

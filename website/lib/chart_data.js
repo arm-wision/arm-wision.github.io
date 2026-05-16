@@ -55,8 +55,10 @@ export const E015_PER_EPOCH = [
   { epoch: 5, top1: 0.8255, top5: 0.9584, genus: 0.9240, family: 0.9553, kaggle: 0.37956 },
 ];
 
+// Bin labels are the upper bound of each bin; the first two are exact counts.
+// Reading: "≤5" means 3 to 5 inclusive, "≤10" means 6 to 10, and so on.
 export const SPECIES_LONG_TAIL = {
-  bins:       ["1", "2", "3 to 5", "6 to 10", "11 to 20", "21 to 50", "51 to 100", "101 to 250", "251 to 500", "501 to 1k", ">1k"],
+  bins:       ["1", "2", "≤5", "≤10", "≤20", "≤50", "≤100", "≤250", "≤500", "≤1k", ">1k"],
   before_cap: [145, 109, 445, 349, 445, 698, 595, 1358, 1387, 2263, 12],
   after_cap:  [  8,   9,  58,  71, 138, 496, 1120, 2244, 3662,   0,   0],
 };
