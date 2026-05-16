@@ -1,28 +1,22 @@
 %% PlantCLEF 2026 Working Note - LifeCLEF / CLEF 2026
 \documentclass[twocolumn]{ceurart}
-
 \sloppy
-
-\usepackage{listings}
-\lstset{breaklines=true}
+\hbadness=10000
+\vbadness=10000
+\hfuzz=40pt
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
-
 \begin{document}
-
 \copyrightyear{2026}
 \copyrightclause{Copyright for this paper by its authors.
   Use permitted under Creative Commons License Attribution 4.0
   International (CC BY 4.0).}
-
 \conference{CLEF 2026 -- Conference and Labs of the Evaluation Forum,
   September 21--24, 2026, Jena, Germany}
-
-\title{Multi-Backbone Ensemble with LoRA Adaptation for Multi-Label Plant Species Identification in Vegetation Plots: ANU at PlantCLEF 2026}
-
+\title{Partial Fine-Tuning of BioCLIP 2.5 with Taxonomic Auxiliary Heads for Multi-Label Plant Species Identification in Vegetation Plots: ANU at PlantCLEF 2026}
 %%
 %% Authors
 \author[1]{Arjun Raj}[%
@@ -30,373 +24,180 @@ email=u7526852@anu.edu.au,
 ]
 \fnmark[1]
 \address[1]{The Australian National University, Canberra, ACT 2601, Australia}
-
 \author[1]{Manindra de Mel}[%
 email=u7543337@anu.edu.au,
 ]
 \fnmark[1]
-
 \author[1]{Razeen Wasif}[%
 email=u7619822@anu.edu.au,
 ]
 \fnmark[1]
-
 \fntext[1]{These authors contributed equally.}
-
 %%
 %% Abstract
 \begin{abstract}
-This paper describes the system submitted by the Australian National University team to the PlantCLEF 2026 challenge, which tasks participants with predicting all plant species present in high-resolution vegetation quadrat images. The core difficulty lies in the domain shift between the training data, comprising individually photographed single-plant specimens, and the test data, consisting of dense multi-species vegetation plots. Our final submission centres on a partial fine-tune of BioCLIP 2.5 (ViT-H/14) in which only the last four transformer blocks together with the final layer norm and projection are unfrozen, while the lower twenty-eight blocks are kept frozen to preserve the Tree-of-Life prior. The encoder is trained on the enlarged PlantCLEF 2024 single-plant manifest with auxiliary cross-entropy heads at the genus, family, and where available order and class taxonomic levels, supplying a structural regulariser without adding inference-time cost. Inference decomposes each quadrat into a $4{\times}4$ grid of $448$-pixel tiles with no overlap, applies the encoder at its native $224$-pixel resolution, and aggregates the tile distributions by per-species softmax mean before emitting every species whose mean probability exceeds a fixed threshold. Beyond this anchor we report three architecture-orthogonal pivots that we submitted but that did not improve over the visual posterior: a triple-backbone classifier retrained on frozen BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank; and a thermodynamic phenological prior built from GBIF month-of-observation histograms. Across all four submitted configurations, our best public Macro F1 is \textbf{0.41165} and our best private Macro F1 is \textbf{0.40283}.
+This paper describes the system submitted by the Australian National University team to the PlantCLEF 2026 challenge, which tasks participants with predicting all plant species present in high-resolution vegetation quadrat images. The core difficulty lies in the domain shift between the training data, comprising individually photographed single-plant specimens, and the test data, consisting of dense multi-species vegetation plots. Our final submission centres on a partial fine-tune of BioCLIP 2.5 (ViT-H/14) in which only the last four transformer blocks together with the final layer norm and projection are unfrozen, while the lower twenty-eight blocks are kept frozen to preserve the Tree-of-Life prior. The encoder is trained on the enlarged PlantCLEF 2024 single-plant manifest with auxiliary cross-entropy heads at the genus, family, and where available order and class taxonomic levels, supplying a structural regulariser without adding inference-time cost. Inference decomposes each quadrat into a $4{\times}4$ grid of $448$-pixel tiles with no overlap, applies the encoder at its native $224$-pixel resolution, and aggregates the tile distributions by per-species softmax mean before emitting every species whose mean probability exceeds a fixed threshold. Beyond this anchor we report three architecture-orthogonal pivots that we submitted but that did not improve over the visual posterior: a triple-backbone classifier retrained on frozen BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank; and a seasonal phenology prior derived from GBIF month-of-observation histograms. Across all four submitted configurations, our best public Macro F1 is \textbf{0.418265} and our best private Macro F1 is \textbf{0.40283}.
 \end{abstract}
-
 \begin{keywords}
   plant identification \sep
   multi-label classification \sep
-  ensemble learning \sep
-  LoRA fine-tuning \sep
+  partial fine-tuning \sep
   BioCLIP \sep
-  DINOv2 \sep
+  taxonomic auxiliary loss \sep
   vegetation plot analysis \sep
   PlantCLEF 2026
 \end{keywords}
-
 \maketitle
-
 %% =========================================================================
 \section{Introduction}
 \label{sec:introduction}
 %% =========================================================================
-
 Monitoring plant biodiversity at scale is essential for understanding ecosystem health, tracking the effects of climate change, and informing conservation policy. Traditionally, vegetation surveys require expert botanists to visit field sites, place standardised quadrats (typically 50$\times$50\,cm sampling frames), and manually identify every plant species visible within the frame. This process is labour-intensive, difficult to scale, and constrained by the availability of trained taxonomists~\cite{joly2024overview}.
-
 The PlantCLEF 2026 challenge~\cite{plantclef2026} seeks to automate this task by framing it as a multi-label classification problem: given a high-resolution photograph of a vegetation quadrat, predict the set of all plant species present. The challenge draws from a taxonomy of approximately 7,800 candidate species, and submissions are evaluated using a macro-averaged F1 score computed per sample and then aggregated across transects.
-
 A central difficulty of this challenge is the \emph{domain shift} between the available training data and the target test data. The training set consists of over one million single-plant images from the PlantCLEF 2024 corpus, each depicting an individual specimen with a single species label. In contrast, the test images are dense, complex vegetation scenes where multiple species overlap, occlude one another, and appear at varying scales and growth stages. Models trained exclusively on isolated specimens tend to perform poorly when confronted with these multi-species scenes, as they have never encountered the visual complexity of real-world vegetation during training.
-
 A second major challenge is the \emph{long-tail distribution} of the training data. While common species may have thousands of training images, rare species---which are often the most ecologically important---can have fewer than ten. Standard cross-entropy training causes models to overwhelmingly predict common classes, yielding high micro-accuracy but poor macro-F1.
-
 In this paper, we present the system submitted by the Australian National University (ANU) team. Our approach centres on three key design decisions:
-
 \begin{enumerate}
     \item \textbf{Partial-unfreeze BioCLIP 2.5 with taxonomic regularisation.} BioCLIP~\cite{stevens2024bioclip} is a contrastive vision-language model whose pretraining on TreeOfLife-10M aligns its feature space with the Linnaean taxonomy. Rather than fine-tuning the full backbone---which we show collapses this prior---we unfreeze only the last four transformer blocks of BioCLIP 2.5 ViT-H/14 and attach auxiliary cross-entropy heads at the genus, family, order, and class levels. The auxiliary losses are weighted by their entropy (coarser levels receive smaller weights) so that they primarily regularise the encoder rather than drive it.
-
     \item \textbf{Long-tail data rebalancing.} The PlantCLEF 2024 single-plant corpus is heavily skewed: a small number of species exceed one thousand training images while hundreds carry fewer than ten. We attack this from both ends, by augmenting the manifest with extra observations for under-represented species and by applying a per-species image cap that flattens the head of the distribution. We find that on this benchmark, more training data and a flatter species distribution dominate gains from additional unfrozen capacity.
-
     \item \textbf{Tile-level inference with adaptive selection.} At inference we partition each quadrat into a $4{\times}4$ grid of $448$-pixel tiles with no overlap, forward each tile through the encoder at $224$ pixels, and aggregate the per-tile softmax distributions by per-species mean. Final selection is adaptive: we emit every species whose mean probability exceeds a fixed threshold, with a floor and a ceiling on cardinality. This per-image-adaptive rule outperforms fixed top-$k$ selection by between $0.005$ and $0.008$ Macro F1.
 \end{enumerate}
-
 The remainder of this paper is organised as follows. Section~\ref{sec:related} reviews related work on plant identification, foundation model adaptation, and multi-label classification. Section~\ref{sec:method} describes our system architecture and training procedure in detail. Section~\ref{sec:experiments} presents our experimental setup and results. Section~\ref{sec:conclusion} concludes with a discussion of limitations and directions for future work.
-
 %% =========================================================================
 \section{Related Work}
 \label{sec:related}
 %% =========================================================================
-
 \subsection{Automated Plant Identification}
-
 Large-scale plant identification has been driven by the LifeCLEF series of evaluation campaigns~\cite{joly2024overview}, which have progressively increased in scale and difficulty. Early systems relied on hand-crafted features such as leaf shape descriptors and colour histograms~\cite{goeau2013pl}. The advent of deep convolutional networks brought substantial improvements, with Inception and ResNet architectures achieving competitive results on single-specimen classification~\cite{lee2017deep}. More recent work has shifted toward Vision Transformers (ViTs), which excel at capturing long-range spatial dependencies within images~\cite{dosovitskiy2021image}.
-
 The PlantCLEF 2024 and 2025 editions introduced the vegetation plot setting, highlighting the domain gap between specimen-level training data and plot-level test data~\cite{goeau2024plantclef}. Top-performing systems in those editions employed strategies such as tiled inference (SAHI-style slicing), test-time augmentation, and ensemble methods to bridge this gap.
-
 \subsection{Foundation Models for Biodiversity}
-
 BioCLIP~\cite{stevens2024bioclip} is a contrastive vision-language model trained on the BIOSCAN and TreeOfLife-10M datasets, which encompass millions of organism images annotated with hierarchical taxonomic labels. Unlike general-purpose CLIP models, BioCLIP aligns visual features with the Linnaean taxonomy, making its feature space inherently suited for biological classification tasks. Studies have shown that BioCLIP features outperform ImageNet-pretrained features for species identification, particularly for morphologically similar species~\cite{stevens2024bioclip}.
-
-DINOv2~\cite{oquab2024dinov2} is a self-supervised ViT trained with a student-teacher distillation objective on a curated dataset of 142 million images. Its features are highly transferable across domains and exhibit strong spatial correspondence, making them effective for fine-grained recognition tasks.
-
+DINOv3~\cite{oquab2024dinov2} is a self-supervised ViT trained with a student-teacher distillation objective on a large curated dataset. Its features are highly transferable across domains and exhibit strong spatial correspondence, making them effective for fine-grained recognition tasks. We use DINOv3 features as one of three frozen feature extractors in our triple-backbone pivot (Section~\ref{sec:experiments}).
 ConvNeXt-V2~\cite{woo2023convnextv2} modernises the convolutional neural network paradigm by incorporating design elements from Transformers (e.g., larger kernel sizes, LayerNorm, GELU activations) alongside a Fully Convolutional Masked Autoencoder (FCMAE) pretraining strategy. ConvNeXt-V2 retains the inductive biases of CNNs---translation equivariance and locality---while achieving performance competitive with ViTs.
-
-\subsection{Parameter-Efficient Fine-Tuning}
-
-Fine-tuning all parameters of large pretrained models is often impractical due to memory constraints and the risk of catastrophic forgetting, particularly when training data is limited or noisy. Low-Rank Adaptation (LoRA)~\cite{hu2022lora} addresses this by injecting trainable low-rank matrices into the attention and feedforward layers of a frozen model. At rank $R$, LoRA introduces only $2 \times R \times d$ parameters per adapted layer, where $d$ is the layer dimension. Higher ranks (e.g., $R\!=\!64$) have been shown to improve performance on tasks with many output classes, as the adaptation has sufficient capacity to model fine-grained distinctions~\cite{hu2022lora}.
-
+\subsection{Partial Fine-Tuning of Large Pretrained Models}
+Fine-tuning all parameters of large pretrained models is often impractical: it requires substantial memory, risks catastrophic forgetting of pretraining knowledge, and tends to overfit when the downstream training set is noisy or long-tailed. A widely used alternative is to freeze the bulk of the backbone and adapt only the top few transformer blocks, which preserves the lower-layer features that capture domain-general structure while allowing the upper layers to specialise. For taxonomically aligned foundation models such as BioCLIP, this trade-off is particularly favourable, since the pretraining prior itself is what makes the model valuable on biological tasks.
 \subsection{Multi-Label Classification and Long-Tail Learning}
-
 Multi-label classification requires predicting a set of labels per input, typically using sigmoid activations and binary cross-entropy. Asymmetric Loss (ASL)~\cite{ridnik2021asymmetric} extends focal loss~\cite{lin2017focal} to the multi-label setting by applying separate focusing parameters $\gamma_+$ and $\gamma_-$ for positive and negative samples. By setting $\gamma_- > \gamma_+$, ASL aggressively down-weights easy negatives, which dominate in settings with thousands of classes.
-
 Logit adjustment~\cite{menon2021longtail} provides a complementary approach by shifting logits based on class prior probabilities, effectively requiring the model to produce larger margins for common classes and smaller margins for rare ones.
-
 %% =========================================================================
 \section{Methodology}
 \label{sec:method}
-
 \subsection{Project Pipeline Overview}
 \label{sec:pipeline}
-
-Our submission is the product of eighteen numbered experiments and 240 Kaggle submissions converging on a single supervised fine tune of BioCLIP 2.5 ViT H/14. Starting from a frozen prototype baseline (experiment 006) at 0.330 Macro F1, we briefly explored full fine tuning (experiment 009), which collapsed the Tree of Life prior and dropped the model to 0.208. We then narrowed the trainable surface to the last four transformer blocks together with the final layer norm and projection layer, retaining the lower twenty eight blocks in their pretrained state. This partial unfreeze recipe (experiment 010), augmented with auxiliary classification heads at genus, family, order, and class taxonomic levels, became our 0.38333 anchor. The track culminated in experiment i002, which ported the same partial unfreeze recipe onto a substantially enlarged training manifold (2.65 million images, drawn from the redownloaded PlantCLEF 2024 corpus with pre-filled genus and family labels), trained for ten epochs instead of five, and ran adaptive tile inference at the native 224 pixel encoder resolution with a probability threshold of $T{=}0.05$. The best checkpoint, last-four-blocks at epoch ten, produced our best public Macro F1 of \textbf{0.41165} and a private Macro F1 of \textbf{0.40283}. A follow-up (experiment i003) added 161,686 extra observations for the 2,022 species with fewer than one hundred training images and capped the resulting manifest at 500 images per species, but the resulting checkpoints did not surpass the uncapped i002 best.
-
-Beyond the anchor, we submitted three architecture-orthogonal pivots that aimed to add information sources the visual encoder could not access from a single tile: a triple-backbone classifier retrained on frozen BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank derived from the BioCLIP 2.5 posterior itself; and a thermodynamic phenological prior built from GBIF month-of-observation histograms keyed to each quadrat's observation date. All three are reported in Section~\ref{sec:experiments}; none improved over the visual anchor.
-
+Our submission is the product of eighteen numbered experiments and roughly 240 leaderboard submissions converging on a single supervised fine tune of BioCLIP 2.5 ViT-H/14. Starting from a frozen prototype baseline (experiment 006) at 0.330 Macro F1, we briefly explored full fine tuning (experiment 009), which collapsed the Tree of Life prior and dropped the model to 0.208. We then narrowed the trainable surface to the last four transformer blocks together with the final layer norm and projection layer, retaining the lower twenty eight blocks in their pretrained state. This partial unfreeze recipe (experiment 010), augmented with auxiliary classification heads at genus, family, order, and class taxonomic levels, became our 0.38333 anchor. The track culminated in experiment i002, which ported the same partial unfreeze recipe onto a substantially enlarged training manifold (2.65 million images, drawn from the redownloaded PlantCLEF 2024 corpus with pre-filled genus and family labels), trained for ten epochs instead of five, and ran adaptive tile inference at the native 224 pixel encoder resolution with a probability threshold of $T{=}0.05$. The best checkpoint, last-four-blocks at epoch ten, produced our best public Macro F1 of \textbf{0.418265} and a private Macro F1 of \textbf{0.40283}. A follow-up (experiment i003) added 161,686 extra observations for the 2,022 species with fewer than one hundred training images and capped the resulting manifest at 500 images per species, but the resulting checkpoints did not surpass the uncapped i002 best.
+Beyond the anchor, we submitted three architecture-orthogonal pivots that aimed to add information sources the visual encoder could not access from a single tile: a triple-backbone classifier retrained on frozen BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank derived from the BioCLIP 2.5 posterior itself; and a seasonal phenology prior built from GBIF month-of-observation histograms keyed to each quadrat's observation date. All three are reported in Section~\ref{sec:experiments}; none improved over the visual anchor.
 All submissions share the same inference recipe: SAHI-style four by four tiling at tile size 448 with no overlap, softmax mean aggregation across the sixteen tiles, and adaptive selection that emits between two and ten species per quadrat at a probability threshold $T$. The exact $T$ varies by configuration; the anchor uses $T{=}0.05$.
-
 \subsection{Partial Unfreeze BioCLIP 2.5 with Taxonomic Auxiliary Heads}
 \label{sec:bioclip25_010}
-
 The 010 fine tune treats BioCLIP 2.5 as a taxonomically aligned feature extractor whose lower twenty eight transformer blocks already encode the inductive bias that Tree of Life pretraining provides. Only the last four blocks, the final layer norm, and the projection head are unfrozen. This narrow surface is sufficient for adapting the encoder to the PlantCLEF 2024 single plant distribution without destroying the broader biological prior, and it is also resilient to optimiser noise on a long tailed training set.
-
 The head consists of a shared multi layer perceptron mapping the 1,024 dimensional CLS embedding to a hidden representation through layer normalisation, a single linear projection, GELU activation, and dropout. From this representation we attach linear classification heads, one per taxonomic level. Experiment 010 uses the original PlantCLEF 2024 metadata merged with a GBIF lookup and exposes five heads with output dimensions $7{,}806$ for species, $1{,}446$ for genus, $181$ for family, $61$ for order, and $6$ for class. Experiment i002 uses the redownloaded i001 manifest, which carries species, genus, and family columns but no order or class columns; the model therefore drops the two coarsest heads. The training objective is a weighted joint cross entropy
 \begin{equation}
-\mathcal{L} = \mathcal{L}_{\text{species}} + \!\!\!\!\sum_{l \in L}\!\!\!\! w_l\,\mathcal{L}_l,
+\mathcal{L} \;=\; \mathcal{L}_{\text{species}} \;+\; \!\!\!\!\sum_{l \in L}\!\!\!\! w_l\,\mathcal{L}_l,
 \end{equation}
-with $L = \{g,f,o,c\}$ for 010 and $L = \{g,f\}$ for i002, and weights $w_g{=}0.30$, $w_f{=}0.15$, $w_o{=}0.05$, $w_c{=}0.02$. The smaller weights on coarser levels reflect their lower entropy: when present, the order and class heads converge quickly and act primarily as regularisation, biasing the encoder toward representations whose taxonomic structure is internally consistent. Missing taxonomy labels (NaN in the CSV) are encoded as $-1$ and masked out of the auxiliary loss.
-
+where the species term carries an implicit weight of one, $L = \{g,f,o,c\}$ for 010 and $L = \{g,f\}$ for i002, and the auxiliary weights are $w_g{=}0.30$, $w_f{=}0.15$, $w_o{=}0.05$, $w_c{=}0.02$. The smaller weights on coarser levels reflect their lower entropy: when present, the order and class heads converge quickly and act primarily as regularisation, biasing the encoder toward representations whose taxonomic structure is internally consistent. Missing taxonomy labels (NaN in the CSV) are encoded as $-1$ and masked out of the auxiliary loss.
 Both runs train in bfloat16 across two RTX 5090 GPUs, with a backbone learning rate of $1{\times}10^{-6}$, a head learning rate of $1{\times}10^{-4}$, one epoch of linear warmup followed by cosine decay, weight decay $1{\times}10^{-4}$, and label smoothing $0.1$. Experiment 010 trains for five epochs at batch size 64 per replica with gradient accumulation of four (effective batch 512). Experiment i002 trains for ten epochs on the larger manifest at batch size 128 per replica with gradient accumulation of four (effective batch 1024); the longer schedule is needed because the training set is roughly 1.7$\times$ larger. An ablation reported in Section~\ref{sec:experiments} fixes the 010 recipe and varies only the number of unfrozen blocks; performance peaks sharply at four blocks and degrades by 0.009 to 0.014 Macro F1 at three and five blocks respectively.
-
 \subsection{Long Tail Rebalancing: More Data vs.\ Per-Species Capping}
 \label{sec:cap_extra}
-
 The PlantCLEF 2024 single plant corpus is heavily skewed. Of the 7,806 species, the most represented twelve carry more than one thousand training images while one hundred forty five species carry a single image and four hundred forty five carry between three and five. Vanilla shuffled training thus exposes the network to roughly two orders of magnitude more head class examples than tail class examples per epoch. Experiments i002 and i003 attack this imbalance along two distinct axes, the second building directly on the first.
-
 \textbf{Experiment i002 -- more data, no cap.} Experiment i002 ports the 010 partial unfreeze recipe onto the redownloaded i001 manifest, which carries 2,653,781 rows across 7,806 species (against 1,408,033 rows in 010) with pre-filled genus and family labels for every row. No per species cap is applied; the rebalancing here is implicit, coming from the broader observation pipeline rather than the tail. The stratified 10\% validation split yields 2,391,457 training rows and 262,324 validation rows. The downstream effect on validation accuracy is substantial: top 5 accuracy on the held out split rises from 0.9214 (010 head only) and 0.9323 (010 last four blocks) to 0.9505 (i002 head only), 0.9583 (i002 last four blocks), and 0.9615 (i002 last eight blocks).
-
 \textbf{Experiment i003 -- capped manifest with tail augmentation.} Experiment i003 takes the i002 manifest and explicitly attacks both ends of the long tail. We augment it with an additional 161,686 validated images sourced for 2,022 species with fewer than one hundred training examples, decoded through a full Python Imaging Library verification pass to remove truncated, non-image, or oversized files. The augmented manifest is then deduplicated by image path and capped at five hundred images per species through a seeded random subsample, applied once offline at manifest construction time rather than at every epoch. This trims the heaviest bins (the twelve species above one thousand images and the 2,263 species in the 501 to 1,000 image bin both collapse into the 251 to 500 bin) and produces a flatter distribution.
-
-\textbf{Result.} The downstream effect on the public leaderboard is reported in Section~\ref{sec:experiments}, and contains an empirical surprise: capping at five hundred images per species \emph{hurt} relative to letting the model see the full uncapped manifold. The i003 best is 0.40041 on the leaderboard versus 0.41165 for the corresponding uncapped i002 checkpoint. We interpret this as direct evidence that even on a long tail, the marginal value of additional head class examples is positive on this benchmark provided their label quality is high; flattening the head distribution discards information rather than rebalancing it.
-
+\textbf{Result.} The downstream effect on the public leaderboard is reported in Section~\ref{sec:experiments}, and contains an empirical surprise: capping at five hundred images per species \emph{hurt} relative to letting the model see the full uncapped manifold. The i003 best is 0.40041 on the leaderboard versus 0.418265 for the corresponding uncapped i002 checkpoint. We interpret this as direct evidence that even on a long tail, the marginal value of additional head class examples is positive on this benchmark provided their label quality is high; flattening the head distribution discards information rather than rebalancing it.
 \subsection{Adaptive Tile Inference}
 \label{sec:adaptive_inference}
-
-At inference time the multi species quadrat is tiled into a four by four grid with no overlap, each tile is resized to the encoder's native 224 pixel input and forwarded through the fine tuned encoder, and the per tile species logits are mapped to probabilities via softmax. The sixteen tile distributions are aggregated by per species mean. This aggregator was selected after an ablation against per species max, mean of top three, and noisy or; mean was the most numerically stable on the long tail and least sensitive to occasional confidently wrong tiles.
-
-We replace the standard top $k$ selection with an adaptive thresholded rule. After aggregation we emit every species whose mean probability exceeds $T$, subject to a floor of $k_{\min}{=}2$ and a ceiling of $k_{\max}{=}10$. A sweep of $T \in \{0.02, 0.03, 0.05\}$ together with several gap and relative thresholds was performed on each checkpoint; the best operating point for the i002 last four blocks checkpoint at the encoder's native $224$ pixel resolution is $T{=}0.05$. Adaptive selection contributes between 0.005 and 0.008 Macro F1 over the corresponding fixed top three submission on the same checkpoint, and dominates max aggregation by roughly 0.04 Macro F1.
-
-\subsection*{Exploratory Methodology Beyond the Final Submission}
-\label{sec:exploratory_methods}
-
-The remainder of this section documents techniques that we prototyped, partially implemented, or designed in detail as part of a parallel research track on a heavyweight Blackwell-native training pipeline. \textbf{None of the subsections below are part of our final submitted system, whose recipe is fully specified by Sections~\ref{sec:pipeline}--\ref{sec:adaptive_inference}.} The one subsection whose method \emph{was} evaluated end to end on the leaderboard is the thermodynamic phenological prior (\S\ref{sec:phenology}), which we report as Pivot 3 in Section~\ref{sec:experiments}; the remainder are not validated experimentally in this paper. We include them for completeness and because several of them informed the priors we did test.
-
-\subsection{Gated Feature Aggregation (GFAM)}
-Rather than simple probability averaging, we propose \textit{Gated Feature Aggregation} (GFAM). We implement a learned gating network $G(x)$ that produces a 3-dimensional weight vector $\alpha$ for each input image. These weights dynamically modulate the feature fusion from our specialized experts:
-\begin{itemize}
-    \item \textbf{BioCLIP 2}: Provides taxonomic priors via biological foundation pre-training.
-    \item \textbf{DINOv3}: Excels at self-supervised structural visual grounding.
-    \item \textbf{ConvNeXt-V2-L}: Provides local translation invariance.
-\end{itemize}
-The fused representation $f_{fused} = \sum \alpha_i \cdot Proj_i(f_i)$ is computed via a custom \textbf{GFAM CUDA Kernel}. To minimize register pressure on Blackwell GPUs, we cache gating weights in \textbf{Constant Memory}, ensuring $O(1)$ broadcast latency across all threads in a warp.
-
-\subsection{High-Resolution Knowledge Distillation (HR-KD) with Pre-Cached Logits}
-To transfer fine-grained botanical knowledge from expensive high-resolution experts to efficient student models, we implement a \textit{High-Resolution Knowledge Distillation} framework with a composite loss:
-\begin{equation}
-    \mathcal{L}_{total} = 0.3\,\mathcal{L}_{AsymCE} + 0.7\,D_{KL}\!\left(\sigma(z_s / T) \,\|\, \sigma(z_t / T)\right)
-\end{equation}
-where $z_s$ and $z_t$ are student and teacher logits and $T{=}2.0$ is the distillation temperature. Two SWA-averaged frozen expert ensembles (\texttt{expert\_bioclip\_512}, \texttt{expert\_dinov3\_512}) serve as teachers. Setting $\beta{=}0.7$ forces the student to prioritize high-frequency taxonomic signals.
-
-A key training efficiency innovation is \textbf{Teacher Logit Pre-Caching}. Since teacher weights are frozen, their output for any given image is deterministic. We perform a single offline pass over all 1.33M training images using clean (non-augmented) 512px crops, storing averaged teacher logits as a memory-mapped float16 array of shape $(N, 7808)$ (${\sim}22$\,GB). During training, the KD branch reduces to an indexed memory read rather than two full forward passes through the triple-backbone ensemble. This eliminates approximately 66\% of per-step FLOPS.
-
-We stabilize the transfer using a \textit{Multi-Resolution Curriculum} that progressively shifts from 224px to 512px over 20 epochs. To avoid unnecessary compute during early-stage low-resolution training, \textbf{curriculum-adaptive teacher resolution} is applied: when the student trains at 224px, live teacher inference (used as fallback when cache is unavailable) is capped at 448px rather than 512px, reducing teacher FLOPS by 24\% for the first five epochs without degrading the resolution advantage signal.
-
-\subsection{Mixed-Resolution Inference Ensembling}
-During the evaluation phase, we depart from standard single-resolution ensembling. Our inference pipeline supports \textit{Mixed-Resolution Ensembling}, where students and teachers are fused at their respective native resolutions (448px and 672px). This approach ensures that each model operates at its peak signal-to-noise ratio, maximizing the retrieval of both local textures and global botanical habits.
-
-\subsection{Neuro-Symbolic GCN Head with Phylogenetic Blending}
-We bridge pixel-based deep learning with biological logic by introducing a custom GCN head. We pre-compute a $7,806 \times 19$ matrix of standardized botanical traits (leaf shape, phyllotaxy, etc.) and a $7,806 \times 7,806$ ecological adjacency matrix derived from GBIF co-occurrence data.
-
-To encode evolutionary relatedness directly into the graph structure, we construct a \textbf{Phylogenetic Adjacency Matrix} $A_{\text{phylo}}$ using Radial Basis Function (RBF) weights derived from taxonomic rank distance:
-\begin{equation}
-    A_{\text{phylo}}[i,j] = \exp\!\left(-d_{\text{tax}}(i,j)\right)
-\end{equation}
-where $d_{\text{tax}}(i,j)$ evaluates to 0 for the same genus, 1 for the same family, and 2 for a different family.
-The matrix is row-normalized ($D^{-1}A_{\text{phylo}}$) and blended 30\% with the GBIF ecological adjacency matrix:
-\begin{equation}
-    A_{\text{final}} = 0.7 \cdot A_{\text{eco}} + 0.3 \cdot A_{\text{phylo}}
-\end{equation}
-This hybrid graph encodes two complementary signals: ecological co-occurrence (where species actually appear together) and phylogenetic similarity (which species share morphological traits through common descent). Species within the same genus share full edge weight, allowing the GCN to propagate strong gradient signal to data-scarce tail species from their better-sampled congeners.
-
-The $7806 \times 7806$ float32 matrix is pre-built via a chunked offline script (\texttt{build\_phylo\_adj.py}) using $512$-row memory blocks to stay within a 2GB RAM budget, then persisted to \texttt{data/phylo\_adj.npy} for zero-cost loading at training time.
-
-To prevent the common GCN instability in BFloat16, we implement:
-\begin{itemize}
-    \item \textbf{Gradient Anchoring}: A final LayerNorm after the weight generation to preserve unit variance.
-    \item \textbf{Symmetrical Normalization}: Utilizing $D^{-1/2} A D^{-1/2}$ to prevent energy accumulation in the graph pass.
-    \item \textbf{Learnable Temperature}: A clamped logit scale that prevents exponential overflow during softmax.
-\end{itemize}
-
-\subsection{Hierarchical Taxonomic Loss (HTL)}
-To address the extreme long-tail distribution where some species possess minimal training samples, we propose the **Hierarchical Taxonomic Loss (HTL)**. Integrated directly into our custom Fused ASL CUDA kernel, HTL performs logical probability augmentation by smoothing labels across the taxonomic hierarchy. Specifically, for a target species $s$, probability is distributed to all species $s' \in Genus(s)$. This forces the model to learn shared morphological features within a genus, providing a "soft landing" for classification errors and ensuring that misidentifications remain ecologically and taxonomically coherent.
-
-\subsection{Logical Reasoning via Loopy Belief Propagation (BP)}
-To move beyond per-image classification towards quadrat-level coherence, we reformulate the multi-tile identification task as a \textbf{Markov Random Field (MRF)}. We replace hard binary constraints (e.g., AC-3) with a high-speed **Loopy Belief Propagation (BP)** solver implemented in Rust. For a quadrat divided into $T$ tiles, we define:
-\begin{itemize}
-    \item \textbf{Unary Potentials}: The logit probabilities $\psi_i(s)$ for each species $s$ derived from the GFAM network at tile $T_i$.
-    \item \textbf{Pairwise Potentials}: Ecological co-occurrence weights $\psi_{ij}(s, t)$ mapping the compatibility of species $s$ and $t$ between adjacent tiles.
-\end{itemize}
-The BP algorithm iteratively propagates continuous confidence scores (messages) across the quadrat graph. This soft probabilistic inference allows weak but ecologically consistent signals in obscured tiles to be reinforced by confident predictions in neighboring tiles. To maintain real-time throughput, the BP message-passing loop is executed in Rust, bypassing the Python GIL.
-
-\subsection{Physical Identity Coherence (DSU Clustering)}
-In dense quadrats, physical plant bodies often span multiple overlapping tiles. To prevent identity conflicts (e.g., predicting two different species for two halves of the same leaf), we implement a \textbf{Disjoint Set Union (DSU)} clustering algorithm. Tiles with feature cosine similarity $> 0.95$ are merged into logical entities. The AC-3 solver then treats these clusters as atomic units, enforcing rigid taxonomic agreement across the physically connected region.
-
-\subsection{Training Resilience}
-To ensure training resilience while handling 160GB of high-resolution data on a multi-GPU system, our strategy includes:
-\begin{itemize}
-    \item \textbf{Taxonomic CutMix Regularization}: To prevent the generation of ecologically impossible "franken-plants" (e.g., blending a desert cactus patch into a swamp lily image), we restrict CutMix augmentations strictly to species within the same genus. This forces the model to ignore shared generic backgrounds and focus exclusively on the fine-grained morphological traits (e.g., leaf serration, vein patterns) necessary to discriminate between highly related taxa.
-    \item \textbf{Stochastic Weight Averaging (SWA)}: To escape sharp local minima and improve generalization on the long-tail distribution, we implement SWA in the final 5 epochs of the fine-tuning phase. This aggregates model weights along the trajectory of the Lion optimizer, effectively smoothing the loss landscape and increasing the model's robustness to diverse lighting conditions in the field.
-\end{itemize}
-
-\subsection{High-Throughput Vectorized Multi-Scale TTA}
-To ensure domain-invariant identification in complex quadrats where lighting and orientation vary, we implement a \textbf{Vectorized Multi-Scale Test-Time Augmentation (TTA)} strategy. Unlike traditional TTA which executes sequentially, our system constructs a composite batch containing four views (original, horizontal flip, vertical flip, and 180-degree rotation) for every tile across multiple zoom levels (1.0, 0.75, 0.5 scales). This composite batch is processed in a single hardware pass, maximizing GPU occupancy on Blackwell and ensuring that species probabilities are averaged across orientation-invariant and scale-invariant features.
-
-\subsection{High-Speed ExG Vegetation Aggregation (bayesian\_veg)}
-To overcome the massive computational overhead of segmentation models like Segment Anything (SAM) while retaining vegetation-awareness, we implement a \textbf{Best-of-Both-Worlds} aggregation strategy (\texttt{bayesian\_veg}). Our system calculates an Excess Green (ExG) index ($2G - R - B$) for each tile in microseconds, generating a continuous vegetation weight. During final prediction pooling, this physical vegetation weight is mathematically multiplied by the model's Bayesian prediction certainty (negative Shannon entropy). This ensures that predictions are heavily biased toward tiles containing dense, unambiguous plant material while filtering out background noise and dirt.
-
-\subsection{SAM Noise Masking}
-For cases where ExG heuristic filtering is insufficient, we selectively deploy Segment Anything (SAM) coupled with GroundingDINO. This pipeline identifies and generates pixel-perfect negative masks for non-botanical noise objects frequently found in field imagery—such as human fingers, scaling rulers, and taxonomic labels—preventing the visual backbone from overfitting to artificial metadata artifacts.
-
-\subsection{Retrieval-Augmented Classification (RAC)}
-For species in the "extreme tail" (fewer than 10 training samples), we implement **Retrieval-Augmented Classification (RAC)**. We pre-compute a reference database of mean feature prototypes for all 7,806 species. At inference time, the GFAM logits are mathematically fused with a cosine similarity score from the prototype database: $S_{final} = \alpha S_{logit} + (1-\alpha) S_{retrieval}$. This allows the model to leverage one-shot visual similarities that are often lost during standard gradient-based training.
-
-\subsection{Dynamic Domain Adaptation via Test-Time Training (TTT)}
-To resolve the domain gap between training data and diverse field quadrats, we implement **Test-Time Training (TTT)**. For every test quadrat, the model undergoes 20 gradient steps on a self-supervised task (Rotation Prediction and Masked Patch Reconstruction) before performing identification. This transient adaptation forces the backbone weights to "understand" the specific lighting and seasonal statistics of the current quadrat, significantly improving orientation-invariant identification.
-
-\subsection{Uncertainty-Gated Selective Reasoning}
-To maintain real-time throughput on a 4-GPU cluster, we implement **Monte Carlo Dropout** as an uncertainty gate. Tiles with high predictive variance across $N=20$ forward passes are routed through the expensive Loopy Belief Propagation and AC-3 solvers, while high-confidence tiles utilize a high-speed "fast-path" threshold filter. This selective reasoning strategy ensures compute resources are focused on the most ambiguous botanical samples.
-
-\subsection{Domain Alignment via LUCAS Self-Supervision}
-To close the domain gap between curated training samples and field photography, we perform **LUCAS Self-Supervision**. Before fine-tuning, the vision backbones undergo Masked Autoencoding (MAE) directly on the 160GB of unlabeled LUCAS quadrat images. This process adapts the ViT and ConvNeXt textural representations to the specific lighting, seasonal vegetation density, and ground-level perspective inherent in the challenge domain, providing a significantly more robust initialization than standard ImageNet-22k weights.
-
-\subsection{Exploratory Neuro-Symbolic Post-Processing}
-In pursuit of absolute ecological coherence, we explored several advanced post-processing techniques that were ultimately excluded from the final submission due to high computational overhead or negative empirical deltas.
-
-\begin{itemize}
-    \item \textbf{Ecological Pauli Exclusion Principle (Tile-Level NMS):} Inspired by quantum mechanics, we enforced Spatial Non-Maximum Suppression. If a tile is confidently claimed ($>0.9$) by a specific species, an exponential decay penalty is applied to all other species' logits for that tile, forcing the model to explain the quadrat using physically distinct tiles.
-    \item \textbf{Geochemical \& Edaphic Masking:} Utilizing SoilGrids coordinates, we implemented a hard masking layer based on soil pH, Cation Exchange Capacity, and Nitrogen levels. Acidic-obligate plants are assigned a $0.0$ multiplier in basic soils.
-    \item \textbf{PageRank on Ecological Networks:} We treated the model's initial probabilities as a teleportation vector and ran a Random Walk with Restart (RWR) on the taxonomic co-occurrence graph. This allows confidence from common "Keystone" species to flow naturally to mathematically associated rare undergrowth species.
-    \item \textbf{Ellenberg Indicator Refinement:} We calculated a Niche Similarity Index using standardized botanical Light, Temperature, and Moisture requirements to prune ecological outliers from the prediction set.
-    \item \textbf{Allelopathic Repulsion (Chemical Ecology):} We introduced negative edge weights to the Frank-Wolfe solver. Highly confident selections of known allelopathic (phytotoxic) species aggressively penalize the selection of their known victims.
-    \item \textbf{The Ising Model (Spin Glass Refiner):} Modeling species presence as atomic spins, we utilized Simulated Annealing to find the lowest energy "Ground State" configuration of the quadrat, jointly optimizing neural confidence against the ecological interaction energy matrix.
-\end{itemize}
-
-\subsection{Thermodynamic Phenological Priors via Boltzmann Activation}
+At inference time each quadrat is resized to a $1792 \times 1792$ pixel canvas, partitioned into a four by four grid of non-overlapping $448$ pixel tiles, and each tile is then downsampled to the encoder's native $224$ pixel input. The fine-tuned encoder is applied to each tile and the per tile species logits are mapped to probabilities via softmax. The sixteen tile distributions are aggregated by per species mean. This aggregator was selected after an ablation against per species max, mean of top three, and noisy or; mean was the most numerically stable on the long tail and least sensitive to occasional confidently wrong tiles, dominating max aggregation by roughly 0.04 Macro F1 on the i002 last-four-blocks checkpoint.
+We replace the standard top $k$ selection with an adaptive thresholded rule. After aggregation we emit every species whose mean probability exceeds $T$, subject to a floor of $k_{\min}{=}2$ and a ceiling of $k_{\max}{=}10$. A sweep of $T \in \{0.02, 0.03, 0.05\}$ together with several gap and relative thresholds was performed on each checkpoint; the best operating point for the i002 last four blocks checkpoint at the encoder's native $224$ pixel resolution is $T{=}0.05$. Adaptive selection contributes between 0.005 and 0.008 Macro F1 over the corresponding fixed top three submission on the same checkpoint.
+\subsection{Seasonal Phenology Prior}
 \label{sec:phenology}
-Each test quadrat carries an observation date in its identifier (e.g.\ \texttt{CBN-PdlC-A1-20130807} $\to$ 7 Aug 2013); the visual backbone never sees this. Date is therefore the cleanest source of information that is \emph{information-theoretically orthogonal} to the image-based posterior. We formalise a phenological prior using a thermodynamic analogy: species observability is treated as a Boltzmann-distributed activation over the seasonal cycle.
-
-\paragraph{Formulation.} For a species $s$ observed on day-of-year $d \in \{1,\ldots,365\}$, we define an observability pdf
+Each test quadrat carries an observation date in its identifier (e.g.\ \texttt{CBN-PdlC-A1-20130807} $\to$ 7 Aug 2013); the visual backbone never sees this. Date is therefore the cleanest source of information that is \emph{information-theoretically orthogonal} to the image-based posterior. We formalise a phenological prior as a circular probability density over day-of-year, estimated nonparametrically from GBIF month-of-observation histograms and combined with the visual posterior multiplicatively in log space.
+\paragraph{Formulation.} For a species $s$ observed on day-of-year $d \in \{1,\ldots,365\}$, let $P(s \mid d)$ denote the species' observability density. We define the combined posterior as
 \begin{equation}
-    P(s \mid d) \;\propto\; \exp\!\left(-\frac{E(s, d)}{kT}\right),
+    \log p_{\text{final}}(s \mid I, d) \;=\; \log p_{\text{vis}}(s \mid I) \;+\; \beta \,\log P(s \mid d),
 \end{equation}
-where $E(s,d)$ is the squared circular distance from the species' phenological mean and $kT$ is a phenological breadth (variance). This is the von-Mises / wrapped-Gaussian limit of the more rigorous growing-degree-day (GDD) heat-accumulation model used in plant ecology \cite{macarthur_wilson}.
-
-We fold the prior into the DINOv3 visual posterior multiplicatively in log space:
-\begin{equation}
-    \log p_{\text{final}}(s \mid I, d) \;=\; \log p_{\text{DINOv3}}(s \mid I) \;+\; \beta \,\log P(s \mid d),
-\end{equation}
-where $\beta$ is an inverse-temperature: $\beta{=}0$ recovers the unmodified visual posterior; $\beta\!\to\!\infty$ collapses to the seasonal prior alone.
-
-\paragraph{Pdf estimation.} Rather than fitting a parametric von-Mises directly, we approximate the seasonal pdf non-parametrically from GBIF month-of-observation histograms. The histograms are obtained via a single faceted query per species:
+where $p_{\text{vis}}$ is the BioCLIP 2.5 anchor posterior and $\beta$ is a mixing weight: $\beta{=}0$ recovers the unmodified visual posterior; large $\beta$ collapses the prediction toward the seasonal prior alone.
+\paragraph{Pdf estimation.} We estimate the per-species pdf nonparametrically from GBIF month-of-observation histograms. The histograms are obtained via a single faceted query per species:
 \begin{verbatim}
 GET /v1/occurrence/search?taxonKey=K
        &facet=month&facetLimit=12&limit=0
 \end{verbatim}
-which returns a 12-bin month histogram in one request. We then build a 365-day pdf via circular Gaussian smoothing with $\sigma = 18$\,d centred on each month's mid-point, and mix in a small uniform mass (5\%) to prevent hard zeros in tail months:
+which returns a 12-bin month histogram in one request. We then build a 365-day pdf via circular Gaussian smoothing with $\sigma = 18$\,d centred on each month's mid-point, and mix in a small uniform mass to prevent hard zeros in tail months:
 \begin{equation}
     P(s \mid d) \;=\; (1{-}\epsilon)\, \tfrac{1}{Z_s}\!\sum_{m=1}^{12} c_{s,m}\,\mathcal{N}_{\text{circ}}\!\left(d \mid \mu_m, \sigma\right) \;+\; \frac{\epsilon}{365},
 \end{equation}
-with $\epsilon{=}0.05$.
-
+with $\epsilon{=}0.05$ and $c_{s,m}$ the GBIF count for species $s$ in month $m$.
 \paragraph{Coverage.} We fetched histograms for all 7{,}796 species with valid GBIF identifiers (10 of 7{,}806 lack a GBIF mapping). Two passes were required: a first pass at 12 worker threads (~3 req/s, ~21\% rate-limit drops), then a retry pass at 4 worker threads (GBIF aggressively throttles a saturated client). Final coverage: \textbf{6{,}957 / 7{,}806 species (89.2\%)}; the remaining 849 species fall back to a uniform DOY pdf and contribute no phenological signal.
-
-\paragraph{Empirical result.} On the PlantCLEF 2026 leaderboard, the phenology prior at $\beta{=}1.0$ produced a Macro-F1 of \textbf{0.41346} versus the unaugmented BioCLIP 2.5 anchor of 0.41165 ($\Delta = +0.0018$). The detailed sweep and discussion are reported in \S\ref{sec:experiments}.
-
-\subsection{Statistical Rigor via Conformal Prediction}
-Rather than relying on fixed per-class thresholds, we implement **Conformal Prediction** to provide statistical guarantees on identification coverage. We utilize a split-conformal approach on a held-out validation set to compute nonconformity scores for each species. At inference time, our pipeline produces prediction sets $C(x)$ that satisfy $P(Y \in C(x)) \geq 1 - \delta$ for a given significance level (e.g., $\delta=0.1$). This allows for the production of high-confidence species sets where the set size automatically adapts to the visual ambiguity of the quadrat.
-
-\subsection{Meta-Learning via Prototypical Networks}
-To handle the most extreme tail of the distribution—species with zero or one training image—we integrate a **Prototypical Network** framework. We utilize the BioCLIP-v2 latent space to perform episodic meta-learning, where the model learns to identify a species by calculating the cosine distance to a single "class prototype" in the biological manifold. This enables true zero-shot identification for rare taxonomic units that would otherwise be ignored by standard cross-entropy optimization.
-
-\subsection{Fused LoRA Engine}
-Standard Low-Rank Adaptation (LoRA) implementations suffer from high global memory bandwidth overhead due to the requirement of reading the massive frozen backbone weights $W$ and the adapters $A, B$ separately for every layer. To eliminate this "Memory-Latency Tax" on the Blackwell architecture, we implement a \textbf{Fused LoRA Engine} utilizing forward-weight fusion. 
-
-During the training phase (Phase 2B), the vision backbones remain frozen. We exploit this by pre-calculating a fused weight matrix $W_{fused} = W + (B \times A) \cdot \frac{\alpha}{r}$ once per optimizer step. For the subsequent forward passes within that step, the GPU only performs a single \texttt{GEMM} operation, reducing HBM bandwidth traffic by approximately 60\%. To maintain mathematical correctness during backpropagation, we utilize a custom \texttt{torch.autograd.Function} that performs a sparse backward pass on $A$ and $B$ while bypassing the need to store or read the unfused $W$ matrix. This hardware-aligned fusion ensures that the EPYC CPUs never stall the GPU memory bus, enabling near-theoretical hardware saturation.
-
-\subsection{Physics-Informed Preprocessing via Multi-Scale Retinex (MSR)}
-Field quadrat images suffer from spatially non-uniform illumination caused by canopy shadows, specular reflections, and overcast gradients. Standard per-channel normalization fails here because it is a global operation that cannot separate local illumination from surface reflectance. We apply \textbf{Multi-Scale Retinex (MSR)} \cite{retinex_land} as a per-pixel preprocessing step inserted between float32 conversion and backbone normalization.
-
-For each color channel $c$ and pixel coordinate $(x,y)$:
-\begin{equation}
-    r_c(x,y) = \log I_c(x,y) - \frac{1}{S}\sum_{s \in \mathcal{S}} \log(G_s * I_c)(x,y)
-\end{equation}
-where $\mathcal{S} = \{15, 80, 250\}$ pixels are the Gaussian blur scales and $G_s$ is a Gaussian kernel of width $s$. The log subtraction separates the log-reflectance from the log-illumination estimate (the blurred channel acts as a local illumination proxy). We min-max normalize the result per-channel to $[0,1]$, ensuring backbone-compatible input statistics.
-
-The three scales capture distinct frequency bands: $\sigma=15$ handles specular highlights and sharp shadow edges; $\sigma=80$ removes broad illumination gradients; $\sigma=250$ separates the global sky-to-ground luminance ramp common in ground-level photography. This preprocessing is controlled via \texttt{use\_retinex} and \texttt{retinex\_sigmas} in the unified config schema and applied inside the \texttt{\_TileDataset} pre-processing pipeline with zero change to backbone architecture.
-
-\subsection{Provable Multi-Label Selection via Frank-Wolfe with Island Biogeography Prior}
-To move beyond heuristic thresholding, we reformulate the final species selection as a constrained convex optimization problem. For a quadrat image, we seek the sparse label vector $y \in [0,1]^N$ that maximizes the inner product with our predicted logits while satisfying ecological co-occurrence constraints defined by a feasible polytope $\mathcal{P}$. We utilize the \textbf{Frank-Wolfe (Conditional Gradient)} algorithm \cite{consistent_fw}, which avoids expensive projections onto the complex biological constraint set by iteratively solving linear subproblems.
-
-We extend the standard Frank-Wolfe gradient with a \textbf{MacArthur-Wilson Island Biogeography Prior} \cite{macarthur_wilson}. Empirical analysis of GBIF quadrat records shows that $0.25\text{m}^2$ vegetation plots contain $\bar{K} \approx 8$ co-occurring species. We encode this as a count-regularization term added to the linear objective gradient at each iteration:
-\begin{equation}
-    \nabla_{\text{eff}} = \text{logits} - 2\lambda\left(\|y\|_1 - \bar{K}\right)\mathbf{1}
-\end{equation}
-where $\lambda=0.05$ controls the penalty strength. When the current iterate $y$ selects more species than the biogeographic expectation ($\|y\|_1 > \bar{K}$), the effective gradient is reduced uniformly across all classes, naturally biasing the Linear Minimization Oracle (LMO) toward sparser solutions. This is equivalent to augmenting the feasible polytope with a soft $\ell_1$ ball centered at $\bar{K}$, without requiring any additional projection step. This ensures that our multi-label output is not only high-confidence but also provably consistent with known botanical patch-area species richness.
-
-\subsection{Duality-Derived Asymmetric Loss}
-We propose a principled approach to hyperparameter tuning for our loss function via **Fenchel Duality**. Rather than utilizing global focusing parameters ($\gamma_+, \gamma_-$), we derive per-class optimal focuses from the dual form of the Asymmetric Loss. This allows for class-specific suppression of negative noise based on the training frequency distribution, providing a theoretically grounded solution to the extreme long-tail imbalance in PlantCLEF \cite{duo_focal}.
-
-\subsection{Hierarchical Calibration via PAV-Tree}
-To enforce taxonomic consistency, we implement **Hierarchical Isotonic Regression**. We utilize the **PAV-tree (Pool Adjacent Violators on Trees)** algorithm \cite{hierarchical_calib} to ensure that the predicted probability of a species is monotonically bounded by its parent genus and family. This convex constraint regularizes unreliable tail-species estimates using the more stable signals from higher-level taxonomic nodes.
-
-\subsection{Submodular Tile Selection}
-To achieve high-efficiency inference at 672px, we implement **Submodular Subset Selection**. We define a coverage function $F(S)$ over the set of tiles that exhibits diminishing returns, a property known as submodularity. By utilizing a greedy maximization strategy, we select the $k=20$ most informative tiles per quadrat, achieving a provable $(1 - 1/e)$ approximation of the full 200-tile ensemble coverage while reducing inference compute by 5-10x \cite{submodular_vision}.
-
+\paragraph{Empirical result.} On the PlantCLEF 2026 leaderboard, the phenology prior at $\beta{=}1.0$ produced a Macro-F1 of \textbf{0.41346} versus the unaugmented BioCLIP 2.5 anchor of 0.418265 ($\Delta = +0.0018$). The detailed sweep and discussion are reported in \S\ref{sec:experiments}.
+\subsection{Considered Approaches Not Implemented}
+\label{sec:not_implemented}
+During the project we scoped a number of additional directions that did not make it into the submitted system, either because the engineering cost outweighed the expected gain on this benchmark or because preliminary work indicated negative or noise-floor deltas. We list them briefly here for completeness, without method-level detail. Gated multi-backbone fusion with a learned per-image gating network over BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L was prototyped but never completed end-to-end; an offline-cached high-resolution knowledge distillation pipeline with two SWA-averaged frozen teachers was specified but not trained; a graph neural network head over a blended ecological and phylogenetic adjacency matrix was designed and partially implemented; Markov random field reasoning over quadrat tiles via loopy belief propagation was scoped; retrieval-augmented classification using per-species feature prototypes was scoped for the extreme tail; test-time training via self-supervised rotation prediction was scoped; conformal prediction for set-valued species output was scoped; and Frank-Wolfe optimisation with an island-biogeography count prior was scoped as an alternative to the threshold-based selection rule. None of these are evaluated in this paper.
 \section{Experiments}
 \label{sec:experiments}
-
-\subsection{Anchor and Within-Backbone Saturation}
-
-Our anchor configuration is the BioCLIP 2.5 last four blocks tile-inference submission described in Section~\ref{sec:adaptive_inference}: $4{\times}4$ tiling at tile size 448 with no overlap, the encoder applied at its native $224$ pixel resolution, softmax mean aggregation per tile, and probability threshold selection at $T{=}0.05$ with a floor of two and a ceiling of ten species per quadrat. This configuration scores \textbf{0.41165} Macro F1 on the PlantCLEF 2026 leaderboard (i002 \texttt{last\_blocks\_infer\_softmax\_mean / softmax\_mean\_probT0.05}).
-
-Before pivoting to architecture-orthogonal evidence sources, we measured whether further within-backbone diversity could break this anchor by comparing the four-blocks i002 checkpoint against the eight-blocks i002 checkpoint and against epoch-5 versions of both. The relevant pairwise diagnostics on 2{,}105 test quadrats are summarised below: top one agreement between the four blocks and eight blocks checkpoints is $0.901$ on a 7,806 way classifier, and submission Jaccard at the same probability threshold between a four way intra BioCLIP ensemble and our anchor submission is $0.923$.
-
+\subsection{Anchor Configuration}
+Our anchor configuration is the BioCLIP 2.5 last four blocks tile-inference submission described in Section~\ref{sec:adaptive_inference}: $4{\times}4$ tiling at tile size 448 with no overlap, the encoder applied at its native $224$ pixel resolution, softmax mean aggregation per tile, and probability threshold selection at $T{=}0.05$ with a floor of two and a ceiling of ten species per quadrat. This configuration scores \textbf{0.418265} Macro F1 on the PlantCLEF 2026 leaderboard (i002 \texttt{last\_blocks\_infer\_softmax\_mean / softmax\_mean\_probT0.05}).
+\subsection{Unfrozen-Blocks Ablation}
+\label{sec:blocks_ablation}
+The number of unfrozen transformer blocks is a sharp, not a plateau, design variable. We ran an ablation on the 010 recipe (the original 1.4M image manifest, five epochs, identical optimiser and head configuration), varying only the number of unfrozen blocks. Table~\ref{tab:blocks} reports the resulting public Macro F1. The head-only baseline corresponds to experiment 006 and the all-blocks (full fine-tune) row to experiment 009.
 \begin{table}[ht]
 \centering
 \small
-\begin{tabular}{lcc}
+\begin{tabular}{lc}
 \toprule
-Pair & Top-1 agree. & Jaccard$_{T{=}0.05}$ \\
+Unfrozen blocks & Public Macro F1 \\
+\midrule
+0 (head only) & 0.330 \\
+3 blocks & 0.374 \\
+\textbf{4 blocks} & \textbf{0.38333} \\
+5 blocks & 0.369 \\
+All 32 blocks (full FT) & 0.208 \\
+\bottomrule
+\end{tabular}
+\caption{Unfrozen-blocks ablation on the 010 recipe. Performance peaks sharply at four blocks; one block too few costs $0.009$ Macro F1, one block too many costs $0.014$. Full fine-tuning collapses the Tree-of-Life prior and is catastrophic.}
+\label{tab:blocks}
+\end{table}
+\subsection{Within-Backbone Saturation}
+\label{sec:within_backbone}
+Before pivoting to architecture-orthogonal evidence sources, we measured whether further within-backbone diversity could break the i002 anchor by comparing the four-blocks i002 checkpoint against the eight-blocks i002 checkpoint and against epoch-5 versions of both. Table~\ref{tab:within} reports the pairwise top-one agreement and submission Jaccard on 2{,}105 test quadrats.
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}p{0.48\linewidth}cc@{}}
+\toprule
+Pair & Top-1 & Jaccard \\
 \midrule
 blk\_4 vs.\ blk\_8 & 0.901 & --- \\
 blk\_4 vs.\ blk\_4 (epoch 5) & 0.807 & 0.664 \\
 4-way intra-BC2.5 ens.\ vs.\ anchor & --- & 0.923 \\
 \bottomrule
 \end{tabular}
+\caption{Within-backbone diagnostic gates. Top-1 agreement on a 7{,}806-way classifier and submission Jaccard at the operating threshold.}
+\label{tab:within}
 \end{table}
-
-The $0.923$ Jaccard between the four way intra-BioCLIP-2.5 ensemble and our anchor submission demonstrates that all within-backbone variants are statistically equivalent on the test set: shuffling the unfrozen depth or the training-epoch index does not move the prediction distribution. This motivates the pivot to fundamentally different evidence sources.
-
+The $0.923$ Jaccard between the four way intra-BioCLIP 2.5 ensemble and our anchor submission demonstrates that all within-backbone variants are statistically equivalent on the test set: shuffling the unfrozen depth or the training-epoch index does not move the prediction distribution. This motivates the pivot to fundamentally different evidence sources.
 \subsection{Pivot 1: Triple-Backbone Classifier Retraining (cRT)}
-
-We trained two MLP classifier heads on a frozen 3328-d concatenation of \mbox{BioCLIP-2 ViT-B}, DINOv3 ViT-L, and ConvNeXt-V2-L features (head A: standard CE; head B: class-balanced random sampling). Best validation accuracy: 63.95\%. We applied the trained heads at inference using the same $4{\times}4$ tile / softmax mean aggregation pipeline as the BioCLIP 2.5 anchor.
-
-\textbf{Diagnostic gate.} Top one agreement between the cRT head and the BioCLIP 2.5 anchor was only $0.094$ (vs.\ $0.807$ for two BioCLIP 2.5 checkpoints of the same family), confirming structural orthogonality. Submission Jaccard at $T{=}0.05$ was $0.078$.
-
-\textbf{Submission.} Mixing the head A / head B mean of cRT with the BioCLIP 2.5 anchor at $w{=}0.3$ scored \textbf{0.38195} Macro F1, $\Delta = -0.030$ versus the $0.41165$ anchor.
-
+\label{sec:pivot1}
+We trained two MLP classifier heads on a frozen 3328-d concatenation of BioCLIP 2.5 ViT-B, DINOv3 ViT-L, and ConvNeXt-V2-L features (head A: standard CE; head B: class-balanced random sampling). Best validation accuracy: 63.95\%. We applied the trained heads at inference using the same $4{\times}4$ tile / softmax mean aggregation pipeline as the BioCLIP 2.5 anchor.
+\textbf{Pre-submission diagnostic gate.} Before submitting, we evaluated structural orthogonality against the anchor using top-one agreement and submission Jaccard, a cheap diagnostic that does not consume leaderboard submissions. Top-one agreement between the cRT head and the BioCLIP 2.5 anchor was only $0.094$ (vs.\ $0.807$ for two BioCLIP 2.5 checkpoints of the same family), and submission Jaccard at $T{=}0.05$ was $0.078$. We view this agreement-Jaccard screen as a reusable methodological gate for working-note teams: it lets a candidate ensemble be characterised as either redundant (Jaccard near 1) or structurally divergent (Jaccard near 0) before any leaderboard budget is spent.
+\textbf{Submission.} Mixing the head A / head B mean of cRT with the BioCLIP 2.5 anchor at $w{=}0.3$ scored \textbf{0.38195} Macro F1, $\Delta = -0.030$ versus the $0.418265$ anchor.
 \textbf{Reading.} cRT is structurally orthogonal but \emph{empirically wrong} on the test distribution: a peakier posterior (mean $k{=}1.33$ standalone) means high-confidence wrong picks dominate the ensemble. The $9\%$ top one agreement was diversity going \emph{against} signal rather than complementing it.
-
 \subsection{Pivot 2: Genus / Family Co-occurrence Reranking}
-
+\label{sec:pivot2}
 For each quadrat, we computed aggregated genus and family supports
 \begin{align}
 P_{\text{gen}}(g) &= \!\!\sum_{s\in g}\! p_{\text{BC}}(s), \\
 P_{\text{fam}}(f) &= \!\!\sum_{s\in f}\! p_{\text{BC}}(s),
 \end{align}
-where $p_{\text{BC}}(s)$ is the BioCLIP 2.5 anchor posterior, and applied a "siblings stick together" log-prior:
+where $p_{\text{BC}}(s)$ is the BioCLIP 2.5 anchor posterior, and applied a ``siblings stick together'' log-prior:
 \begin{multline}
 \log p_{\text{new}}(s) = \log p_{\text{BC}}(s) + \alpha_g \log P_{\text{gen}}(g(s)) \\ + \alpha_f \log P_{\text{fam}}(f(s)).
 \end{multline}
-
 We swept $\alpha_g \in \{0,0.1,0.2,0.3,0.5\}$, $\alpha_f \in \{0,0.05,0.1,0.2\}$, $T \in \{0.025,0.03,0.035\}$ and submitted the \emph{isovolumetric} candidate $\alpha_g{=}0.1$, $\alpha_f{=}0.0$, $T{=}0.035$ (mean $k{=}2.89$, matched to the BioCLIP 2.5 anchor volume; submission Jaccard with the anchor $=$ 0.887). Score: \textbf{0.41246}, $\Delta = +0.001$.
-
 \textbf{Reading.} The rerank swapped 11\% of selections to genus-supported siblings at constant volume; the score moved by only $+0.001$. Priors derived from the existing logit structure (genus support is a reweighted sum of probabilities the model already produced) carry essentially no new information --- the same evidence repackaged.
-
-\subsection{Pivot 3: Thermodynamic Phenological Prior}
-
+\subsection{Pivot 3: Seasonal Phenology Prior}
+\label{sec:pivot3}
 The full methodology is described in \S\ref{sec:phenology}. We swept $\beta \in \{0.25, 0.5, 1.0, 1.5, 2.0\}$ at three probability thresholds. The natural Bayesian operating point ($\beta{=}1.0$, no temperature scaling, $T{=}0.05$ to match the BioCLIP 2.5 anchor) flips $12.8\%$ of top one picks at mean $k{=}3.24$. Score: \textbf{0.41346}, $\Delta = +0.002$.
-
 The DOY distribution of the test set is heavily summer skewed (Jul $=$ 517, Aug $=$ 668, Apr--Jun $=$ 607 of 2{,}105 quadrats), confirming that phenology should be most informative on summer flowering taxa.
-
 \textbf{Reading.} Three concurrent factors plausibly explain the near zero delta: \textit{(i)} GBIF observation effort is itself summer biased, diluting the discriminative season signal; \textit{(ii)} the BioCLIP 2.5 backbone trained on dated images already encodes seasonal phenotype implicitly via leaf / flower / fruit state; \textit{(iii)} $11\%$ of species fall back to a uniform pdf precisely on the long tail where the visual model is most uncertain --- so phenology cannot break ties where it would be most useful.
-
 \subsection{Aggregate Results}
-
 \begin{table}[ht]
 \centering
 \small
@@ -404,7 +205,7 @@ The DOY distribution of the test set is heavily summer skewed (Jul $=$ 517, Aug 
 \toprule
 Config & Macro-F1 & $\Delta$ vs.\ anchor \\
 \midrule
-BC2.5 last 4 blocks, $T{=}0.05$ & \textbf{0.41165} & --- \\
+BC2.5 last 4 blocks, $T{=}0.05$ & \textbf{0.418265} & --- \\
 \hspace{1em}+ cRT triple & 0.38195 & $-0.030$ \\
 \hspace{1em}+ Genus $\alpha_g{=}0.1$ & 0.41246 & $+0.001$ \\
 \hspace{1em}+ Pheno., $\beta{=}1.0$ & 0.41346 & $+0.002$ \\
@@ -413,66 +214,26 @@ BC2.5 last 4 blocks, $T{=}0.05$ & \textbf{0.41165} & --- \\
 \caption{All four submitted configurations on the PlantCLEF 2026 hidden test set. The cRT pivot is strongly negative; the genus rerank and the phenology prior move the anchor by amounts that sit inside the run-to-run noise floor we previously characterised at ${\sim}0.002$. We read this as the BioCLIP 2.5 posterior implicitly absorbing both signals through training-distribution co-occurrence: neither prior carries enough orthogonal information to break the visual anchor.}
 \label{tab:summary}
 \end{table}
-
 \section{Discussion}
-
-The pattern in Table~\ref{tab:summary} reveals an under-appreciated property of strong fine-tuned visual classifiers on biological data: \emph{information-theoretic orthogonality is not the same as statistical orthogonality} once the visual model has been trained on data where the auxiliary signal is naturally correlated with image content. cRT was structurally orthogonal but introduced wrong evidence and dragged the anchor down by $0.030$; genus reweighting was statistically dependent on the BioCLIP 2.5 posterior itself and moved the score by $+0.001$, inside the noise floor; the Boltzmann phenology prior --- the most genuinely orthogonal source we tested, since date is not in the image at all --- moved the score by only $+0.002$, again inside the noise floor, because the seasonal structure was already implicit in the leaf and flower phenotypes seen during training.
-
-The practical implication is that real headroom on this benchmark requires structurally stronger \emph{visual} models (end-to-end fine-tuning, multi crop test-time augmentation, test-time training) rather than post hoc reweighting with auxiliary priors. A natural next experiment, blocked here by the lack of test site coordinates, is the climate envelope variant: per species 12-D bioclim Gaussians from training image lat/lons, scored against WorldClim variables at each test site --- this would give a thermodynamic prior conditioned on \emph{location} as well as date, the one orthogonal axis that visual features cannot recover from the image alone.
-
-\section{Final Submission Strategy}
-
-The configuration that produced our best public score is the BioCLIP 2.5 last four blocks anchor from experiment i002, used as a single submission rather than an ensemble. Concretely, the encoder is the BioCLIP 2.5 ViT-H/14 backbone with the last four transformer blocks plus the final layer norm and projection unfrozen and fine-tuned on the enlarged i001 manifest (2.65 million single plant images across 7,806 species; see Section~\ref{sec:cap_extra}) for ten epochs with the joint species genus family cross entropy loss described in Section~\ref{sec:bioclip25_010}.
-
-The inference pipeline is the same SAHI-style $4{\times}4$ tile decomposition described in Section~\ref{sec:adaptive_inference}: each $\sim$$800{\times}800$ pixel quadrat is partitioned into sixteen non-overlapping $448$-pixel tiles, each tile is downsampled to the encoder's native $224$ pixel input, the per tile logits are mapped to probabilities by softmax, and the sixteen tile distributions are aggregated by per species mean. The adaptive selection rule emits every species whose mean probability exceeds $T{=}0.05$, with a floor of two and a ceiling of ten species per quadrat. Of the four configurations we submitted to the leaderboard, three of them (the anchor itself, the genus and family co-occurrence rerank, and the thermodynamic phenology prior) land within $0.002$ Macro F1 of one another and a fourth (the triple-backbone cRT mix) falls $0.030$ below the anchor; we accordingly take the unaugmented anchor as our headline submission. The post hoc priors and the cRT pivot are reported in Section~\ref{sec:experiments} as evidence about the limits of architecture-orthogonal reweighting on this benchmark rather than as part of the final submitted pipeline.
-
-\section{Future Work}
-While our final submission focused on gated ensembles and thermodynamic priors, our active research roadmap explores the intersection of spectral physics, dynamic distillation, and Large Multimodal Models (LMMs).
-
-\subsection{Agentic LLM Arbiter (Visual Chain of Thought)}
-For high-entropy or ambiguous samples, we implement an Agentic LLM Arbiter. A locally deployed Large Multimodal Model (e.g., Gemma 4 or Nemotron) performs a \textbf{Visual Chain-of-Thought (VCoT)} analysis. Operating as a simulated field-expert, the LMM integrates raw visual features with ecological metadata (pH, GDD) to break ties between visually similar species and decisively veto impossible predictions without the hallucination risks of zero-shot LMM generation.
-
-\subsection{Global Filter Networks (GFNet) \& Spectral Vision}
-Standard vision transformers struggle with the quadratic $O(N^2)$ cost of scanning high-resolution quadrats. We are moving toward Global Filter Networks (GFNets) that utilize frequency-domain mathematics:
-\begin{itemize}
-    \item \textbf{Fourier Token Mixing:} We replace standard Self-Attention with 2D Fast Fourier Transforms (FFT). By mapping image features into the Complex Plane, the model processes the entire quadrat's texture simultaneously.
-    \item \textbf{Complex-Valued Filtering:} We utilize Complex-Valued Neural Networks (CVNNs) to learn spectral filters. High frequencies (e.g., sharp leaf edges, petal veins) are mathematically isolated, while low frequencies (e.g., diffuse soil, canopy shadows) are suppressed.
-    \item \textbf{Massive Scale:} Because the FFT scales at $O(N \log N)$, we can train on 1024px+ images with massive batch sizes, capturing microscopic botanical details that remain invisible to standard spatial models.
-\end{itemize}
-
-\subsection{Asynchronous Self-Healing Neural Networks}
-To address concept drift and hallucinations in real-time without the computational overhead of full retraining, our future work incorporates an Asynchronous Self-Healing Engine. We inject a lightweight \textbf{Reflexive Layer} (adapter) at the classification head. During inference, if the model predicts a species with high visual confidence but is vetoed by our neuro-symbolic filters (e.g., Thermodynamic Phenology or AC-3 bounds), it triggers a \textit{Symbolic Conflict}. A non-blocking background thread captures this event, computes a KL-Divergence loss between the raw logits and the symbolically corrected distribution, and applies a rapid gradient step to the adapter. This allows the model to autonomously "heal" its domain blind-spots on-the-fly during deployment.
-
-
-\subsection{Elastic/Funnel Hashing for Zero-RAM Metadata Indexing}
-To prevent metadata RAM spikes during massive dataset loading on consumer hardware, we are transitioning from standard $O(N \log N)$ unique array rebuilding to a bleeding-edge $O(1)$ amortized insertion hash table based on \textbf{Elastic/Funnel Hashing}. By decoupling the probing sequences across multiple logarithmically decreasing sub-tables (levels), this structure guarantees that elements are never moved once placed, entirely eliminating catastrophic cascading and Garbage Collection stutters during high load factors.
-
-\subsection{Extreme Memory-Constrained Computing: Square-Root Space Logic Evaluation}
-Inspired by breakthroughs in simulating time with square-root space, we are exploring methods to perform Extreme Memory-Constrained Computing for Neuro-Symbolic reasoning. The methodology involves:
-\begin{enumerate}
-    \item \textbf{Partition the Logic:} Breaking the logical forward pass into discrete "blocks" (e.g., evaluating generic/family constraints first, then spatial constraints).
-    \item \textbf{The Tree Mapping:} Mapping dependencies between these logical blocks into a Tree Evaluation problem.
-    \item \textbf{Space-Efficient Verification:} Using $O(\sqrt{t \log t})$ space-efficient algorithms to evaluate gradients without storing the entire state history in RAM, preventing combinatorial explosions on consumer GPUs.
-\end{enumerate}
-
-
+\label{sec:discussion}
+The pattern in Table~\ref{tab:summary} reveals an under-appreciated property of strong fine-tuned visual classifiers on biological data: \emph{information-theoretic orthogonality is not the same as statistical orthogonality} once the visual model has been trained on data where the auxiliary signal is naturally correlated with image content. cRT was structurally orthogonal but introduced wrong evidence and dragged the anchor down by $0.030$; genus reweighting was statistically dependent on the BioCLIP 2.5 posterior itself and moved the score by $+0.001$, inside the noise floor; the seasonal phenology prior --- the most genuinely orthogonal source we tested, since date is not in the image at all --- moved the score by only $+0.002$, again inside the noise floor, because the seasonal structure was already implicit in the leaf and flower phenotypes seen during training.
+The practical implication is that real headroom on this benchmark requires structurally stronger \emph{visual} models (end-to-end fine-tuning that preserves the prior, multi-crop test-time augmentation, test-time training, synthetic mosaic training distributions) rather than post hoc reweighting with auxiliary priors. A natural next experiment, blocked here by the lack of test site coordinates, is a climate-envelope variant: per-species 12-D bioclim Gaussians fit from training image lat/lons, scored against WorldClim variables at each test site --- this would give a prior conditioned on \emph{location} as well as date, which is the one orthogonal axis that visual features cannot recover from the image alone.
+We also observed a striking decoupling between validation top-5 accuracy on the held-out 10\% split of the single-plant manifest and Macro F1 on the multi-species quadrat leaderboard. Across our twelve strongest runs the two metrics correlate at only $r \approx 0.4$, and within the unfrozen-blocks ablation of Table~\ref{tab:blocks} they invert: validation top-5 accuracy rises monotonically with unfrozen capacity while leaderboard Macro F1 peaks in the middle and collapses at full fine-tune. We read this as direct evidence that the bottleneck on this benchmark is the single-plant to multi-species distribution shift, not model capacity on the single-plant distribution itself.
+\section{Final Submitted System}
+\label{sec:final_submission}
+The configuration that produced our best public score is the BioCLIP 2.5 last-four-blocks anchor from experiment i002, submitted as a single model rather than an ensemble. The encoder is BioCLIP 2.5 ViT-H/14 with the last four transformer blocks plus the final layer norm and projection unfrozen and fine-tuned on the enlarged i001 manifest (2.65 million single-plant images across 7,806 species; see \S\ref{sec:cap_extra}) for ten epochs with the joint species/genus/family cross-entropy loss of \S\ref{sec:bioclip25_010}. At inference, each quadrat is resized to $1792 \times 1792$ pixels, partitioned into a $4 \times 4$ grid of non-overlapping $448$-pixel tiles, each tile is downsampled to the encoder's native $224$-pixel input, per-tile softmax probabilities are aggregated by species-wise mean across the sixteen tiles, and we emit every species whose mean probability exceeds $T{=}0.05$ subject to $k_{\min}{=}2$ and $k_{\max}{=}10$. Of the four configurations we submitted, three (the anchor, the genus/family rerank, and the phenology prior) land within $0.002$ Macro F1 of one another and a fourth (the triple-backbone cRT mix) falls $0.030$ below; we accordingly take the unaugmented anchor as our headline submission.
 \section{Conclusion}
 \label{sec:conclusion}
 %% =========================================================================
-
-We presented the ANU team's submission to PlantCLEF 2026, the product of eighteen numbered experiments and 240 Kaggle submissions. Our best public Macro F1 of \textbf{0.41165} and private Macro F1 of \textbf{0.40283} were obtained from a BioCLIP 2.5 ViT-H/14 fine tune with only the last four transformer blocks (together with the final layer norm and projection) unfrozen, trained for ten epochs on the redownloaded PlantCLEF 2024 manifest (2.65 million single-plant images across 7,806 species, with pre-filled genus and family labels) under a joint species genus family cross entropy loss. Inference combined a four by four tile decomposition at tile size 448 with no overlap, softmax mean aggregation across the sixteen tiles, and an adaptive probability threshold of $T{=}0.05$, all at the encoder's native 224 pixel resolution. A follow up experiment (i003) added 161,686 extra images for the 2,022 species with fewer than one hundred training examples and capped every species at five hundred training images; the resulting checkpoint reached 0.40041 on the public leaderboard, below the uncapped anchor by 0.011, which we read as evidence that on this benchmark the marginal value of additional head class examples is positive and that flattening the head discards information rather than rebalancing it.
-
-Three findings carry the bulk of what this benchmark taught us. The first is that partial unfreeze is a sharp, not a plateau, design choice on BioCLIP 2.5: $n{=}4$ unfrozen blocks is the empirical sweet spot, and deviations of one block in either direction cost between $0.009$ and $0.014$ Macro F1, while a full fine tune destroys the Tree of Life prior and drops the model to 0.208. The second is the validation versus Kaggle decoupling. Across our twelve strongest runs the two metrics correlate at only $r \approx 0.4$, and within the unfreeze ablation they invert entirely: validation top 5 accuracy rises monotonically while Kaggle Macro F1 peaks in the middle. We interpret this as direct evidence that the bottleneck on this benchmark is the single plant to multi species distribution shift, not model capacity. The third is that auxiliary post hoc reweighting of an already strong visual posterior carries essentially no usable signal beyond what the visual model has already absorbed. Classifier retraining over a frozen triple backbone fusion (cRT, $\Delta {=} -0.030$) introduced wrong evidence and hurt; genus and family co occurrence priors derived from the same posterior ($\Delta {=} +0.001$) and a thermodynamic phenology prior over GBIF observation dates ($\Delta {=} +0.002$) both moved the anchor by amounts inside our run to run noise floor. Fine tuned visual classifiers on biological data absorb these signals implicitly through training distribution co occurrence, leaving little for post hoc combination to exploit.
-
-Several directions for future work follow directly from these findings. The first is to pull more aggressively on the data axis rather than the capacity axis. A synthetic mosaic training regime that composes single plant images into multi species scenes with controlled species overlap would let the network see the quadrat distribution during training, which neither the PC24 corpus nor the iNaturalist habitat shots do at scale. The second is self distillation against our own production checkpoint, using its predictions on the unlabelled LUCAS pseudo quadrat corpus as soft targets filtered by confidence and entropy. The third is genuinely orthogonal evidence that is not in the image at all, in particular a location conditioned bioclimatic envelope prior built from training image coordinates against WorldClim variables at each test site. Finally, per class threshold calibration on a held out multi species validation set would more directly target the Macro F1 metric than the global probability threshold we currently use, and could absorb residual species frequency imbalances that our manifest cap leaves behind.
-
+We presented the ANU team's submission to PlantCLEF 2026. Our best public Macro F1 of \textbf{0.418265} and private Macro F1 of \textbf{0.40283} were obtained from a BioCLIP 2.5 ViT-H/14 fine tune with only the last four transformer blocks (together with the final layer norm and projection) unfrozen, trained for ten epochs on the redownloaded PlantCLEF 2024 manifest (2.65 million single-plant images across 7,806 species, with pre-filled genus and family labels) under a joint species/genus/family cross entropy loss. Inference combined a four-by-four tile decomposition at tile size 448 with no overlap, softmax mean aggregation across the sixteen tiles, and an adaptive probability threshold of $T{=}0.05$, all at the encoder's native 224-pixel resolution. A follow-up experiment (i003) added 161,686 extra images for the 2,022 species with fewer than one hundred training examples and capped every species at five hundred training images; the resulting checkpoint reached 0.40041 on the public leaderboard, below the uncapped anchor by 0.011, which we read as evidence that on this benchmark the marginal value of additional head-class examples is positive and that flattening the head discards information rather than rebalancing it.
+Three findings carry the bulk of what this benchmark taught us. The first is that partial unfreeze is a sharp, not a plateau, design choice on BioCLIP 2.5: $n{=}4$ unfrozen blocks is the empirical sweet spot, deviations of one block in either direction cost between $0.009$ and $0.014$ Macro F1, and a full fine-tune destroys the Tree-of-Life prior and drops the model to 0.208. The second is the validation versus Kaggle decoupling: across our twelve strongest runs the two metrics correlate at only $r \approx 0.4$, and within the unfreeze ablation they invert entirely, which is direct evidence that the bottleneck on this benchmark is the single-plant to multi-species distribution shift rather than model capacity. The third is that auxiliary post-hoc reweighting of an already strong visual posterior carries essentially no usable signal beyond what the visual model has already absorbed. Classifier retraining over a frozen triple-backbone fusion (cRT, $\Delta {=} -0.030$) introduced wrong evidence and hurt; genus and family co-occurrence priors derived from the same posterior ($\Delta {=} +0.001$) and a seasonal phenology prior over GBIF observation dates ($\Delta {=} +0.002$) both moved the anchor by amounts inside our run-to-run noise floor. Fine-tuned visual classifiers on biological data absorb these signals implicitly through training-distribution co-occurrence, leaving little for post-hoc combination to exploit.
+Several directions for future work follow directly from these findings. The first is to pull more aggressively on the data axis rather than the capacity axis: a synthetic mosaic training regime that composes single-plant images into multi-species scenes with controlled species overlap would let the network see the quadrat distribution during training, which neither the PC24 corpus nor the iNaturalist habitat shots do at scale. The second is self-distillation against our own production checkpoint, using its predictions on the unlabelled LUCAS pseudo-quadrat corpus as soft targets filtered by confidence and entropy. The third is genuinely orthogonal evidence that is not in the image at all, in particular a location-conditioned bioclimatic envelope prior built from training-image coordinates against WorldClim variables at each test site --- the one orthogonal axis that visual features cannot recover from the image alone. Finally, per-class threshold calibration on a held-out multi-species validation set would more directly target the Macro F1 metric than the global probability threshold we currently use, and could absorb residual species-frequency imbalances that our manifest cap leaves behind.
 %%
 %% Acknowledgments
 \begin{acknowledgments}
-  This work was conducted as part of the COMP3710 Deep Learning course at the Australian National University. We thank the PlantCLEF 2026 organisers for providing the datasets and evaluation infrastructure.
+  This work was conducted as part of the COMP3242 Deep Learning course at the Australian National University. We thank the PlantCLEF 2026 organisers for providing the datasets and evaluation infrastructure.
 \end{acknowledgments}
 %%
 %% Bibliography
 \bibliography{plantclef-refs}
-
 \end{document}
