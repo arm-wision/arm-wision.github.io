@@ -8,7 +8,7 @@ export default function Footer() {
             <span>PlantCLEF&nbsp;2026 · Submission recap</span>
           </div>
           <p className="brand-tag">
-            By Manindra de Mel, Arjun Raj, Razeen Wasif, Will Brake. Our
+            By Arjun Raj, Razeen Wasif, Manindra de Mel, Will Brake. Our
             submission to the 7th edition of the LifeCLEF plant
             identification challenge.
           </p>
@@ -20,7 +20,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="foot-legal">
-        <span>© 2026 de Mel, Raj, Wasif, Brake. ANU Deep Learning.</span>
+        <span>© 2026 Raj, Wasif, de Mel, Brake. ANU Deep Learning.</span>
         <span>Built for the LifeCLEF research evaluation initiative.</span>
       </div>
     </footer>
