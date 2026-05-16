@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Reveal from "./Reveal";
 
-const BIB = `@inproceedings{demel2026plantclef,
-  title     = {PlantCLEF 2026: Our Submission to the
-               Multi Species Vegetation Plot Challenge},
+const BIB = `@inproceedings{armwision2026plantclef,
+  title     = {ARM Wision at PlantCLEF 2026: Our Submission to
+               the Multi Species Vegetation Plot Challenge},
   author    = {de Mel, Manindra and Raj, Arjun and
                Wasif, Razeen and Brake, Will},
   booktitle = {Working Notes of CLEF 2026},
