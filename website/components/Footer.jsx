@@ -21,7 +21,6 @@ export default function Footer() {
       </div>
       <div className="foot-legal">
         <span>© 2026 Raj, Wasif, de Mel, Brake. ANU Deep Learning.</span>
-        <span>Built for the LifeCLEF research evaluation initiative.</span>
       </div>
     </footer>
   );

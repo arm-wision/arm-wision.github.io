@@ -1368,3 +1368,23 @@ section.white { background: var(--surface-card); }
   .lb-table tbody td:nth-child(5) { display: none; }
   .lb-table { min-width: 0; }
 }
+
+/* Author links: subtle, no underline by default */
+.au-line a.au,
+.org .name[href] {
+  text-decoration: none;
+  border-bottom: 1px dotted var(--hairline-strong);
+  transition: border-color .15s, color .15s;
+}
+.au-line a.au:hover,
+.org .name[href]:hover {
+  border-bottom-color: var(--ink);
+  color: var(--ink);
+}
+.org .name .ext-arrow {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.75em;
+  color: var(--muted);
+  vertical-align: middle;
+}

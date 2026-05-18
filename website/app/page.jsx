@@ -5,7 +5,6 @@ import Abstract from "@/components/Abstract";
 import Tasks from "@/components/Tasks";
 import Dataset from "@/components/Dataset";
 import ChartsSection from "@/components/ChartsSection";
-import Timeline from "@/components/Timeline";
 import Leaderboard from "@/components/Leaderboard";
 import Baselines from "@/components/Baselines";
 import TeamBlock from "@/components/TeamBlock";
@@ -22,7 +21,6 @@ export default function Page() {
       <Tasks />
       <Dataset />
       <ChartsSection />
-      <Timeline />
       <Leaderboard />
       <Baselines />
       <TeamBlock />

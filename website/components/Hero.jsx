@@ -65,7 +65,11 @@ export default function Hero() {
             <div className="au-line">
               {TEAM.map((a, i) => (
                 <span key={a.name}>
-                  <span className="au">{a.name}</span>
+                  {a.link ? (
+                    <a className="au" href={a.link} target="_blank" rel="noreferrer">{a.name}</a>
+                  ) : (
+                    <span className="au">{a.name}</span>
+                  )}
                   {i < TEAM.length - 1 && <span className="sep">·</span>}
                 </span>
               ))}

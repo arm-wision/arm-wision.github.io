@@ -16,7 +16,13 @@ export default function TeamBlock() {
         <Reveal className="org-grid org-grid-no-av" stagger>
           {TEAM.map((o) => (
             <div className="org" key={o.uid}>
-              <span className="name">{o.name}</span>
+              {o.link ? (
+                <a className="name" href={o.link} target="_blank" rel="noreferrer">
+                  {o.name} <span className="ext-arrow" aria-hidden="true">↗</span>
+                </a>
+              ) : (
+                <span className="name">{o.name}</span>
+              )}
               <span className="aff k-mono">{o.uid}</span>
             </div>
           ))}
