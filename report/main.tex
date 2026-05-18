@@ -1,43 +1,81 @@
-%% PlantCLEF 2026 Working Note - LifeCLEF / CLEF 2026
-\documentclass[twocolumn]{ceurart}
-\sloppy
-\hbadness=10000
-\vbadness=10000
-\hfuzz=40pt
+%%
+%% Working note prepared for the CEUR-WS / CEUR-ART proceedings format.
+%% Template reference:
+%%   https://www.overleaf.com/latex/templates/template-for-submissions-to-
+%%   ceur-workshop-proceedings-ceur-ws-dot-org/wqyfdgftmcfw
+%%
+%% Document class options (per the canonical ceurart.cls):
+%%   (default)         single-column proceedings layout
+%%   [twocolumn]       two-column proceedings layout
+%%   [hf]              show running header / footer
+%%   [longmktitle]     extra room for long author / affiliation lists
+%%   [singleblind]     blind-review (single)
+%%   [doubleblind]     blind-review (double)
+%%   [final|review]    final-paper or review-mode layout
+%%
+\documentclass{ceurart}
+
+%%
+%% Packages
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric}
+
 \begin{document}
+
+%%
+%% Rights management information.
 \copyrightyear{2026}
 \copyrightclause{Copyright for this paper by its authors.
   Use permitted under Creative Commons License Attribution 4.0
   International (CC BY 4.0).}
+
+%%
+%% Conference information.
 \conference{CLEF 2026 -- Conference and Labs of the Evaluation Forum,
   September 21--24, 2026, Jena, Germany}
+
+%%
+%% Title.
 \title{Partial Fine-Tuning of BioCLIP 2.5 with Taxonomic Auxiliary Heads for Multi-Label Plant Species Identification in Vegetation Plots: ANU at PlantCLEF 2026}
+
 %%
-%% Authors
+%% Authors.
+%% Per the canonical CEUR-ART template, each author block supports an
+%% optional key-value list with \texttt{orcid=}, \texttt{email=},
+%% \texttt{url=}. Only \texttt{email=} is supplied here; add the other
+%% keys when convenient.
 \author[1]{Arjun Raj}[%
-email=u7526852@anu.edu.au,
+  email=u7526852@anu.edu.au,
 ]
 \fnmark[1]
+
 \address[1]{The Australian National University, Canberra, ACT 2601, Australia}
+
 \author[1]{Manindra de Mel}[%
-email=u7543337@anu.edu.au,
+  email=u7543337@anu.edu.au,
 ]
 \fnmark[1]
+
 \author[1]{Razeen Wasif}[%
-email=u7619822@anu.edu.au,
+  email=u7619822@anu.edu.au,
 ]
 \fnmark[1]
+
 \fntext[1]{These authors contributed equally.}
+
 %%
-%% Abstract
+%% Abstract.
 \begin{abstract}
 This paper describes the system submitted by the Australian National University team to the PlantCLEF 2026 challenge, which tasks participants with predicting all plant species present in high-resolution vegetation quadrat images. The core difficulty lies in the domain shift between the training data, comprising individually photographed single-plant specimens, and the test data, consisting of dense multi-species vegetation plots. Our final submission centres on a partial fine-tune of BioCLIP 2.5 (ViT-H/14) in which only the last four transformer blocks together with the final layer norm and projection are unfrozen, while the lower twenty-eight blocks are kept frozen to preserve the Tree-of-Life prior. The encoder is trained on the enlarged PlantCLEF 2024 single-plant manifest with auxiliary cross-entropy heads at the genus, family, and where available order and class taxonomic levels, supplying a structural regulariser without adding inference-time cost. Inference decomposes each quadrat into a $4{\times}4$ grid of $448$-pixel tiles with no overlap, applies the encoder at its native $224$-pixel resolution, and aggregates the tile distributions by per-species softmax mean before emitting every species whose mean probability exceeds a fixed threshold. Beyond this anchor we report three architecture-orthogonal pivots that we submitted but that did not improve over the visual posterior: a triple-backbone classifier retrained on frozen BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank; and a seasonal phenology prior derived from GBIF month-of-observation histograms. Across all four submitted configurations, our best public Macro F1 is \textbf{0.418265} and our best private Macro F1 is \textbf{0.40283}.
 \end{abstract}
+
+%%
+%% Keywords.
 \begin{keywords}
   plant identification \sep
   multi-label classification \sep
@@ -47,7 +85,9 @@ This paper describes the system submitted by the Australian National University 
   vegetation plot analysis \sep
   PlantCLEF 2026
 \end{keywords}
+
 \maketitle
+
 %% =========================================================================
 \section{Introduction}
 \label{sec:introduction}
@@ -87,6 +127,14 @@ Logit adjustment~\cite{menon2021longtail} provides a complementary approach by s
 Our submission is the product of eighteen numbered experiments and roughly 240 leaderboard submissions converging on a single supervised fine tune of BioCLIP 2.5 ViT-H/14. Starting from a frozen prototype baseline (experiment 006) at 0.330 Macro F1, we briefly explored full fine tuning (experiment 009), which collapsed the Tree of Life prior and dropped the model to 0.208. We then narrowed the trainable surface to the last four transformer blocks together with the final layer norm and projection layer, retaining the lower twenty eight blocks in their pretrained state. This partial unfreeze recipe (experiment 010), augmented with auxiliary classification heads at genus, family, order, and class taxonomic levels, became our 0.38333 anchor. The track culminated in experiment i002, which ported the same partial unfreeze recipe onto a substantially enlarged training manifold (2.65 million images, drawn from the redownloaded PlantCLEF 2024 corpus with pre-filled genus and family labels) and trained for ten epochs instead of five. The best checkpoint (last-four-blocks at epoch ten) was deployed for inference under two recipes that are both reported in Section~\ref{sec:experiments}: a single-resolution submission at $T{=}0.05$ scoring 0.41165, and an ensemble of inference at 224 and 336 pixels combined with logit adjustment ($\tau{=}0.25$) and $T{=}0.03$ scoring \textbf{0.418265}. The latter is our headline submission; its private Macro F1 is \textbf{0.40283}. A follow-up (experiment i003) added 161,686 extra observations for the 2,022 species with fewer than one hundred training images and capped the resulting manifest at 500 images per species, but the resulting checkpoints did not surpass the uncapped i002 best.
 Beyond the anchor, we submitted three architecture-orthogonal pivots that aimed to add information sources the visual encoder could not access from a single tile: a triple-backbone classifier retrained on frozen BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank derived from the BioCLIP 2.5 posterior itself; and a seasonal phenology prior built from GBIF month-of-observation histograms keyed to each quadrat's observation date. All three are reported in Section~\ref{sec:experiments}; none improved over the visual anchor.
 All submissions share the same inference scaffold: SAHI-style four by four tiling at tile size 448 with no overlap, softmax mean aggregation across the sixteen tiles, and adaptive selection that emits between two and ten species per quadrat at a probability threshold $T$. The headline anchor adds two further ingredients: an ensemble of inference at 224 and 336 pixel resolutions, and logit adjustment ($\tau{=}0.25$) before threshold selection at $T{=}0.03$. The exact $T$ used by each pivot is reported alongside that pivot.
+
+\begin{figure*}[t]
+  \centering
+  \resizebox{0.95\linewidth}{!}{\input{figures/inference_pipeline}}
+  \caption{Inference pipeline for the headline submission. Each quadrat is decomposed into a multi-scale grid of $448$\,px tiles, gated by an ExG vegetation filter, forwarded through the partially-fine-tuned BioCLIP 2.5 ViT-H/14 at both $224$ and $336$ pixels, and reduced to a per-image posterior by entropy-weighted Bayesian aggregation. Post-processing applies the GBIF phenology penalty, class-prior logit adjustment ($\tau{=}0.25$), and an adaptive sigmoid threshold ($T{=}0.03$). The figure groups stages by execution scope: pre-processing (per image), visual posterior (per tile, then per model), and post-processing (per image).}
+  \label{fig:pipeline}
+\end{figure*}
+
 \subsection{Partial Unfreeze BioCLIP 2.5 with Taxonomic Auxiliary Heads}
 \label{sec:bioclip25_010}
 The 010 fine tune treats BioCLIP 2.5 as a taxonomically aligned feature extractor whose lower twenty eight transformer blocks already encode the inductive bias that Tree of Life pretraining provides. Only the last four blocks, the final layer norm, and the projection head are unfrozen. This narrow surface is sufficient for adapting the encoder to the PlantCLEF 2024 single plant distribution without destroying the broader biological prior, and it is also resilient to optimiser noise on a long tailed training set.
@@ -234,6 +282,8 @@ Several directions for future work follow directly from these findings. The firs
   This work was conducted as part of the COMP3242 Deep Learning course at the Australian National University. We thank the PlantCLEF 2026 organisers for providing the datasets and evaluation infrastructure.
 \end{acknowledgments}
 %%
-%% Bibliography
+%% Bibliography. The canonical ceurart.cls already issues
+%% \bibliographystyle{elsarticle-num-names}; no explicit override needed.
 \bibliography{plantclef-refs}
+
 \end{document}
