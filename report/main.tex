@@ -132,7 +132,7 @@ All submissions share the same inference scaffold, illustrated in Figure~\ref{fi
 
 \begin{figure*}[t]
   \centering
-  \resizebox{0.95\linewidth}{!}{\input{figures/inference_pipeline}}
+  \resizebox{0.95\linewidth}{!}{\input{figures/anchor_pipeline}}
   \caption{Inference pipeline for the headline anchor submission (solid path; public Macro F1 $0.418265$). Each quadrat is partitioned into a $4{\times}4$ grid of $448$-pixel non-overlapping tiles and forwarded through the partially fine-tuned BioCLIP~2.5 ViT-H/14 (lower 28 transformer blocks frozen; last 4 plus LN and projection unfrozen) at two inference resolutions, $224$ and $336$ pixels. Per-tile softmax probabilities are averaged across the 16 tiles and across the two resolutions, then class-prior logit adjustment ($\tau{=}0.25$) is applied before an adaptive sigmoid threshold ($T{=}0.03$, $k_{\min}{=}2$, $k_{\max}{=}10$) selects the output species set. Three architecture-orthogonal pivots (dashed; cRT triple-backbone classifier retraining, genus co-occurrence rerank, seasonal phenology prior) indicate where alternative configurations insert into the anchor; all three scored below the anchor on the leaderboard and are reported in Section~\ref{sec:experiments}.}
   \label{fig:pipeline}
 \end{figure*}
@@ -189,7 +189,7 @@ which returns a 12-bin month histogram in one request. We then build a 365-day p
     P(s \mid d) \;=\; (1{-}\epsilon)\, \tfrac{1}{Z_s}\!\sum_{m=1}^{12} c_{s,m}\,\mathcal{N}_{\text{circ}}\!\left(d \mid \mu_m, \sigma\right) \;+\; \frac{\epsilon}{365},
 \end{equation}
 with $\epsilon{=}0.05$ and $c_{s,m}$ the GBIF count for species $s$ in month $m$.
-\paragraph{Coverage.} We fetched histograms for all 7{,}796 species with valid GBIF identifiers (10 of 7{,}806 lack a GBIF mapping). Two passes were required: a first pass at 12 worker threads (~3 req/s, ~21\% rate-limit drops), then a retry pass at 4 worker threads (GBIF aggressively throttles a saturated client). Final coverage: \textbf{6{,}957 / 7{,}806 species (89.2\%)}; the remaining 849 species fall back to a uniform DOY pdf and contribute no phenological signal.
+\paragraph{Coverage.} We fetched histograms for all 7{,}796 species with valid GBIF identifiers (10 of 7{,}806 lack a GBIF mapping). Two passes were required: a first pass at 12 worker threads (~3 req/s, ~21\% rate-limit drops), then a retry pass at 4 worker threads (GBIF aggressively throttled a saturated client). Final coverage: \textbf{6{,}957 / 7{,}806 species (89.2\%)}; the remaining 849 species fall back to a uniform DOY pdf and contribute no phenological signal.
 \paragraph{Submission pipeline.} Beyond the phenology log-prior itself, the seasonal phenology submission departs from the anchor inference scaffold (Figure~\ref{fig:pipeline}) in three ways, illustrated architecturally in Figure~\ref{fig:phenology_pipeline} and visually in Figure~\ref{fig:phenology_illustration}. First, an Excess Green index $\mathrm{ExG}_t = 2G_t - R_t - B_t$ is computed per tile and tiles with fewer than $15\%$ green pixels are dropped before the encoder forward pass, removing tiles that contain no vegetation. Second, the surviving tiles are aggregated with a per-tile Bayesian weight $w_t \propto \exp(-H_t)\cdot\mathrm{ExG}_t$, where $H_t$ is the predictive entropy of tile $t$, yielding a softmax-weighted mean rather than the anchor's unweighted mean. Third, the input quadrat is processed at two grid scales ($1.0$ and $0.8$) in addition to the two inference resolutions ($224$ and $336$ pixels), with all per-tile distributions pooled into a single posterior before the phenology prior is added. Logit adjustment ($\tau{=}0.25$) and adaptive threshold selection ($T{=}0.03$) then follow as in the anchor.
 \paragraph{Empirical result.} On the PlantCLEF 2026 leaderboard, the phenology prior at $\beta{=}1.0$, $T{=}0.03$ produced a Macro-F1 of \textbf{0.41346} versus the unaugmented BioCLIP 2.5 anchor of 0.418265 ($\Delta = -0.0048$). The detailed sweep and discussion are reported in \S\ref{sec:experiments}.
 
@@ -277,6 +277,66 @@ We swept $\alpha_g \in \{0,0.1,0.2,0.3,0.5\}$, $\alpha_f \in \{0,0.05,0.1,0.2\}$
 The full methodology is described in \S\ref{sec:phenology} and the pipeline is illustrated in Figure~\ref{fig:phenology_pipeline}. We swept $\beta \in \{0.25, 0.5, 1.0, 1.5, 2.0\}$ at three probability thresholds. The natural Bayesian operating point ($\beta{=}1.0$, no temperature scaling, $T{=}0.03$ and $\tau{=}0.25$ matching the anchor's logit-adjustment and threshold values) flips $12.8\%$ of top one picks at mean $k{=}3.24$. Score: \textbf{0.41346}, $\Delta = -0.005$.
 The DOY distribution of the test set is heavily summer skewed (Jul $=$ 517, Aug $=$ 668, Apr--Jun $=$ 607 of 2{,}105 quadrats), confirming that phenology should be most informative on summer flowering taxa.
 \textbf{Reading.} Three concurrent factors plausibly explain the near zero delta: \textit{(i)} GBIF observation effort is itself summer biased, diluting the discriminative season signal; \textit{(ii)} the BioCLIP 2.5 backbone trained on dated images already encodes seasonal phenotype implicitly via leaf / flower / fruit state; \textit{(iii)} $11\%$ of species fall back to a uniform pdf precisely on the long tail where the visual model is most uncertain --- so phenology cannot break ties where it would be most useful.
+\subsection{Inference Hyperparameter Ablations}
+\label{sec:infer_ablations}
+The anchor and unfrozen-blocks (\S\ref{sec:blocks_ablation}) results commit to specific values for several inference-side knobs: logit-adjustment temperature $\tau{=}0.25$, probability threshold $T{=}0.03$, softmax-mean tile aggregation, and an adaptive probability-threshold selection rule with $k_{\min}{=}2$, $k_{\max}{=}10$. This subsection consolidates the leaderboard sweeps that those values fell out of. All numbers are from the i002 last-four-blocks checkpoint, evaluated on the public Macro F1 split unless otherwise stated.
+
+\textbf{Logit adjustment $\tau$ and probability threshold $T$.} Table~\ref{tab:tau_T} reports the joint sweep over $\tau \in \{0.25, 0.5\}$ and $T \in \{0.03, 0.05, 0.07\}$ on the single-resolution 224-pixel inference recipe (no 336-pixel ensemble). The optimum is sharp: $\tau{=}0.25$, $T{=}0.03$ dominates every other cell by between $0.022$ and $0.083$ Macro F1, and Macro F1 falls off monotonically along both axes. Doubling $\tau$ from $0.25$ to $0.50$ at fixed $T{=}0.03$ costs $0.022$ --- evidence that the long-tail boost saturates quickly and that pushing it harder starts emitting too many rare-but-implausible species.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+$\tau$ & $T{=}0.03$ & $T{=}0.05$ & $T{=}0.07$ \\
+\midrule
+$0.25$ & \textbf{0.40590} & 0.36423 & 0.35069 \\
+$0.50$ & 0.38440 & 0.34047 & 0.32248 \\
+\bottomrule
+\end{tabular}
+\caption{Joint $\tau \times T$ sweep on the i002 last-four-blocks checkpoint, single-resolution 224-pixel inference. Public Macro F1. The peak at $(\tau{=}0.25, T{=}0.03)$ is the anchor value taken into the 224+336 ensemble that produces the headline $0.41826$ in Table~\ref{tab:summary}.}
+\label{tab:tau_T}
+\end{table}
+
+\textbf{Selection rule.} Holding $\tau{=}0.25$ fixed, we compared four selection rules with $k_{\min}{=}1$, $k_{\max}{=}10$: \emph{probability threshold} (emit every $s$ with $p_s > T$), \emph{fixed top-$k$}, \emph{gap} (emit while consecutive species differ by less than a fraction of the top probability), and \emph{relative threshold} (emit every $s$ with $p_s$ within a fraction of the top). Adaptive probability-thresholding at $T{=}0.03$ wins decisively (Table~\ref{tab:select_rule}); fixed top-$k$ is second-best at $k{=}2$, which is consistent with the test set's empirical mean of $\sim$2--3 species per quadrat; both gap- and relative-threshold rules are well off the pace.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{llc}
+\toprule
+Rule & Value & Public Macro F1 \\
+\midrule
+probability threshold (\emph{anchor}) & $T{=}0.03$ & \textbf{0.40590} \\
+probability threshold               & $T{=}0.05$ & 0.36423 \\
+probability threshold               & $T{=}0.07$ & 0.35069 \\
+\midrule
+fixed top-$k$                       & $k{=}1$    & 0.28633 \\
+fixed top-$k$                       & $k{=}2$    & 0.39878 \\
+fixed top-$k$                       & $k{=}3$    & 0.39731 \\
+fixed top-$k$                       & $k{=}4$    & 0.38042 \\
+fixed top-$k$                       & $k{=}5$    & 0.35959 \\
+\midrule
+gap                                  & $0.40$    & 0.33199 \\
+gap                                  & $0.50$    & 0.33664 \\
+gap                                  & $0.60$    & 0.34996 \\
+\midrule
+relative threshold                   & $0.15$    & 0.31348 \\
+relative threshold                   & $0.20$    & 0.31704 \\
+relative threshold                   & $0.25$    & 0.31823 \\
+relative threshold                   & $0.30$    & 0.33623 \\
+\bottomrule
+\end{tabular}
+\caption{Selection-rule ablation at $\tau{=}0.25$ on the i002 last-four-blocks single-resolution checkpoint. Probability-thresholding at $T{=}0.03$ dominates; fixed top-$k$ is competitive at $k{=}2$ because the test-set mean cardinality is empirically $\sim$2--3 species per quadrat. Both gap and relative-threshold variants underperform the anchor by between $0.06$ and $0.10$ Macro F1.}
+\label{tab:select_rule}
+\end{table}
+
+\textbf{Per-tile aggregation.} We tested per-species softmax-mean against a per-species max and a mixture $\alpha \cdot \text{softmax\_mean} + (1{-}\alpha) \cdot \text{noisy\_or}$ across $\alpha \in \{0.25, 0.50, 0.75, 1.0\}$. All variants land within $0.0005$ Macro F1 of the softmax-mean anchor at $0.38333$; the second-best variant, $\alpha{=}0.75$, scores $0.38278$. We read this as evidence that the choice of per-tile aggregation is \emph{not} the bottleneck on this benchmark, and report softmax-mean throughout the rest of the paper without further reservation.
+
+\textbf{Resolution ensemble.} Going from a single-resolution 224-pixel inference at $T{=}0.05$ to a $224+336$ probability-averaged ensemble at $\tau{=}0.25$, $T{=}0.03$ lifts public Macro F1 from $0.41165$ to $0.41826$ ($\Delta = +0.0066$) and private Macro F1 from $0.38132$ to $0.40283$ ($\Delta = +0.022$). The private gain is more than 3$\times$ the public gain --- the 336-pixel pass appears to recover rare-species pixels that the single-resolution recipe drops, and those species are the ones the private split weights most heavily.
+
+\textbf{Takeaway.} Among the inference-side knobs, only the logit-adjustment $\tau$ and the probability threshold $T$ are load-bearing in the sense that misadjusting either by a single grid step costs more than the run-to-run noise floor of $\sim$0.002 Macro F1. The selection rule choice is qualitatively important (probability-threshold beats fixed top-$k$ by $\sim$0.007 at the optimum), but inside the probability-threshold family the surface is gentle. The per-tile aggregation is statistically flat at this scale. These observations match the broader pattern of \S\ref{sec:discussion}: the bottleneck on this benchmark is the visual model's exposure to multi-species scenes during training, not any of the inference-side hyperparameter choices.
+
 \subsection{Aggregate Results}
 \begin{table}[ht]
 \centering
@@ -329,11 +389,9 @@ Several directions for future work follow directly from these findings. The firs
   This work was conducted as part of the COMP3242 Deep Learning course at the Australian National University. We thank the PlantCLEF 2026 organisers for providing the datasets and evaluation infrastructure.
 \end{acknowledgments}
 %%
-%% Bibliography. The local ceurart.cls compatibility shim sets the
-%% default style to plainnat; the canonical template would use
-%% \bibliographystyle{ceurart}. Naming the style explicitly here makes
-%% the choice visible at the top level.
-\bibliographystyle{plainnat}
+%% Bibliography. The canonical ceurart.cls already sets
+%% \bibliographystyle{elsarticle-num-names}; calling it again here would
+%% raise BibTeX's "Illegal, another \bibstyle command" error.
 \bibliography{plantclef-refs}
 
 \end{document}
