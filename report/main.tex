@@ -23,6 +23,9 @@
 \usepackage{hyperref}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
 
 \begin{document}
 
@@ -149,6 +152,13 @@ The PlantCLEF 2024 single plant corpus is heavily skewed. Of the 7,806 species, 
 \textbf{Experiment i002 -- more data, no cap.} Experiment i002 ports the 010 partial unfreeze recipe onto the redownloaded i001 manifest, which carries 2,653,781 rows across 7,806 species (against 1,408,033 rows in 010) with pre-filled genus and family labels for every row. No per species cap is applied; the rebalancing here is implicit, coming from the broader observation pipeline rather than the tail. The stratified 10\% validation split yields 2,391,457 training rows and 262,324 validation rows. The downstream effect on validation accuracy is substantial: top 5 accuracy on the held out split rises from 0.9214 (010 head only) and 0.9323 (010 last four blocks) to 0.9505 (i002 head only), 0.9583 (i002 last four blocks), and 0.9615 (i002 last eight blocks).
 \textbf{Experiment i003 -- capped manifest with tail augmentation.} Experiment i003 takes the i002 manifest and explicitly attacks both ends of the long tail. We augment it with an additional 161,686 validated images sourced for 2,022 species with fewer than one hundred training examples, decoded through a full Python Imaging Library verification pass to remove truncated, non-image, or oversized files. The augmented manifest is then deduplicated by image path and capped at five hundred images per species through a seeded random subsample, applied once offline at manifest construction time rather than at every epoch. This trims the heaviest bins (the twelve species above one thousand images and the 2,263 species in the 501 to 1,000 image bin both collapse into the 251 to 500 bin) and produces a flatter distribution.
 \textbf{Result.} The downstream effect on the public leaderboard is reported in Section~\ref{sec:experiments}, and contains an empirical surprise: capping at five hundred images per species \emph{hurt} relative to letting the model see the full uncapped manifold. The i003 best is 0.40041 on the leaderboard versus 0.418265 for the corresponding uncapped i002 checkpoint. We interpret this as direct evidence that even on a long tail, the marginal value of additional head class examples is positive on this benchmark provided their label quality is high; flattening the head distribution discards information rather than rebalancing it.
+
+\begin{figure}[!htbp]
+  \centering
+  \input{figures/species_long_tail}
+  \caption{Species count per training-image bin, before and after the i003 per-species cap at $500$. The cap collapses the two heaviest bins ($\le$1k and $>$1k) into the $\le$500 bin and lifts middle bins, but does not move species out of the long tail (left bins). Section~\ref{sec:cap_extra} reports the corresponding leaderboard outcome: this flatter distribution \emph{hurt} the public Macro F1.}
+  \label{fig:long_tail}
+\end{figure}
 \subsection{Adaptive Tile Inference}
 \label{sec:adaptive_inference}
 At inference time each quadrat is resized to a $1792 \times 1792$ pixel canvas and partitioned into a four by four grid of non-overlapping $448$ pixel tiles. The fine-tuned encoder is then applied to each tile under our headline recipe at two resolutions: tiles downsampled to the encoder's native $224$ pixels, and tiles downsampled to $336$ pixels (the BioCLIP 2.5 ViT-H/14 backbone tolerates the 1.5$\times$ stretch via bicubic positional-embedding interpolation). The per-tile species logits are mapped to probabilities via softmax, the sixteen tile distributions are aggregated by per-species mean, and the resulting 224 and 336 posteriors are averaged. Softmax-mean aggregation was selected after an ablation against per-species max, mean of top three, and noisy-or; mean was the most numerically stable on the long tail and dominates max aggregation by roughly 0.04 Macro F1 on the i002 last-four-blocks checkpoint.
@@ -216,6 +226,13 @@ All 32 blocks (full FT) & 0.208 \\
 \caption{Unfrozen-blocks ablation on the 010 recipe. Performance peaks sharply at four blocks; one block too few costs $0.009$ Macro F1, one block too many costs $0.014$. Full fine-tuning collapses the Tree-of-Life prior and is catastrophic.}
 \label{tab:blocks}
 \end{table}
+
+\begin{figure}[!htbp]
+  \centering
+  \input{figures/unfreeze_sweep}
+  \caption{Unfrozen-blocks sweep visualised with both metrics. Held-out validation top-5 (dashed, right axis) rises monotonically with capacity from $n{=}0$ to $n{=}5$, but Kaggle Macro F1 (solid, left axis) peaks sharply at $n{=}4$ and collapses at full fine-tune ($n{=}32$). The disagreement between the two curves is the load-bearing finding of \S\ref{sec:discussion}: validation accuracy on the single-plant distribution does not predict multi-species quadrat Macro F1.}
+  \label{fig:unfreeze_sweep}
+\end{figure}
 \subsection{Within-Backbone Saturation}
 \label{sec:within_backbone}
 Before pivoting to architecture-orthogonal evidence sources, we measured whether further within-backbone diversity could break the i002 anchor by comparing the four-blocks i002 checkpoint against the eight-blocks i002 checkpoint and against epoch-5 versions of both. Table~\ref{tab:within} reports the pairwise top-one agreement and submission Jaccard on 2{,}105 test quadrats.
@@ -278,11 +295,25 @@ BC2.5 last 4 blocks, 224+336+LA, $T{=}0.03$ & \textbf{0.418265} & --- \\
 \caption{All four submitted configurations on the PlantCLEF 2026 hidden test set. The cRT pivot is strongly negative; the genus rerank and the phenology prior move the anchor by $-0.006$ and $-0.005$ respectively --- magnitudes comfortably inside the run-to-run leaderboard noise floor we previously characterised at ${\sim}0.002$ but consistent in sign. We read this as the BioCLIP 2.5 posterior implicitly absorbing both signals through training-distribution co-occurrence: neither prior carries enough orthogonal information to break the visual anchor.}
 \label{tab:summary}
 \end{table}
+
+\begin{figure}[!htbp]
+  \centering
+  \input{figures/aggregate_deltas}
+  \caption{Public Macro F1 of the four submitted configurations from Table~\ref{tab:summary}. The dashed grey line marks the anchor (0.41826). cRT is the only pivot whose loss exceeds the characterised noise floor; the genus and phenology priors are both within $-0.006$ of the anchor.}
+  \label{fig:aggregate_deltas}
+\end{figure}
 \section{Discussion}
 \label{sec:discussion}
 The pattern in Table~\ref{tab:summary} reveals an under-appreciated property of strong fine-tuned visual classifiers on biological data: \emph{information-theoretic orthogonality is not the same as statistical orthogonality} once the visual model has been trained on data where the auxiliary signal is naturally correlated with image content. cRT was structurally orthogonal but introduced wrong evidence and dragged the anchor down by $0.036$; genus reweighting was statistically dependent on the BioCLIP 2.5 posterior itself and moved the score by $-0.006$, close to the noise floor; the seasonal phenology prior --- the most genuinely orthogonal source we tested, since date is not in the image at all --- moved the score by only $-0.005$, again close to the noise floor, because the seasonal structure was already implicit in the leaf and flower phenotypes seen during training.
 The practical implication is that real headroom on this benchmark requires structurally stronger \emph{visual} models (end-to-end fine-tuning that preserves the prior, multi-crop test-time augmentation, test-time training, synthetic mosaic training distributions) rather than post hoc reweighting with auxiliary priors. A natural next experiment, blocked here by the lack of test site coordinates, is a climate-envelope variant: per-species 12-D bioclim Gaussians fit from training image lat/lons, scored against WorldClim variables at each test site --- this would give a prior conditioned on \emph{location} as well as date, which is the one orthogonal axis that visual features cannot recover from the image alone.
-We also observed a striking decoupling between validation top-5 accuracy on the held-out 10\% split of the single-plant manifest and Macro F1 on the multi-species quadrat leaderboard. Across our twelve strongest runs the two metrics correlate at only $r \approx 0.4$, and within the unfrozen-blocks ablation of Table~\ref{tab:blocks} they invert: validation top-5 accuracy rises monotonically with unfrozen capacity while leaderboard Macro F1 peaks in the middle and collapses at full fine-tune. We read this as direct evidence that the bottleneck on this benchmark is the single-plant to multi-species distribution shift, not model capacity on the single-plant distribution itself.
+We also observed a striking decoupling between validation top-5 accuracy on the held-out 10\% split of the single-plant manifest and Macro F1 on the multi-species quadrat leaderboard. Across our twelve strongest runs the two metrics correlate at only $r \approx 0.4$ (Figure~\ref{fig:val_vs_kaggle}), and within the unfrozen-blocks ablation of Table~\ref{tab:blocks} they invert: validation top-5 accuracy rises monotonically with unfrozen capacity while leaderboard Macro F1 peaks in the middle and collapses at full fine-tune. We read this as direct evidence that the bottleneck on this benchmark is the single-plant to multi-species distribution shift, not model capacity on the single-plant distribution itself.
+
+\begin{figure}[!htbp]
+  \centering
+  \input{figures/val_vs_kaggle}
+  \caption{Validation top-5 accuracy on the held-out single-plant split versus public Macro F1 on the multi-species quadrat leaderboard, across our twelve strongest runs. The headline anchor ($\star$, i002 last-four-blocks 224+336+LA ensemble) does not sit at the maximum validation point; the i003 capped checkpoints (green squares) and the 015 PC24+iNat mix (teal) reach higher validation accuracy but lower leaderboard score. The dashed line indicates the weak monotone trend ($r \approx 0.4$).}
+  \label{fig:val_vs_kaggle}
+\end{figure}
 \section{Final Submitted System}
 \label{sec:final_submission}
 The configuration that produced our best public score is the BioCLIP 2.5 last-four-blocks anchor from experiment i002, submitted as a single backbone deployed under a resolution-ensemble inference recipe rather than as a multi-checkpoint ensemble. The encoder is BioCLIP 2.5 ViT-H/14 with the last four transformer blocks plus the final layer norm and projection unfrozen and fine-tuned on the enlarged i001 manifest (2.65 million single-plant images across 7,806 species; see \S\ref{sec:cap_extra}) for ten epochs with the joint species/genus/family cross-entropy loss of \S\ref{sec:bioclip25_010}. At inference, each quadrat is resized to $1792 \times 1792$ pixels, partitioned into a $4 \times 4$ grid of non-overlapping $448$-pixel tiles, and each tile is forwarded through the encoder at both $224$ and $336$ pixels. Per-tile softmax probabilities are aggregated by species-wise mean across the sixteen tiles, the 224 and 336 posteriors are averaged, logit adjustment $-\tau \log \pi_s$ is applied with $\tau{=}0.25$, and we emit every species whose post-adjusted probability exceeds $T{=}0.03$ subject to $k_{\min}{=}2$ and $k_{\max}{=}10$. Of the four configurations we submitted, the genus/family rerank and the phenology prior land $-0.006$ and $-0.005$ below the anchor respectively (magnitudes inside our characterised noise floor); the triple-backbone cRT mix falls $-0.036$ below. We accordingly take the unaugmented anchor as our headline submission.
