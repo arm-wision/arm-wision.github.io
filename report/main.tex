@@ -289,7 +289,14 @@ We swept $\alpha_g \in \{0,0.1,0.2,0.3,0.5\}$, $\alpha_f \in \{0,0.05,0.1,0.2\}$
 \subsection{Pivot 3: Seasonal Phenology Prior}
 \label{sec:pivot3}
 The full methodology is described in \S\ref{sec:phenology} and the pipeline is illustrated in Figure~\ref{fig:phenology_pipeline}. We swept $\beta \in \{0.25, 0.5, 1.0, 1.5, 2.0\}$ at three probability thresholds. The natural Bayesian operating point ($\beta{=}1.0$, no temperature scaling, $T{=}0.03$ and $\tau{=}0.25$ matching the anchor's logit-adjustment and threshold values) flips $12.8\%$ of top one picks at mean $k{=}3.24$. Score: \textbf{0.41346}, $\Delta = -0.005$.
-The DOY distribution of the test set is heavily summer skewed (Jul $=$ 517, Aug $=$ 668, Apr--Jun $=$ 607 of 2{,}105 quadrats), confirming that phenology should be most informative on summer flowering taxa.
+The DOY distribution of the test set is heavily summer skewed (Jul $=$ 517, Aug $=$ 668, Apr--Jun $=$ 607 of 2{,}105 quadrats), confirming that phenology should be most informative on summer flowering taxa. Figure~\ref{fig:test_doy_wheel} visualises this concentration as a calendar wheel: nearly nine out of every ten test quadrats fall between April and August, leaving the remaining seven months almost empty.
+
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{0.82\linewidth}{!}{\input{figures/test_doy_wheel}}
+  \caption{Calendar wheel of the PlantCLEF~2026 test set by month of observation (2{,}105 quadrats total). Radial bar length is proportional to the count for that month. The July (517) and August (668) wedges are reported exactly in the data; the April--June total of 607 is split uniformly across the three months for the figure, as is the residual 313 across the remaining seven months. The visually obvious summer over-representation motivates the seasonal phenology pivot (\S\ref{sec:pivot3}): a date-conditioned prior could only ever help in the densely-sampled months, and conversely should not be expected to lift Macro F1 on the sparse winter tail.}
+  \label{fig:test_doy_wheel}
+\end{figure}
 \textbf{Reading.} Three concurrent factors plausibly explain the near zero delta: \textit{(i)} GBIF observation effort is itself summer biased, diluting the discriminative season signal; \textit{(ii)} the BioCLIP 2.5 backbone trained on dated images already encodes seasonal phenotype implicitly via leaf / flower / fruit state; \textit{(iii)} $11\%$ of species fall back to a uniform pdf precisely on the long tail where the visual model is most uncertain --- so phenology cannot break ties where it would be most useful.
 \subsection{Inference Hyperparameter Ablations}
 \label{sec:infer_ablations}
