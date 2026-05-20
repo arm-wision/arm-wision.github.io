@@ -49,6 +49,8 @@ src/extensions/plantclef_ext.egg-info/
 *.out
 *.bbl
 *.blg
+*.pdf
+*.abs
 
 node_modules/
 .next/
