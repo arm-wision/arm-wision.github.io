@@ -51,6 +51,7 @@ src/extensions/plantclef_ext.egg-info/
 *.blg
 *.pdf
 *.abs
+*.xmpi
 
 node_modules/
 .next/
