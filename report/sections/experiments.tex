@@ -3,7 +3,7 @@
 
 \subsection{Anchor Configuration}
 
-Our anchor configuration is the BioCLIP 2.5 last four blocks tile-inference submission described in Section~\ref{sec:adaptive_inference}: $4{\times}4$ tiling at tile size 448 with no overlap, an ensemble of inference at 224 and 336 pixel resolutions, softmax mean aggregation per tile, logit adjustment at $\tau{=}0.25$, and probability threshold selection at $T{=}0.03$ with a floor of two and a ceiling of ten species per quadrat. This configuration scores \textbf{0.418265} public Macro F1 on the PlantCLEF 2026 leaderboard (i002 four-blocks 224+336 ensemble; private Macro F1 $=$ 0.40283). For comparison, the same checkpoint at single-resolution 224 pixels without logit adjustment (\texttt{last\_blocks\_infer\_softmax\_mean / softmax\_mean\_probT0.05}) scores 0.41165 public / 0.38132 private --- the 224+336+LA ensemble lifts the public score by $+0.007$ and the private score by $+0.022$.
+Our anchor configuration is the BioCLIP 2.5 last four blocks tile-inference submission described in Section~\ref{sec:adaptive_inference}: $4{\times}4$ tiling at tile size 448 with no overlap, an ensemble of inference at 224 and 336 pixel resolutions, softmax mean aggregation per tile, logit adjustment at $\tau{=}0.25$, and probability threshold selection at $T{=}0.03$ with a floor of two and a ceiling of ten species per quadrat. This configuration scores \textbf{0.418265} public Macro F1 on the PlantCLEF 2026 leaderboard (i002 four-blocks 224+336 ensemble; private Macro F1 $=$ 0.40283). For comparison, the same checkpoint at single-resolution 224 pixels without logit adjustment (\texttt{last\_blocks\_infer\_softmax\_mean / softmax\_mean\_probT0.05}) scores 0.41165 public / 0.38132 private --- the 224+336+LA ensemble lifts the public score by $+0.007$ and the private score by $+0.022$. A full development trace of every direction we explored, with best public and private scores and an exploration-depth label for each, is given in Appendix~\ref{app:experiment_summary}.
 
 \subsection{Unfrozen-Blocks Ablation}
 \label{sec:blocks_ablation}
@@ -58,6 +58,52 @@ Before pivoting to architecture-orthogonal evidence sources, we measured whether
 \end{table}
 
 The $0.923$ Jaccard between the four way intra-BioCLIP 2.5 ensemble and our anchor submission demonstrates that all within-backbone variants are statistically equivalent on the test set: shuffling the unfrozen depth or the training-epoch index does not move the prediction distribution. This motivates the pivot to fundamentally different evidence sources.
+
+\subsection{Head Representation Analysis}
+\label{sec:head_repr}
+
+The two supervised fine tunes wire their classification heads differently (Figure~\ref{fig:head_design}): experiment~010 feeds a single shared multi layer perceptron into five linear heads, whereas experiment~i002 gives each of its three heads an independent perceptron. To understand what each design does to the feature space we ran a descriptive probe of the trained representations. This analysis is not causal: the two experiments also differ in training data, schedule, number of unfrozen blocks, and head count, and they use different validation splits, so we compare each representation only against its own encoder and never compute cross experiment similarity (only $62$ of the $4{,}000$ sampled images overlap between the two splits).
+
+For a family stratified sample of $4{,}000$ validation images per experiment we captured the BioCLIP encoder feature and every MLP hidden vector with forward hooks, then measured linear centred kernel alignment (CKA) and lightweight taxonomic separation diagnostics (cosine silhouette at the genus and family levels). The results are summarised in Table~\ref{tab:head_repr} and Figure~\ref{fig:head_taxstruct}.
+
+Two observations are robust within each experiment. First, every MLP output stays highly aligned with its own encoder feature (linear CKA between $0.75$ and $0.84$), so neither head design discards the BioCLIP geometry. In i002 the three per head MLPs are distinct rather than redundant copies (pairwise CKA $0.73$ to $0.84$): the family MLP departs most from both the encoder ($0.75$) and the species MLP ($0.73$), while the species MLP stays closest to the encoder ($0.82$). Second, in both designs the trained MLP is modestly more taxonomically structured than that experiment's own raw encoder feature (for example the 010 shared trunk raises genus cosine silhouette from $0.18$ to $0.21$). Within i002 the genus and family MLPs separate taxa more sharply than the species MLP (family level silhouette $0.26$ for the family MLP versus $0.16$ for the species MLP), which is the expected signature of each MLP specialising toward its own head's loss.
+
+We stress that these are descriptive statements about representation geometry. They characterise what the shared and per head designs do to the feature space, but they do not isolate the effect of the head topology on the leaderboard score, which remains confounded with the data and schedule differences between the two experiments. We therefore make no causal claim, and we do not treat the 010 versus i002 comparison as a controlled ablation.
+
+\begin{figure*}[t]
+  \centering
+  \resizebox{0.95\linewidth}{!}{\input{figures/head_design_schematic}}
+  \caption{Head designs of the two supervised fine tunes. Experiment~010 (left) uses a single shared MLP (layer normalisation, a linear projection of the $1{,}024$-d embedding, GELU, and dropout) whose hidden vector feeds five linear heads (species/genus/family/order/class); the auxiliary taxonomy losses back propagate through the shared trunk. Experiment~i002 (right) uses three independent per head MLPs (species/genus/family), so the auxiliary gradients do not pass through the species MLP. Both share the partially unfrozen BioCLIP~2.5 backbone (last blocks plus the final layer norm and projection). The diagram shows the design difference only: the two experiments are not a controlled ablation, since they also differ in training data, schedule, unfrozen blocks, and head count.}
+  \label{fig:head_design}
+\end{figure*}
+
+\begin{table}[ht]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}llccc@{}}
+    \toprule
+    Exp. & Representation & CKA$\to$enc. & Fam.\ silh. & Gen.\ silh. \\
+    \midrule
+    010  & encoder       & ---    & 0.134 & 0.183 \\
+    010  & shared MLP    & 0.845  & 0.177 & 0.215 \\
+    \cmidrule(lr){1-5}
+    i002 & encoder       & ---    & 0.134 & 0.185 \\
+    i002 & species MLP   & 0.821  & 0.158 & 0.220 \\
+    i002 & genus MLP     & 0.806  & 0.193 & 0.252 \\
+    i002 & family MLP    & 0.749  & 0.260 & 0.296 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Within experiment representation analysis. CKA is linear centred kernel alignment of each MLP output to its own encoder feature; silhouette is cosine, at the family and genus levels, on the same $4{,}000$-image sample. Cross experiment CKA is omitted because the two experiments use different validation splits (only $62/4{,}000$ sampled images overlap). i002 cross head CKA: species/genus $0.84$, species/family $0.73$, genus/family $0.84$.}
+  \label{tab:head_repr}
+\end{table}
+
+\begin{figure}[!htbp]
+  \centering
+  \input{figures/head_taxstruct}
+  \caption{Taxonomic structure of each head representation on the family stratified $4{,}000$-image samples: cosine silhouette at the family and genus levels. Within each experiment the trained MLP increases structure over its own raw encoder feature; within i002 the family and genus MLPs are the most structured (family level silhouette $0.26$ for the family MLP versus $0.16$ for the species MLP). Magnitudes are comparable only within an experiment, not across, because the two experiments use different validation samples.}
+  \label{fig:head_taxstruct}
+\end{figure}
 
 \subsection{Pivot 1: Triple-Backbone Classifier Retraining (cRT)}
 \label{sec:pivot1}
