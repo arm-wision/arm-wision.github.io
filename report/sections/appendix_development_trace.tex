@@ -1,10 +1,10 @@
 % ============================================================================
-% Appendix (staging): content relocated out of the Method section during the
-% Phase 1 restructure. Holds the full seasonal-phenology method (a pivot that
-% did not improve over the visual anchor), the long-tail capping detail, and the
-% considered-but-not-implemented directions. These were moved verbatim from
-% sections/methodology.tex so no content is lost and existing cross-references
-% (\ref{sec:phenology}, \ref{fig:phenology_pipeline}) still resolve.
+% Supplementary appendices (B onward): material kept out of the main text to
+% preserve the top-down narrative -- the long-tail manifest detail, the full
+% seasonal-phenology method (a pivot that did not improve over the visual
+% anchor), the additional inference sweeps, and the considered-but-not-
+% implemented directions. Cross-referenced from the main text
+% (\ref{sec:phenology}, \ref{sec:appendix_extra_sweeps}, \ref{sec:cap_extra_detail}).
 % This file is \input after sections/appendix_experiment_summary.tex, which has
 % already opened the \appendix; no second \appendix is needed here.
 % ============================================================================
@@ -37,22 +37,10 @@ oversized files. The augmented manifest is then deduplicated by image path and c
 hundred images per species through a seeded random subsample, applied once offline at manifest
 construction time rather than at every epoch. This trims the heaviest bins (the twelve species
 above one thousand images and the 2,263 species in the 501 to 1,000 image bin both collapse into
-the 251 to 500 bin) and produces a flatter distribution.
-
-\textbf{Result.} The downstream effect on the public leaderboard contains an empirical surprise:
-capping at five hundred images per species \emph{hurt} relative to letting the model see the full
-uncapped manifold. The i003 best is 0.40041 on the leaderboard versus 0.418265 for the
-corresponding uncapped i002 checkpoint. We interpret this as direct evidence that even on a long
-tail, the marginal value of additional head class examples is positive on this benchmark provided
-their label quality is high; flattening the head distribution discards information rather than
-rebalancing it.
-
-\begin{figure}[!htbp]
-  \centering
-  \input{figures/species_long_tail}
-  \caption{Species count per training-image bin, before and after the i003 per-species cap at $500$. The cap collapses the two heaviest bins ($\le$1k and $>$1k) into the $\le$500 bin and lifts middle bins, but does not move species out of the long tail (left bins). This flatter distribution \emph{hurt} the public Macro F1 (see above).}
-  \label{fig:long_tail}
-\end{figure}
+the 251 to 500 bin) and produces a flatter distribution. The leaderboard outcome of this
+capped manifest---a public Macro F1 of $0.40041$ against $0.418265$ for the uncapped i002
+checkpoint---is analysed in \S\ref{sec:longtail}, together with the before/after distribution
+(Figure~\ref{fig:long_tail}).
 
 \section{Seasonal Phenology Prior: Full Method}
 \label{sec:phenology}
@@ -92,7 +80,16 @@ with $\epsilon{=}0.05$ and $c_{s,m}$ the GBIF count for species $s$ in month $m$
 
 \paragraph{Submission pipeline.} Beyond the phenology log-prior itself, the seasonal phenology submission departs from the anchor inference scaffold (Figure~\ref{fig:pipeline}) in three ways, illustrated architecturally in Figure~\ref{fig:phenology_pipeline} and visually in Figure~\ref{fig:phenology_illustration}. First, an Excess Green index $\mathrm{ExG}_t = 2G_t - R_t - B_t$ is computed per tile and tiles with fewer than $15\%$ green pixels are dropped before the encoder forward pass, removing tiles that contain no vegetation. Second, the surviving tiles are aggregated with a per-tile Bayesian weight $w_t \propto \exp(-H_t)\cdot\mathrm{ExG}_t$, where $H_t$ is the predictive entropy of tile $t$, yielding a softmax-weighted mean rather than the anchor's unweighted mean. Third, the input quadrat is processed at two grid scales ($1.0$ and $0.8$) in addition to the two inference resolutions ($224$ and $336$ pixels), with all per-tile distributions pooled into a single posterior before the phenology prior is added. Logit adjustment ($\tau{=}0.25$) and adaptive threshold selection ($T{=}0.03$) then follow as in the anchor.
 
-\paragraph{Empirical result.} On the PlantCLEF 2026 leaderboard, the phenology prior at $\beta{=}1.0$, $T{=}0.03$ produced a Macro-F1 of \textbf{0.41346} versus the unaugmented BioCLIP 2.5 anchor of 0.418265 ($\Delta = -0.0048$). The detailed sweep and discussion are reported in \S\ref{sec:experiments}.
+\paragraph{Empirical result.} On the PlantCLEF 2026 leaderboard, the phenology prior at $\beta{=}1.0$, $T{=}0.03$ produced a Macro-F1 of \textbf{0.41346} versus the unaugmented BioCLIP 2.5 anchor of 0.418265 ($\Delta = -0.0048$). We swept $\beta \in \{0.25, 0.5, 1.0, 1.5, 2.0\}$ at three probability thresholds; the natural Bayesian operating point ($\beta{=}1.0$, no temperature scaling, $T{=}0.03$, $\tau{=}0.25$ matching the anchor) flips $12.8\%$ of top-one picks at mean $k{=}3.24$. The headline result is summarised in \S\ref{sec:final_results}.
+
+\paragraph{Why the gain is negligible.} The day-of-year distribution of the test set is heavily summer skewed (Jul $=$ 517, Aug $=$ 668, Apr--Jun $=$ 607 of 2{,}105 quadrats; Figure~\ref{fig:test_doy_wheel}), so a date-conditioned prior could only help in the densely sampled months. Three concurrent factors plausibly explain the near-zero delta: \textit{(i)} GBIF observation effort is itself summer biased, diluting the discriminative season signal; \textit{(ii)} the BioCLIP 2.5 backbone trained on dated images already encodes seasonal phenotype implicitly via leaf / flower / fruit state; \textit{(iii)} $11\%$ of species fall back to a uniform pdf precisely on the long tail where the visual model is most uncertain, so phenology cannot break ties where it would be most useful.
+
+\begin{figure}[!htbp]
+  \centering
+  \resizebox{0.82\linewidth}{!}{\input{figures/test_doy_wheel}}
+  \caption{Calendar wheel of the PlantCLEF~2026 test set by month of observation (2{,}105 quadrats total). Radial bar length is proportional to the count for that month. The July (517) and August (668) wedges are reported exactly in the data; the April--June total of 607 is split uniformly across the three months for the figure, as is the residual 313 across the remaining seven months. The visually obvious summer over-representation motivates the seasonal phenology pivot: a date-conditioned prior could only ever help in the densely-sampled months, and conversely should not be expected to lift Macro F1 on the sparse winter tail.}
+  \label{fig:test_doy_wheel}
+\end{figure}
 
 \begin{figure}[!ht]
   \centering
@@ -118,3 +115,44 @@ tail; test-time training via self-supervised rotation prediction was scoped; con
 for set-valued species output was scoped; and Frank-Wolfe optimisation with an island-biogeography
 count prior was scoped as an alternative to the threshold-based selection rule. None of these are
 evaluated in this paper.
+
+\section{Additional Inference Sweeps}
+\label{sec:appendix_extra_sweeps}
+
+This section holds the exhaustive inference-sweep rows that are summarised but not tabulated in
+\S\ref{sec:infer_ablations}. All numbers are public Macro F1.
+
+\textbf{Gap and relative-threshold selection rules.} Holding $\tau{=}0.25$ fixed on the i002
+last-four-blocks single-resolution checkpoint, the gap rule (emit while consecutive species differ
+by less than a fraction of the top probability) and the relative-threshold rule (emit every $s$
+with $p_s$ within a fraction of the top) both underperform the probability-threshold anchor
+($0.40590$) by between $0.06$ and $0.10$ Macro F1 (Table~\ref{tab:select_rule_extra}).
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{llc}
+    \toprule
+    Rule & Value & Public Macro F1 \\
+    \midrule
+    gap                                  & $0.40$    & 0.33199 \\
+    gap                                  & $0.50$    & 0.33664 \\
+    gap                                  & $0.60$    & 0.34996 \\
+    \midrule
+    relative threshold                   & $0.15$    & 0.31348 \\
+    relative threshold                   & $0.20$    & 0.31704 \\
+    relative threshold                   & $0.25$    & 0.31823 \\
+    relative threshold                   & $0.30$    & 0.33623 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Gap and relative-threshold selection rules at $\tau{=}0.25$ on the i002 last-four-blocks single-resolution checkpoint. Both families underperform the probability-threshold anchor ($T{=}0.03$, $0.40590$; see Table~\ref{tab:select_rule}) by between $0.06$ and $0.10$ Macro F1.}
+  \label{tab:select_rule_extra}
+\end{table}
+
+\textbf{Noisy-or aggregation mixture.} On the earlier 010 four-block anchor we additionally swept
+softmax-mean against a mixture $\alpha \cdot \text{softmax\_mean} + (1{-}\alpha) \cdot
+\text{noisy\_or}$ across $\alpha \in \{0.25, 0.50, 0.75, 1.0\}$. All variants land within $0.0005$
+Macro F1 of the softmax-mean anchor at $0.38333$, with the second-best, $\alpha{=}0.75$, at
+$0.38278$, so on that earlier posterior the choice of aggregator is essentially flat. On the
+fine-tuned i002 checkpoint, by contrast, softmax-mean pulls clearly ahead of max
+(\S\ref{sec:tile_aggregation}).

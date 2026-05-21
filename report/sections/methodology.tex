@@ -32,8 +32,8 @@ labels for every row, yielding roughly $2.65$\,million images across $7{,}806$ s
 deployed model (experiment~i002) trains on this larger manifest \emph{without} any per-species
 cap. We also explored an explicitly rebalanced variant (experiment~i003) that augments the tail
 with extra validated images and caps every species at five hundred images; its leaderboard
-outcome---which did not improve on the uncapped manifest---is reported in
-Section~\ref{sec:experiments} and Appendix~\ref{app:experiment_summary}. We therefore treat
+outcome---which did not improve on the uncapped manifest---is analysed in
+Section~\ref{sec:longtail}. We therefore treat
 ``more clean data, no cap'' as a deliberate design choice for the final system rather than as a
 controlled study of rebalancing.
 
@@ -96,6 +96,13 @@ run a controlled comparison that varies only the head wiring, and we make no cla
 per-head MLP, or the taxonomy supervision, caused any performance gain. We report the head wiring
 as a deliberate design choice and analyse the resulting feature spaces descriptively in
 Section~\ref{sec:head_repr}.
+
+\begin{figure*}[t]
+  \centering
+  \resizebox{0.95\linewidth}{!}{\input{figures/head_design_schematic}}
+  \caption{Head designs of the two supervised fine tunes. Experiment~010 (left) uses a single shared MLP (layer normalisation, a linear projection of the $1{,}024$-d embedding, GELU, and dropout) whose hidden vector feeds five linear heads (species/genus/family/order/class); the auxiliary taxonomy losses back propagate through the shared trunk. Experiment~i002 (right) uses three independent per head MLPs (species/genus/family), so the auxiliary gradients do not pass through the species MLP. Both share the partially unfrozen BioCLIP~2.5 backbone (last blocks plus the final layer norm and projection). The diagram shows the design difference only: the two experiments are not a controlled ablation, since they also differ in training data, schedule, unfrozen blocks, and head count.}
+  \label{fig:head_design}
+\end{figure*}
 
 \subsection{Tiled Inference}
 \label{sec:adaptive_inference}
