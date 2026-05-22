@@ -69,8 +69,10 @@ sixteen tiles, each tile is forwarded through the encoder at both
 $224$ and $336$ pixels, the per-tile softmax distributions are
 averaged across tiles and across resolutions, class-prior logit
 adjustment is applied, and an adaptive probability threshold selects
-the emitted species set. Our best public Macro F1 is \textbf{0.41826} and our best private
-Macro F1 is \textbf{0.40283}.
+the emitted species set. Our best public Macro F1 is \textbf{0.41826}; the same
+configuration scores \textbf{0.40283} private (the strongest private
+result of the project, $0.40600$, comes from a logit-adjusted
+single-resolution variant).
 \end{abstract}
 
 %%

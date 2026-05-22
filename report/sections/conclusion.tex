@@ -8,10 +8,10 @@ with taxonomy-aware auxiliary heads and deployed under tiled softmax-mean infere
 logit adjustment and a $224{+}336$ resolution ensemble. It reached a public Macro F1 of
 \textbf{0.41826} and a private Macro F1 of \textbf{0.40283}.
 
-Three findings carry the bulk of what this benchmark taught us. The first is that partial unfreeze
-is a sharp, not a plateau, design choice on BioCLIP 2.5: $n{=}4$ unfrozen blocks is the empirical
-sweet spot, deviations of one block in either direction cost between $0.009$ and $0.014$ Macro F1,
-and a full fine-tune destroys the Tree-of-Life prior and drops the model to $0.208$. The second is
+Three findings carry the bulk of what this benchmark taught us. The first is that unfreeze depth
+matters on BioCLIP 2.5: a moderate depth of four to eight blocks is the operating region (the
+deployed model uses four), while a full fine-tune destroys the Tree-of-Life prior and drops the
+model to $0.301$ public / $0.296$ private. The second is
 the validation versus leaderboard decoupling: across our twelve strongest runs the two metrics
 correlate at only $r \approx 0.4$, and within the unfreeze ablation they invert entirely, which is
 direct evidence that the bottleneck on this benchmark is the single-plant to multi-species
