@@ -44,24 +44,15 @@ In this paper, we present the system submitted by the Australian National Univer
 
 \begin{figure}[t]
   \centering
-  \resizebox{0.72\linewidth}{!}{\input{figures/introduction_pipeline}}
-  \caption{System overview for the ANU PlantCLEF 2026 submission.
-  The pipeline has three stages. First, a partial fine-tune of BioCLIP
-  2.5 ViT-H/14 in which the lower 28 transformer blocks are frozen to
-  preserve the Tree-of-Life prior and only the last 4 blocks plus the
-  final layer norm and projection are unfrozen; auxiliary cross-entropy
-  heads at the genus and family levels act as a structural regulariser
-  without adding inference-time cost. Second, long-tail rebalancing via
-  an enlarged 2.65-million-image manifest with pre-filled taxonomic
-  labels and no per-species cap; capping each species at 500 images hurt
-  performance (0.400 vs.\ 0.418 public Macro F1), confirming that more
-  clean data dominates a flatter distribution on this benchmark. Third,
-  tile-level inference in which each quadrat is partitioned into a
-  $4{\times}4$ grid of sixteen tiles, each forwarded at 224 and
-  336 pixels; class-prior logit adjustment ($\tau{=}0.25$) down-weights
-  common species before an adaptive threshold ($T{=}0.03$,
-  $k_{\min}{=}2$, $k_{\max}{=}10$) selects the output species set.}
-  \label{fig:introduction_pipeline}
+  \includegraphics[width=0.72\linewidth]{figures/training_pipeline}
+  \caption{Training pipeline for the ANU PlantCLEF 2026 submission.
+The PlantCLEF 2024 single-plant manifest (2.65M images across 7,806
+species) is fed into a partially fine-tuned BioCLIP~2.5 ViT-H/14
+in which the lower 28 transformer blocks are frozen to preserve the
+Tree-of-Life prior and only the last 4 blocks plus the final layer
+norm and projection are unfrozen. Auxiliary cross-entropy heads at
+the family, genus, and species levels are attached.}
+  \label{fig:training_pipeline}
 \end{figure}
 
 The remainder of this paper is organised as follows. Section~\ref{sec:related} reviews related work on plant identification, foundation model adaptation, and multi-label classification. Section~\ref{sec:method} defines the final system top-down, from data and label construction through to the final inference pipeline. Section~\ref{sec:experiments} sets out the evaluation protocol, the baseline ladder, and the experiments that justify each component. Section~\ref{sec:analysis} analyses why the system behaves as it does: the validation/leaderboard decoupling, the head representation geometry, the within-backbone saturation, and the long-tail behaviour. Section~\ref{sec:discussion} discusses limitations and future work, and Section~\ref{sec:conclusion} concludes.
