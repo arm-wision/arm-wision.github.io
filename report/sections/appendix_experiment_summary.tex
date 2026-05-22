@@ -186,7 +186,7 @@ on more clean data with no cap) gave the strongest checkpoint. On top of that
 checkpoint, the aggregation study selected softmax-mean over max and dropped plain mean,
 the selection study chose adaptive probability thresholding, light logit adjustment
 ($\tau{=}0.25$) gave the best private score, and a $224{+}336$ resolution ensemble gave
-the best public score of $0.41826$. The three pivots (a triple-backbone classifier, a
+the best public score of $0.418265$. The three pivots (a triple-backbone classifier, a
 genus/family rerank, and a seasonal phenology prior) were all reranking attempts on this
 anchor; none improved it, and we report the phenology prior as a novelty contribution
 on its own terms.
@@ -202,7 +202,7 @@ on its own terms.
   run a controlled shared-versus-per-head comparison, nor a species-only run that
   removes the taxonomy heads, so we report these as design choices, not causes.
   \item Public and private leaderboards disagree. Our best public configuration
-  ($0.41826$) is not our best private one ($0.40600$), and the i002+010 ensemble is
+  ($0.418265$) is not our best private one ($0.40600$), and the i002+010 ensemble is
   near-best on private while weak on public. We report both columns and avoid implying
   that the best public run is best overall.
   \item Held-out single-plant validation accuracy correlates only weakly with

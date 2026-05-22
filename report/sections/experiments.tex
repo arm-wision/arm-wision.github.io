@@ -203,13 +203,16 @@ Appendix~\ref{sec:appendix_extra_sweeps}.
 \end{table}
 
 \textbf{Resolution ensemble.} Averaging the same checkpoint at two inference resolutions lifts
-the result substantially. Going from a single-resolution $224$-pixel inference at $T{=}0.05$ to a
-$224{+}336$ probability-averaged ensemble at $\tau{=}0.25$, $T{=}0.03$ raises public Macro F1
-from $0.41165$ to $0.418265$ ($\Delta{=}{+}0.0066$) and private Macro F1 from $0.38132$ to
-$0.40283$ ($\Delta{=}{+}0.022$). The private gain is more than $3\times$ the public gain --- the
-$336$-pixel pass appears to recover rare-species pixels that the single-resolution recipe drops,
-and those species are the ones the private split weights most heavily. This is a single-checkpoint
-ensemble of the i002 model, not a multi-checkpoint ensemble.
+the result substantially. Going from the best single-resolution $224$-pixel softmax-mean result
+before logit adjustment to the $224{+}336$ probability-averaged ensemble at $\tau{=}0.25$,
+$T{=}0.03$ raises public Macro F1 from $0.41165$ to $0.418265$ ($\Delta{=}{+}0.0066$) and private
+Macro F1 from $0.38132$ to $0.40283$ ($\Delta{=}{+}0.022$). This delta bundles the addition of
+logit adjustment with the resolution ensemble; the cleaner matched-LA comparison at $\tau{=}0.25$,
+$T{=}0.03$ (single-resolution $0.40590$ from Table~\ref{tab:tau_T} versus ensemble $0.418265$)
+gives a public lift of about $+0.012$. The private gain remains more than $3\times$ the public
+gain, suggesting that the $336$-pixel pass recovers rare-species pixels the single-resolution
+recipe drops, and those species are the ones the private split weights most heavily. This is a
+single-checkpoint ensemble of the i002 model, not a multi-checkpoint ensemble.
 
 \textbf{Public/private caveat.} The best public and best private operating points are not the
 same submission. Adding logit adjustment to softmax-mean scores $0.40590$ public but $0.40600$
