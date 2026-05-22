@@ -32,7 +32,7 @@ labels for every row, yielding roughly $2.65$\,million images across $7{,}806$ s
 deployed model (experiment~i002) trains on this larger manifest \emph{without} any per-species
 cap. We also explored an explicitly rebalanced variant (experiment~i003) that augments the tail
 with extra validated images and caps every species at five hundred images; its leaderboard
-outcome---which did not improve on the uncapped manifest---is analysed in
+outcome, which did not improve on the uncapped manifest, is analysed in
 Section~\ref{sec:longtail}. We therefore treat
 ``more clean data, no cap'' as a deliberate design choice for the final system rather than as a
 controlled study of rebalancing.
@@ -62,8 +62,8 @@ are listed in Appendix~\ref{app:experiment_summary}.
 
 On top of the encoder we attach a small head that predicts species jointly with coarser
 taxonomic levels, so the auxiliary taxonomy losses act as a structural regulariser. Each head is
-built from the same template---layer normalisation of the $1{,}024$-dimensional CLS embedding, a
-linear projection to a hidden representation, a GELU non-linearity, and dropout---but the two
+built from the same template (layer normalisation of the $1{,}024$-dimensional CLS embedding, a
+linear projection to a hidden representation, a GELU non-linearity, and dropout), but the two
 fine-tunes we report wire it differently.
 
 \textbf{Shared trunk (experiment~010).} Our first strong fine-tune uses a single \emph{shared}
@@ -91,7 +91,7 @@ the encoder. The deployed per-head model uses only $w_g{=}0.30$ and $w_f{=}0.15$
 labels are encoded as $-1$ and masked out of the auxiliary loss.
 
 We stress that the shared-trunk and per-head designs differ in several other respects at the same
-time---training data, schedule, number of unfrozen blocks, and head count---so we do \emph{not}
+time (training data, schedule, number of unfrozen blocks, and head count), so we do \emph{not}
 run a controlled comparison that varies only the head wiring, and we make no claim that the
 per-head MLP, or the taxonomy supervision, caused any performance gain. We report the head wiring
 as a deliberate design choice and analyse the resulting feature spaces descriptively in

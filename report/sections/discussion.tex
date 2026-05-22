@@ -16,7 +16,7 @@ stronger configuration overall and make \emph{no} causal claim that the per-head
 caused the gain. Nor do we ablate the taxonomy supervision itself: we never trained a
 species-only control with the auxiliary heads removed, so the auxiliary losses are reported as a
 deliberate regulariser, not as a measured improvement. The one head-adjacent factor we did
-isolate---the number of unfrozen blocks, holding the 010 head fixed---shows a sharp optimum at
+isolate, the number of unfrozen blocks (holding the 010 head fixed), shows a sharp optimum at
 four blocks (\S\ref{sec:blocks_ablation}), and that is the surface the final anchor uses. The
 single near-controlled counterfactual we have is the i003 cap (\S\ref{sec:longtail}), where only
 the manifest changed and the score dropped.
@@ -37,8 +37,8 @@ validation splits (only $62$ of $4{,}000$ sampled images overlap), so we compare
 representation only against its own encoder and never cross-experiment. It characterises what the
 shared and per-head designs do to the feature space; it does not isolate the effect of head
 topology on Macro F1. More broadly, the full development trace in
-Appendix~\ref{app:experiment_summary} is exactly that---a trace, not a controlled ablation
-table---and most of its rows change several factors at once.
+Appendix~\ref{app:experiment_summary} is exactly that, a trace rather than a controlled
+ablation table, and most of its rows change several factors at once.
 
 \paragraph{Future work.} Several directions follow directly from these findings. The first is to
 pull on the data axis rather than the capacity axis: a synthetic mosaic training regime that
@@ -47,7 +47,7 @@ network see the quadrat distribution during training, which neither the PlantCLE
 iNaturalist habitat shots do at scale. The second is self-distillation against our own production
 checkpoint, using its predictions on the unlabelled LUCAS pseudo-quadrat corpus as soft targets
 filtered by confidence and entropy. The third is genuinely orthogonal evidence that is not in the
-image at all---in particular a location-conditioned bioclimatic envelope prior built from
+image at all, in particular a location-conditioned bioclimatic envelope prior built from
 training-image coordinates against WorldClim variables at each test site, the one orthogonal axis
 that visual features cannot recover from the image alone (this experiment is blocked here only by
 the absence of test-site coordinates). Finally, per-class threshold calibration on a held-out

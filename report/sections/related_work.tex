@@ -13,7 +13,7 @@ BioCLIP~\cite{stevens2024bioclip} is a contrastive vision-language model trained
 
 DINOv3~\cite{simeoni2025dinov3} is a self-supervised ViT trained with a student-teacher distillation objective on a large curated dataset. Its features are highly transferable across domains and exhibit strong spatial correspondence, making them effective for fine-grained recognition tasks. We use DINOv3 features as one of three frozen feature extractors in our triple-backbone pivot (Section~\ref{sec:experiments}).
 
-ConvNeXt-V2~\cite{woo2023convnextv2} modernises the convolutional neural network paradigm by incorporating design elements from Transformers (e.g., larger kernel sizes, LayerNorm, GELU activations) alongside a Fully Convolutional Masked Autoencoder (FCMAE) pretraining strategy. ConvNeXt-V2 retains the inductive biases of CNNs---translation equivariance and locality---while achieving performance competitive with ViTs.
+ConvNeXt-V2~\cite{woo2023convnextv2} modernises the convolutional neural network paradigm by incorporating design elements from Transformers (e.g., larger kernel sizes, LayerNorm, GELU activations) alongside a Fully Convolutional Masked Autoencoder (FCMAE) pretraining strategy. ConvNeXt-V2 retains the inductive biases of CNNs (translation equivariance and locality) while achieving performance competitive with ViTs.
 
 \subsection{Partial Fine-Tuning of Large Pretrained Models}
 

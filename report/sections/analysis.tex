@@ -9,8 +9,8 @@ the bottleneck as a distribution-shift problem rather than a model-capacity one.
 Section~\ref{sec:head_repr} probes the trained head representations with linear CKA and
 taxonomic-separation diagnostics; this analysis is \emph{descriptive}, not causal.
 Section~\ref{sec:orthogonality} shows that variants within our own backbone have saturated into
-essentially one model, which motivated---and explains the failure of---the search for orthogonal
-evidence sources. Section~\ref{sec:longtail} examines why flattening the long tail hurt rather
+essentially one model, which both motivated the search for orthogonal evidence sources and
+explains its failure. Section~\ref{sec:longtail} examines why flattening the long tail hurt rather
 than helped.
 
 \subsection{Validation vs Leaderboard Mismatch}
@@ -130,7 +130,7 @@ test quadrats.
 The $0.923$ Jaccard between the four-way intra-BioCLIP~2.5 ensemble and our anchor submission
 shows that all within-backbone variants are essentially one model on the test set: shuffling the
 unfrozen depth or the training-epoch index does not move the prediction distribution. This is
-what motivated the three architecture-orthogonal pivots (\S\ref{sec:final_results})---if the
+what motivated the three architecture-orthogonal pivots (\S\ref{sec:final_results}): if the
 remaining headroom is not inside the backbone, it must come from a signal the backbone cannot
 read.
 
@@ -140,8 +140,8 @@ orthogonality is not the same as statistical orthogonality} once the visual mode
 trained on data where the auxiliary signal is naturally correlated with image content. cRT was
 structurally orthogonal but introduced wrong evidence and dragged the anchor down by $0.036$;
 genus reweighting was statistically dependent on the BioCLIP~2.5 posterior itself and moved the
-score by $-0.006$, close to the noise floor; the seasonal phenology prior---the most genuinely
-orthogonal source we tested, since date is not in the image at all---moved the score by only
+score by $-0.006$, close to the noise floor; the seasonal phenology prior, the most genuinely
+orthogonal source we tested (since date is not in the image at all), moved the score by only
 $-0.005$, again close to the noise floor, because the seasonal structure was already implicit in
 the leaf and flower phenotypes seen during training. The practical reading is that real headroom
 on this benchmark requires structurally stronger \emph{visual} models rather than post hoc
@@ -155,7 +155,7 @@ i003 takes the i002 manifest, augments the tail with $161{,}686$ validated image
 $2{,}022$ species with fewer than one hundred training examples, and then caps every species at
 five hundred images, flattening the head of the distribution (Figure~\ref{fig:long_tail}).
 Because i003 changes only the training manifest relative to i002, the leaderboard outcome is
-unusually interpretable---and it is a surprise: this flatter distribution \emph{hurt}, with the
+unusually interpretable, and it is a surprise: this flatter distribution \emph{hurt}, with the
 i003 best reaching $0.40041$ public Macro F1 against $0.418265$ for the corresponding uncapped
 i002 checkpoint. We read this as direct evidence that, on this benchmark, the marginal value of
 additional head-class examples is positive provided their label quality is high: capping discards

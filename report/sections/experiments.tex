@@ -154,7 +154,7 @@ last-four-blocks single-resolution ($224$-pixel) checkpoint.
 the joint sweep over $\tau \in \{0.25, 0.5\}$ and $T \in \{0.03, 0.05, 0.07\}$. The optimum is
 sharp: $\tau{=}0.25$, $T{=}0.03$ dominates every other cell by between $0.022$ and $0.083$ Macro
 F1, and Macro F1 falls off monotonically along both axes. Doubling $\tau$ from $0.25$ to $0.50$
-at fixed $T{=}0.03$ costs $0.022$ --- evidence that the long-tail boost saturates quickly and
+at fixed $T{=}0.03$ costs $0.022$, evidence that the long-tail boost saturates quickly and
 that pushing it harder starts emitting too many rare-but-implausible species.
 
 \begin{table}[ht]
@@ -216,7 +216,7 @@ single-checkpoint ensemble of the i002 model, not a multi-checkpoint ensemble.
 
 \textbf{Public/private caveat.} The best public and best private operating points are not the
 same submission. Adding logit adjustment to softmax-mean scores $0.40590$ public but $0.40600$
-private --- the strongest private result of the project --- so the configuration we report as the
+private (the strongest private result of the project), so the configuration we report as the
 public headline is not the one that maximises private Macro F1. We carry both columns through the
 final-submission table below rather than collapsing to a single number.
 
@@ -247,7 +247,7 @@ collect all four submitted configurations.
     \hspace{1em}+ Pheno., $\beta{=}1.0$ & 0.41346 & $-0.005$ \\
     \bottomrule
   \end{tabular}
-  \caption{All four submitted configurations on the PlantCLEF 2026 hidden test set (public Macro F1). The cRT pivot is strongly negative; the genus rerank and the phenology prior move the anchor by $-0.006$ and $-0.005$ respectively --- magnitudes comfortably inside the run-to-run leaderboard noise floor we characterise at ${\sim}0.002$ but consistent in sign. We read this as the BioCLIP 2.5 posterior implicitly absorbing both signals through training-distribution co-occurrence; the orthogonality argument is developed in \S\ref{sec:orthogonality}.}
+  \caption{All four submitted configurations on the PlantCLEF 2026 hidden test set (public Macro F1). The cRT pivot is strongly negative; the genus rerank and the phenology prior move the anchor by $-0.006$ and $-0.005$ respectively, magnitudes comfortably inside the run-to-run leaderboard noise floor we characterise at ${\sim}0.002$ but consistent in sign. We read this as the BioCLIP 2.5 posterior implicitly absorbing both signals through training-distribution co-occurrence; the orthogonality argument is developed in \S\ref{sec:orthogonality}.}
   \label{tab:summary}
 \end{table}
 
@@ -261,7 +261,7 @@ collect all four submitted configurations.
 \textbf{Pivot 1: triple-backbone classifier retraining (cRT).} We retrained two MLP heads on a
 frozen $3328$-d concatenation of BioCLIP~2.5, DINOv3, and ConvNeXt-V2-L features (best validation
 accuracy $63.95\%$) and mixed them with the anchor at $w{=}0.3$. A cheap pre-submission diagnostic
-gate --- top-one agreement and submission Jaccard against the anchor --- already flagged the head
+gate (top-one agreement and submission Jaccard against the anchor) already flagged the head
 as structurally divergent (agreement $0.094$, Jaccard $0.078$). On submission it scored
 $\mathbf{0.38195}$ ($\Delta{=}{-}0.036$): the divergence was diversity going \emph{against} signal,
 a peakier posterior whose high-confidence wrong picks dominate the mix.

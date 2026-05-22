@@ -72,7 +72,8 @@
    <dc:title><rdf:Alt><rdf:li xml:lang="x-default">Partial Fine-Tuning of BioCLIP 2.5 with Taxonomic Auxiliary Heads for Multi-Label Plant Species Identification in Vegetation Plots: ANU at PlantCLEF 2026</rdf:li></rdf:Alt></dc:title>
    <dc:creator><rdf:Seq><rdf:li>Arjun Raj</rdf:li>
      <rdf:li>Manindra de Mel</rdf:li>
-     <rdf:li>Razeen Wasif</rdf:li></rdf:Seq></dc:creator>
+     <rdf:li>Razeen Wasif</rdf:li>
+     <rdf:li>William Brake</rdf:li></rdf:Seq></dc:creator>
    <dc:rights><rdf:Alt><rdf:li xml:lang="x-default">© 2026 Copyright for this paper by its authors. Use permitted under Creative Commons License Attribution 4.0 International (CC BY 4.0).</rdf:li></rdf:Alt></dc:rights>
    <dc:description><rdf:Alt><rdf:li xml:lang="x-default">Layout by CEURART v0.6.2</rdf:li></rdf:Alt></dc:description>
    <dc:subject><rdf:Bag><rdf:li>plant identification </rdf:li>
@@ -95,9 +96,9 @@
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"> 
    <xmp:CreatorTool>LaTeX with hyperref</xmp:CreatorTool> 
-   <xmp:ModifyDate>2026-05-20T20:09:27+10:00</xmp:ModifyDate> 
-   <xmp:CreateDate>2026-05-20T20:09:27+10:00</xmp:CreateDate> 
-   <xmp:MetadataDate>2026-05-20T20:09:27+10:00</xmp:MetadataDate> 
+   <xmp:ModifyDate>2026-05-22T20:40:30+10:00</xmp:ModifyDate> 
+   <xmp:CreateDate>2026-05-22T20:40:30+10:00</xmp:CreateDate> 
+   <xmp:MetadataDate>2026-05-22T20:40:30+10:00</xmp:MetadataDate> 
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:xmpRights = "http://ns.adobe.com/xap/1.0/rights/"> 
    <xmpRights:Marked>True</xmpRights:Marked>
@@ -106,7 +107,7 @@
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"> 
    <xmpMM:DocumentID>uuid:DF005B57-2A06-8753-7167-92D8CE935460</xmpMM:DocumentID> 
-   <xmpMM:InstanceID>uuid:E99AEBBB-2E87-D0F2-54D1-420D121605C0</xmpMM:InstanceID> 
+   <xmpMM:InstanceID>uuid:22F050E7-2DC0-A900-01E6-8C9D2E971624</xmpMM:InstanceID> 
   </rdf:Description> 
  </rdf:RDF> 
 </x:xmpmeta> 
