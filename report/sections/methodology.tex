@@ -27,15 +27,35 @@ roughly two orders of magnitude more head-class than tail-class examples per epo
 
 Our final model trains on an enlarged and cleaned manifest. The original PlantCLEF~2024 metadata
 (merged with a GBIF taxonomy lookup) supplies the first fine-tune; a subsequent data rebuild
-(experiment~i001) re-downloaded the corpus, deduplicated it, and pre-filled genus and family
-labels for every row, yielding roughly $2.65$\,million images across $7{,}806$ species. The
-deployed model (experiment~i002) trains on this larger manifest \emph{without} any per-species
-cap. We also explored an explicitly rebalanced variant (experiment~i003) that augments the tail
-with extra validated images and caps every species at five hundred images; its leaderboard
-outcome, which did not improve on the uncapped manifest, is analysed in
-Section~\ref{sec:longtail}. We therefore treat
-``more clean data, no cap'' as a deliberate design choice for the final system rather than as a
-controlled study of rebalancing.
+(experiment~i001) re-downloaded the corpus, supplemented it with a research-grade iNaturalist
+pull, deduplicated, and pre-filled genus and family labels for every row, yielding roughly
+$2.65$\,million images across $7{,}806$ species (Table~\ref{tab:i001_manifest}). The deployed
+model (experiment~i002) trains on this larger manifest \emph{without} any per-species cap. We
+also explored an explicitly rebalanced variant (experiment~i003) that augments the tail with
+extra validated images and caps every species at five hundred images; its leaderboard outcome,
+which did not improve on the uncapped manifest, is analysed in Section~\ref{sec:longtail}. We
+therefore treat ``more clean data, no cap'' as a deliberate design choice for the final system
+rather than as a controlled study of rebalancing.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \setlength{\tabcolsep}{6pt}
+  \begin{tabular}{@{}lrrrr@{}}
+    \toprule
+    Source / Split & Images & Observations & Species & Genera \\
+    \midrule
+    PlantCLEF~2024 (Pl@ntNet)     & $1{,}408{,}033$ & $1{,}151{,}904$ & $7{,}806$ & $1{,}446$ \\
+    iNaturalist (research-grade)  & $1{,}245{,}748$ & $1{,}245{,}085$ & $5{,}037$ & $1{,}254$ \\
+    \midrule
+    \textbf{i001 manifest (union)}    & $\mathbf{2{,}653{,}781}$ & --- & $\mathbf{7{,}806}$ & $\mathbf{1{,}446}$ \\
+    \hspace{1em}Train (stratified 90\%) & $2{,}391{,}457$ & $1{,}121{,}447$ & $7{,}806$ & $1{,}446$ \\
+    \hspace{1em}Val (stratified 10\%)   & $262{,}324$     & $123{,}768$     & $7{,}309$ & $1{,}429$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Composition of the i001 training manifest used by the deployed i002 model. The PlantCLEF~2024 row reproduces the dataset overview from~\cite{joly2024overview}; the iNaturalist row reflects the research-grade pull we de-duplicated and image-verified before adding to the manifest. All iNaturalist species are a subset of the PlantCLEF~2024 taxonomy, so the union species and genus counts match the PlantCLEF~2024 row; iNaturalist therefore covers $5{,}037$ of the $7{,}806$ classes (the most populous head) rather than extending the long tail. The Train / Val rows are the deterministic stratified split applied at training time (10\% per species, seed $42$, species with fewer than five images held entirely in Train); the Val row drops to $7{,}309$ species because $497$ rare species fall below the five-image threshold and remain Train-only. Observations are reported only on the union and split rows where the field is well defined for iNaturalist sources, and they are omitted on the union total because the field is undefined for PlantCLEF~2024 rows in our merged manifest.}
+  \label{tab:i001_manifest}
+\end{table}
 
 \subsection{BioCLIP 2.5 Fine-tuning}
 \label{sec:backbone}
