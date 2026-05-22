@@ -6,8 +6,8 @@ import Reveal from "./Reveal";
 const BIB = `@inproceedings{armwision2026plantclef,
   title     = {ARM Wision at PlantCLEF 2026: Our Submission to
                the Multi Species Vegetation Plot Challenge},
-  author    = {Raj, Arjun and Wasif, Razeen and
-               de Mel, Manindra and Brake, Will},
+  author    = {Raj, Arjun and de Mel, Manindra and
+               Wasif, Razeen and Brake, Will},
   booktitle = {Working Notes of CLEF 2026},
   series    = {CEUR Workshop Proceedings},
   year      = {2026}
