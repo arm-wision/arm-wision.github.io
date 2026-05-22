@@ -39,12 +39,12 @@
   \node[collab] at (3.2,4.55) {Experiment 010: shared MLP trunk};
 
   % backbone
-  \node[enc, minimum width=6.4cm, minimum height=8mm] (b010) at (3.2,0)
-    {BioCLIP 2.5 ViT-H/14 encoder \;(last blocks + LN + proj trainable)};
+  \node[enc, minimum width=6.2cm, minimum height=8mm] (b010) at (3.2,0)
+    {BioCLIP 2.5 ViT-H/14 encoder};
 
   % shared MLP
   \node[mlp=Shar, minimum width=4.2cm] (s010) at (3.2,1.55)
-    {Shared MLP \;(LN\,$\to$\,Linear\,$\to$\,GELU\,$\to$\,Dropout), 1024-d};
+    {Shared MLP};
 
   % five heads
   \node[head=Sp] (h010sp) at (0.55,3.35) {species\\\tiny 7806};
@@ -74,8 +74,8 @@
   \node[collab] at (2.6,4.55) {Experiment i002: independent per-head MLPs};
 
   % backbone
-  \node[enc, minimum width=5.2cm, minimum height=8mm] (bi02) at (2.6,0)
-    {BioCLIP 2.5 ViT-H/14 encoder \;(last blocks + LN + proj trainable)};
+  \node[enc, minimum width=6.2cm, minimum height=8mm] (bi02) at (2.6,0)
+    {BioCLIP 2.5 ViT-H/14 encoder};
 
   % three per-head MLPs
   \node[mlp=Sp, minimum width=1.5cm] (mi02sp) at (0.8,1.55) {species\\MLP};
