@@ -60,7 +60,7 @@
 \node[io]    (img)    {Quadrat image \\
                        \small\itshape (raw RGB)};
 \node[stage] (tiles)  [below=of img]    {Multi-scale grid tiling \\
-                                          {\scriptsize $4{\times}4$ @ $448$\,px $\cdot$ scales $\{1.0, 0.8\}$}};
+                                          {\scriptsize $4{\times}4$ grid $\cdot$ scales $\{1.0, 0.8\}$}};
 \node[stage] (veg)    [below=of tiles]  {ExG vegetation filter \\
                                           {\scriptsize drop tiles with $<\!15\%$ green pixels}};
 \node[emph]  (fwd)    [below=of veg]    {BioCLIP 2.5 ViT-H/14 (last $4$ blocks unfrozen) \\

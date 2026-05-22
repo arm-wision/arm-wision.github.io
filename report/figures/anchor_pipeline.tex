@@ -46,9 +46,9 @@
 
 % ── Main column (top to bottom) ──────────────────────────────────────────
 \node[io]    (img)    {Quadrat image \\
-                       \small\itshape (raw RGB, $\sim$1800$\times$1800\,px)};
+                       \small\itshape (raw RGB, variable size, $\sim$1100--4100\,px/side)};
 \node[stage] (tiles)  [below=of img]    {$4\times4$ tile grid \\
-                                          {\scriptsize 16 non-overlapping tiles, $448$\,px each}};
+                                          {\scriptsize 16 non-overlapping tiles}};
 \node[emph]  (fwd)    [below=of tiles]  {BioCLIP 2.5 ViT-H/14 \\
                                           {\scriptsize 28 frozen blocks + last 4 blocks, LN, proj.\ unfrozen} \\
                                           {\scriptsize forward at $224$\,px \textbf{and} $336$\,px}};
@@ -106,7 +106,7 @@
 
 % ── Side-band parameter callouts on the right ───────────────────────────
 \node[param, right=22mm of tiles.east, anchor=west] (p1)
-  {tile size $448$, no overlap};
+  {$4\times4$ grid, no overlap};
 \node[param, right=22mm of fwd.east,   anchor=west] (p2)
   {\textbf{2 forwards} per tile \\ (resolution ensemble)};
 \node[param, right=22mm of agg.east,   anchor=west] (p3)

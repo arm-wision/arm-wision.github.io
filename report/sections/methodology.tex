@@ -130,8 +130,8 @@ Section~\ref{sec:head_repr}.
 The classifier is trained on single-plant images, but each test quadrat is a dense, multi-species
 scene in which plants overlap, occlude one another, and appear at varying scales. Passing a whole
 quadrat through an encoder trained on isolated specimens therefore mixes many species into one
-embedding. We instead resize each quadrat to a $1792\times1792$ canvas and partition it into a
-$4\times4$ grid of sixteen non-overlapping $448$-pixel tiles, so that most tiles contain only one
+embedding. We instead partition each quadrat into a non-overlapping
+$4\times4$ grid of sixteen tiles, each roughly a quarter of the quadrat in width and height, so that most tiles contain only one
 or a few species, closer to the training distribution. Each tile is forwarded through the encoder
 at two resolutions, the encoder's native $224$ pixels and $336$ pixels (the ViT-H/14 backbone
 tolerates the $1.5\times$ stretch via bicubic positional-embedding interpolation), giving a
@@ -178,8 +178,8 @@ deployed system.
 The deployed system is a single BioCLIP~2.5 ViT-H/14 backbone with its last four transformer
 blocks (plus the final layer norm and projection) fine-tuned for ten epochs on the enlarged i001
 manifest under the joint species/genus/family cross-entropy loss of \S\ref{sec:bioclip25_010}. At
-inference (Figure~\ref{fig:pipeline}), each quadrat is resized to $1792\times1792$ pixels and
-partitioned into a $4\times4$ grid of non-overlapping $448$-pixel tiles; every tile is forwarded
+inference (Figure~\ref{fig:pipeline}), each quadrat is
+partitioned into a non-overlapping $4\times4$ grid of sixteen tiles; every tile is forwarded
 through the encoder at both $224$ and $336$ pixels. Per-tile softmax probabilities are aggregated
 by species-wise mean across the sixteen tiles, the two resolutions are averaged, class-prior logit
 adjustment ($\tau{=}0.25$) is applied, and every species whose post-adjusted probability exceeds
@@ -200,6 +200,6 @@ Section~\ref{sec:experiments}.
 \begin{figure*}[t]
   \centering
   \resizebox{0.95\linewidth}{!}{\input{figures/anchor_pipeline}}
-  \caption{Inference pipeline for the headline anchor submission (solid path; public Macro F1 $0.418265$). Each quadrat is partitioned into a $4{\times}4$ grid of $448$-pixel non-overlapping tiles and forwarded through the partially fine-tuned BioCLIP~2.5 ViT-H/14 (lower 28 transformer blocks frozen; last 4 plus LN and projection unfrozen) at two inference resolutions, $224$ and $336$ pixels. Per-tile softmax probabilities are averaged across the 16 tiles and across the two resolutions, then class-prior logit adjustment ($\tau{=}0.25$) is applied before an adaptive sigmoid threshold ($T{=}0.03$, $k_{\min}{=}2$, $k_{\max}{=}10$) selects the output species set. Three architecture-orthogonal pivots (dashed; cRT triple-backbone classifier retraining, genus co-occurrence rerank, seasonal phenology prior) indicate where alternative configurations insert into the anchor; all three scored below the anchor on the leaderboard and are reported in Section~\ref{sec:experiments}.}
+  \caption{Inference pipeline for the headline anchor submission (solid path; public Macro F1 $0.418265$). Each quadrat is partitioned into a non-overlapping $4{\times}4$ grid of sixteen tiles and forwarded through the partially fine-tuned BioCLIP~2.5 ViT-H/14 (lower 28 transformer blocks frozen; last 4 plus LN and projection unfrozen) at two inference resolutions, $224$ and $336$ pixels. Per-tile softmax probabilities are averaged across the 16 tiles and across the two resolutions, then class-prior logit adjustment ($\tau{=}0.25$) is applied before an adaptive sigmoid threshold ($T{=}0.03$, $k_{\min}{=}2$, $k_{\max}{=}10$) selects the output species set. Three architecture-orthogonal pivots (dashed; cRT triple-backbone classifier retraining, genus co-occurrence rerank, seasonal phenology prior) indicate where alternative configurations insert into the anchor; all three scored below the anchor on the leaderboard and are reported in Section~\ref{sec:experiments}.}
   \label{fig:pipeline}
 \end{figure*}
