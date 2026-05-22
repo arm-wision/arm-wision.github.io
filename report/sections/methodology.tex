@@ -74,8 +74,11 @@ ablation that locates its optimum in Section~\ref{sec:experiments}.
 Training runs in bfloat16 across two RTX~5090 GPUs with a low backbone learning rate
 ($1{\times}10^{-6}$) and a higher head learning rate ($1{\times}10^{-4}$), one epoch of linear
 warmup followed by cosine decay, weight decay $1{\times}10^{-4}$, and label smoothing $0.1$. The
-final model trains for ten epochs on the enlarged manifest; full optimiser and hardware settings
-are listed in Appendix~\ref{app:experiment_summary}.
+final model is the second stage of a two-stage schedule: ten epochs of head-only training on the
+enlarged manifest with the backbone fully frozen, which initialises the per-head MLPs of
+\S\ref{sec:bioclip25_010}, then a further ten epochs with the last four blocks unfrozen, resuming
+the model weights only. Full optimiser and hardware settings are listed in
+Appendix~\ref{app:experiment_summary}.
 
 \subsection{Taxonomy-aware Heads}
 \label{sec:bioclip25_010}
@@ -83,8 +86,8 @@ are listed in Appendix~\ref{app:experiment_summary}.
 On top of the encoder we attach a small head that predicts species jointly with coarser
 taxonomic levels, so the auxiliary taxonomy losses act as a structural regulariser. Each head is
 built from the same template (layer normalisation of the $1{,}024$-dimensional CLS embedding, a
-linear projection to a hidden representation, a GELU non-linearity, and dropout), but the two
-fine-tunes we report wire it differently.
+linear projection to a $1{,}024$-dimensional hidden representation, a GELU non-linearity, and
+dropout at rate $0.2$), but the two fine-tunes we report wire it differently.
 
 \textbf{Shared trunk (experiment~010).} Our first strong fine-tune uses a single \emph{shared}
 multi-layer perceptron whose one hidden vector is read by every taxonomic head, so the auxiliary

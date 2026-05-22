@@ -259,8 +259,8 @@ collect all four submitted configurations.
 \end{figure}
 
 \textbf{Pivot 1: triple-backbone classifier retraining (cRT).} We retrained two MLP heads on a
-frozen $3328$-d concatenation of BioCLIP~2.5, DINOv3, and ConvNeXt-V2-L features (best validation
-accuracy $63.95\%$) and mixed them with the anchor at $w{=}0.3$. A cheap pre-submission diagnostic
+frozen $3328$-d concatenation of BioCLIP~2.5 ($1024$-d), DINOv3-Base ($768$-d), and ConvNeXt-V2-L
+($1536$-d) features (best validation accuracy $63.95\%$) and mixed them with the anchor at $w{=}0.3$. A cheap pre-submission diagnostic
 gate (top-one agreement and submission Jaccard against the anchor) already flagged the head
 as structurally divergent (agreement $0.094$, Jaccard $0.078$). On submission it scored
 $\mathbf{0.38195}$ ($\Delta{=}{-}0.036$): the divergence was diversity going \emph{against} signal,
