@@ -51,7 +51,7 @@ taxonomy-aware multi-task head of \S\ref{sec:bioclip25_010}. The first strong mo
 experiment~010 (shared-trunk head, five taxonomic levels, original $1.41$M-image manifest,
 five epochs), reached a best single-configuration public Macro F1 of $0.391$ (private
 $0.383$); the four-block checkpoint we use as the reference point for the ablations below
-scores $0.38333$. The deployed model, experiment~i002 (per-head MLPs, three taxonomic levels,
+scores $0.38333$. Our final model, experiment~i002 (per-head MLPs, three taxonomic levels,
 the larger $2.65$M-image i001 manifest, ten epochs), reached $0.41165$ public / $0.38132$
 private at single-resolution inference, our best single-configuration result before
 calibration and ensembling.
@@ -89,7 +89,7 @@ public and private Macro F1 under the common \texttt{grid\_4x4}/softmax-mean pip
     32 (full fine-tune)  & 0.301 & 0.296 & 0.934 \\
     \bottomrule
   \end{tabular}
-  \caption{Unfrozen-blocks sweep within experiment~010 (BioCLIP~2.5 ViT-H/14, $1.41$M-image single-plant manifest; each stage warm-starts from the previous, block stages train five epochs). Public Macro F1 peaks at eight unfrozen blocks; the private split is flatter, with the four-, eight- and twelve-block runs within $0.006$ of one another ($0.383$--$0.389$), so the optimum is a moderate-unfreeze plateau rather than a single sharp peak. Held-out validation top-5 rises monotonically through twelve blocks --- the validation/leaderboard decoupling of \S\ref{sec:val_lb}. The full fine-tune was submitted but scored far below the plateau on both splits (public $0.301$, private $0.296$); its validation top-5 ($0.934$) had already dropped below the 12-block run and its validation loss rose after epoch~7 (overfitting), so we did not deploy it. Each cell is the best-public or best-private selection for that stage; selection rules differ across cells.}
+  \caption{Unfrozen-blocks sweep within experiment~010 (BioCLIP~2.5 ViT-H/14, $1.41$M-image single-plant manifest; each stage warm-starts from the previous, block stages train five epochs). Public Macro F1 peaks at eight unfrozen blocks; the private split is flatter, with the four-, eight- and twelve-block runs within $0.006$ of one another ($0.383$--$0.389$), so the optimum is a moderate-unfreeze plateau rather than a single sharp peak. Held-out validation top-5 rises monotonically through twelve blocks --- the validation/leaderboard decoupling of \S\ref{sec:val_lb}. The full fine-tune was submitted but scored far below the plateau on both splits (public $0.301$, private $0.296$); its validation top-5 ($0.934$) had already dropped below the 12-block run and its validation loss rose after epoch~7 (overfitting), so we did not carry it forward. Each cell is the best-public or best-private selection for that stage; selection rules differ across cells.}
   \label{tab:blocks}
 \end{table}
 
@@ -110,12 +110,12 @@ trades the pretrained representation for single-plant fit faster than the leader
 lesson is that partial unfreezing helps but is easily overdone, and that the single-plant validation
 metric over-rewards capacity relative to quadrat Macro F1 (\S\ref{sec:val_lb}).
 
-The deployed model (experiment~i002) repeated this staged unfreezing on its larger $2.65$M-image
+Our final model (experiment~i002) repeated this staged unfreezing on its larger $2.65$M-image
 manifest, but only as far as eight blocks (Table~\ref{tab:blocks_i002}). Here the optimum is
-shallower: public Macro F1 peaks at \emph{four} blocks and eight blocks is worse, so we deployed the
-four-block checkpoint. Because the manifest, schedule and head topology all differ from the 010
-sweep, the two are not directly comparable; we read the shift only as suggestive evidence that a
-larger manifest reduces the useful unfreeze depth. The deployed anchor uses this four-block
+shallower: public Macro F1 peaks at \emph{four} blocks and eight blocks is worse, so we chose the
+four-block checkpoint as the anchor. Because the manifest, schedule and head topology all differ
+from the 010 sweep, the two are not directly comparable; we read the shift only as suggestive
+evidence that a larger manifest reduces the useful unfreeze depth. The headline anchor uses this four-block
 checkpoint served as a $224{+}336$ ensemble with logit adjustment (\S\ref{sec:infer_ablations}) ---
 the same \emph{number} of unfrozen blocks as the 010 four-block row, not the identical run.
 
@@ -127,7 +127,7 @@ the same \emph{number} of unfrozen blocks as the 010 four-block row, not the ide
     i002 stage (2.65M manifest) & Best public F1 & Best private F1 \\
     \midrule
     head only (0 blocks)         & 0.394 & 0.388 \\
-    \textbf{4 blocks (deployed)} & \textbf{0.412} & 0.389 \\
+    \textbf{4 blocks (anchor)} & \textbf{0.412} & 0.389 \\
     8 blocks                     & 0.405 & 0.375 \\
     \midrule
     \multicolumn{3}{l}{\emph{inference enhancements on the 4-block checkpoint}}\\
@@ -135,7 +135,7 @@ the same \emph{number} of unfrozen blocks as the 010 four-block row, not the ide
     \quad + $224{+}336$ ensemble (anchor)            & \textbf{0.418} & 0.403 \\
     \bottomrule
   \end{tabular}
-  \caption{i002 staged unfreeze sweep on the larger $2.65$M-image manifest (ten epochs per stage, three taxonomy heads). Unlike the 010 sweep, public Macro F1 peaks at \emph{four} blocks and eight blocks is worse, so the four-block checkpoint was deployed; the larger manifest already makes the head-only baseline strong ($0.394$). This sweep is partial (no twelve-block or full-fine-tune run) and is \emph{not} directly comparable to the 010 sweep, which differs in manifest, schedule and head topology. The bottom rows show the logit-adjustment and resolution-ensemble inference steps that produce the deployed anchor (\S\ref{sec:infer_ablations}).}
+  \caption{i002 staged unfreeze sweep on the larger $2.65$M-image manifest (ten epochs per stage, three taxonomy heads). Unlike the 010 sweep, public Macro F1 peaks at \emph{four} blocks and eight blocks is worse, so the four-block checkpoint was submitted; the larger manifest already makes the head-only baseline strong ($0.394$). This sweep is partial (no twelve-block or full-fine-tune run) and is \emph{not} directly comparable to the 010 sweep, which differs in manifest, schedule and head topology. The bottom rows show the logit-adjustment and resolution-ensemble inference steps that produce the headline anchor (\S\ref{sec:infer_ablations}).}
   \label{tab:blocks_i002}
 \end{table}
 
@@ -165,7 +165,7 @@ mean forward. We treat this as the reason mean was dropped rather than as a resu
 model, since it comes from an earlier, weaker head-only checkpoint and is confounded by
 checkpoint and training-data differences.
 
-The second stage is the deployed i002 four-block checkpoint (\texttt{grid\_4x4}, no overlap,
+The second stage is the i002 four-block checkpoint (\texttt{grid\_4x4}, no overlap,
 $224$ pixels), where the submitted comparison was max against softmax-mean only; plain mean was
 not re-submitted here, so the 010 mean numbers and the i002 softmax-mean numbers are
 \emph{not} a same-checkpoint comparison. Softmax-mean was again the better of the two: at each
@@ -183,7 +183,7 @@ softmax-mean with an adaptive probability threshold for the final system.
 \subsection{Calibration and Ensembling}
 \label{sec:infer_ablations}
 
-On the deployed i002 checkpoint we fixed the remaining inference knobs through leaderboard
+On the i002 four-block checkpoint we fixed the remaining inference knobs through leaderboard
 sweeps: the logit-adjustment temperature $\tau$, the probability threshold $T$, the selection
 rule, and the resolution ensemble. Unless noted, numbers are public Macro F1 on the i002
 last-four-blocks single-resolution ($224$-pixel) checkpoint.
@@ -261,7 +261,7 @@ final-submission table below rather than collapsing to a single number.
 \subsection{Final Submission}
 \label{sec:final_results}
 
-Our headline configuration is the deployed i002 four-block checkpoint under the full inference
+Our headline configuration is the i002 four-block checkpoint under the full inference
 recipe of \S\ref{sec:final_submission}: $4{\times}4$ grid tiling, a $224{+}336$
 resolution ensemble, softmax-mean aggregation, logit adjustment ($\tau{=}0.25$), and adaptive
 probability-threshold selection ($T{=}0.03$, $k_{\min}{=}2$, $k_{\max}{=}10$). It scores

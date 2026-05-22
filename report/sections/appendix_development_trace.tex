@@ -1,6 +1,6 @@
 % ============================================================================
 % Supplementary appendices (B onward): material kept out of the main text to
-% preserve the top-down narrative -- the deployed-model training-configuration
+% preserve the top-down narrative -- the i002 training-configuration
 % table, the long-tail manifest detail, the full seasonal-phenology method (a
 % pivot that did not improve over the visual anchor), the additional inference
 % sweeps, and the considered-but-not-implemented directions. Cross-referenced
@@ -10,10 +10,10 @@
 % already opened the \appendix; no second \appendix is needed here.
 % ============================================================================
 
-\section{Deployed Model Training Configuration}
+\section{Training Configuration of the i002 Model}
 \label{sec:training_config}
 
-The deployed i002 model is the second stage of a two-stage schedule on the i001 manifest of
+The i002 model is the second stage of a two-stage schedule on the i001 manifest of
 \S\ref{sec:cap_extra}. Stage~1 trains the head MLPs and the species, genus and family classifiers
 with the BioCLIP~2.5 backbone fully frozen; Stage~2 resumes the model weights only and additionally
 unfreezes the last four transformer blocks together with the final layer norm and projection.
@@ -57,7 +57,7 @@ Table~\ref{tab:training_config} gives the full specification.
     Train / val split         & \multicolumn{2}{@{}>{\raggedright\arraybackslash}p{0.74\linewidth}@{}}{stratified per species, $10\%$ to validation, seed $42$, species with $<\!5$ images held in train} \\
     \bottomrule
   \end{tabular}
-  \caption{Complete training-configuration specification for the deployed i002 model. The two
+  \caption{Complete training-configuration specification for the i002 model. The two
   rows above the horizontal divider differ between the two stages; everything below the divider
   is identical across stages. Numbers in the ``Total optimisation steps'' and ``Warmup steps''
   rows correspond to the two-GPU run on the train split of $2{,}391{,}457$ images
@@ -159,7 +159,7 @@ with $\epsilon{=}0.05$ and $c_{s,m}$ the GBIF count for species $s$ in month $m$
 \label{sec:not_implemented}
 
 During the project we scoped a number of additional directions that did not make it into the
-submitted system, either because the engineering cost outweighed the expected gain on this
+final system, either because the engineering cost outweighed the expected gain on this
 benchmark or because preliminary work indicated negative or noise-floor deltas. We list them
 briefly here for completeness, without method-level detail. Gated multi-backbone fusion with a
 learned per-image gating network over BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L was prototyped but
