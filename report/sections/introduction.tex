@@ -18,7 +18,7 @@ from dominating the final score.
 
 A central difficulty of this challenge is the \emph{domain shift} between the available training data and the target test data. The training set consists of over one million single-plant images from the PlantCLEF 2024 corpus, each depicting an individual specimen with a single species label (Figure~\ref{fig:train_grid}). In contrast, the test images are dense, complex vegetation scenes where multiple species overlap, occlude one another, and appear at varying scales and growth stages (Figure~\ref{fig:quadrats}). Models trained exclusively on isolated specimens tend to perform poorly when confronted with these multi-species scenes, as they have never encountered the visual complexity of real-world vegetation during training.
 
-\begin{figure*}[t]
+\begin{figure*}[h]
   \centering
   \resizebox{0.92\linewidth}{!}{\input{figures/train_grid}}
   \caption{Six representative single-plant training images from the PlantCLEF~2024 corpus. Each image carries a single species label and was contributed through the Pl@ntNet citizen-science pipeline. Shooting style is intentionally varied (close-up macro, half-body, full-plant in habitat) and lighting / background are uncontrolled.}
@@ -41,5 +41,27 @@ In this paper, we present the system submitted by the Australian National Univer
   \item \textbf{Long-tail data rebalancing.} The PlantCLEF 2024 single-plant corpus is heavily skewed: a small number of species exceed one thousand training images while hundreds carry fewer than ten. We attack this primarily by enlarging the training manifest to 2.65 million images with pre-filled genus and family labels for every row. A follow-up experiment additionally capped each species at 500 images to flatten the head of the distribution, but this hurt rather than helped (0.40041 vs.\ 0.418265 public Macro F1) --- evidence that on this benchmark the marginal value of additional head-class examples is positive when label quality is high, and that flattening the distribution discards information rather than rebalancing it.
   \item \textbf{Tile-level inference with adaptive selection.} At inference we partition each quadrat into a $4{\times}4$ grid of $448$-pixel tiles with no overlap, forward each tile through the encoder at both $224$ and $336$ pixels, and aggregate the per-tile softmax distributions by per-species mean across both the sixteen tiles and the two resolutions. Class-prior logit adjustment ($\tau{=}0.25$) is then applied, which down-weights common species to counteract the long-tail bias. Final selection is adaptive: we emit every species whose post-adjusted probability exceeds a fixed threshold ($T{=}0.03$), with a floor of two and a ceiling of ten species per quadrat. The dual-resolution ensemble ($224$ and $336$ pixels) lifts the public score by $+0.0066$ over the single-resolution baseline; the adaptive threshold outperforms the best fixed top-$k$ ($k{=}2$) by about $0.007$ Macro F1, and by larger margins for other $k$.
 \end{enumerate}
+
+\begin{figure}[t]
+  \centering
+  \resizebox{0.72\linewidth}{!}{\input{figures/introduction_pipeline}}
+  \caption{System overview for the ANU PlantCLEF 2026 submission.
+  The pipeline has three stages. First, a partial fine-tune of BioCLIP
+  2.5 ViT-H/14 in which the lower 28 transformer blocks are frozen to
+  preserve the Tree-of-Life prior and only the last 4 blocks plus the
+  final layer norm and projection are unfrozen; auxiliary cross-entropy
+  heads at the genus and family levels act as a structural regulariser
+  without adding inference-time cost. Second, long-tail rebalancing via
+  an enlarged 2.65-million-image manifest with pre-filled taxonomic
+  labels and no per-species cap; capping each species at 500 images hurt
+  performance (0.400 vs.\ 0.418 public Macro F1), confirming that more
+  clean data dominates a flatter distribution on this benchmark. Third,
+  tile-level inference in which each quadrat is partitioned into a
+  $4{\times}4$ grid of 448-pixel tiles, each forwarded at 224 and
+  336 pixels; class-prior logit adjustment ($\tau{=}0.25$) down-weights
+  common species before an adaptive threshold ($T{=}0.03$,
+  $k_{\min}{=}2$, $k_{\max}{=}10$) selects the output species set.}
+  \label{fig:introduction_pipeline}
+\end{figure}
 
 The remainder of this paper is organised as follows. Section~\ref{sec:related} reviews related work on plant identification, foundation model adaptation, and multi-label classification. Section~\ref{sec:method} defines the final system top-down, from data and label construction through to the deployed inference pipeline. Section~\ref{sec:experiments} sets out the evaluation protocol, the baseline ladder, and the experiments that justify each component. Section~\ref{sec:analysis} analyses why the system behaves as it does---the validation/leaderboard decoupling, the head representation geometry, the within-backbone saturation, and the long-tail behaviour. Section~\ref{sec:discussion} discusses limitations and future work, and Section~\ref{sec:conclusion} concludes.
