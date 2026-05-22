@@ -1,0 +1,8 @@
+{
+  "n_species": 7806,
+  "total_prompts": 71723,
+  "min_per_species": 5,
+  "max_per_species": 22,
+  "avg_per_species": 9.19,
+  "prompt_mode": "all"
+}
