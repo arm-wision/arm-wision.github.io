@@ -123,11 +123,7 @@ Each test quadrat carries an observation date in its identifier (e.g.\ \texttt{C
 \end{equation}
 where $p_{\text{vis}}$ is the BioCLIP 2.5 anchor posterior and $\beta$ is a mixing weight: $\beta{=}0$ recovers the unmodified visual posterior; large $\beta$ collapses the prediction toward the seasonal prior alone.
 
-\paragraph{Pdf estimation.} We estimate the per-species pdf nonparametrically from GBIF month-of-observation histograms. The histograms are obtained via a single faceted query per species:
-\begin{verbatim}
-GET /v1/occurrence/search?taxonKey=K
-       &facet=month&facetLimit=12&limit=0
-\end{verbatim}
+\paragraph{Pdf estimation.} We estimate the per-species pdf nonparametrically from GBIF month-of-observation histograms. The histograms are obtained via a single faceted query per species
 which returns a 12-bin month histogram in one request. We then build a 365-day pdf via circular Gaussian smoothing with $\sigma = 18$\,d centred on each month's mid-point, and mix in a small uniform mass to prevent hard zeros in tail months:
 \begin{equation}
   P(s \mid d) \;=\; (1{-}\epsilon)\, \tfrac{1}{Z_s}\!\sum_{m=1}^{12} c_{s,m}\,\mathcal{N}_{\text{circ}}\!\left(d \mid \mu_m, \sigma\right) \;+\; \frac{\epsilon}{365},

@@ -15,9 +15,7 @@ each one tested, how deeply we pursued it, its best leaderboard scores, and what
 took away from it. It is intended as an honest development trace rather than a
 controlled ablation study. Over the project we made more than six hundred Kaggle
 submissions; the tables below summarise them by experiment or by inference direction
-rather than listing every run. All public and private Macro F1 values are taken from
-the Kaggle API as recorded in our submission archive
-(\texttt{docs/submissions\_archive/submission\_manifest.csv}); no score is inferred
+rather than listing every run. No score is inferred
 from a training log. Where a private score could not be recovered we write
 \texttt{[nf]} (not found), and directions that never produced a submission (data
 construction and diagnostic analyses) are marked \texttt{[ns]}.
@@ -39,10 +37,9 @@ significance.
 \scriptsize
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
-\caption{Model and training experiments (development trace). Public/private are the
+\caption{Model and training experiments. Public/private are the
 best Kaggle Macro F1 for that experiment group; for the model rows the private value
-is the best private of the group (which may come from a different submission than the
-best public). Depth: Deep / Moderate / Shallow / Diagnostic / Dropped. Scores are not a
+is the best private of the group. Depth: Deep / Moderate / Shallow / Diagnostic / Dropped. Scores are not a
 controlled ablation; see the caveats in Section~\ref{sec:appendix_caveats}.}
 \label{tab:appendix_main_models}
 \begin{tabularx}{\linewidth}{@{}l l c c c c X@{}}
@@ -148,8 +145,7 @@ threshold, and gap rules. A mild class-prior logit adjustment ($\tau{=}0.25$) tr
 little public score for the best private score. Finally, averaging the same checkpoint
 at two inference resolutions ($224$ and $336$ pixels) produced our headline public
 result of $0.418$. A cross-checkpoint ensemble with 010 instead hurt public but
-reached near-best private ($0.405$), a clear example of public and private leaderboard
-disagreement.
+reached near-best private ($0.405$).
 
 \subsection{Data experiments}
 Experiment i001 rebuilt the training corpus by re-downloading PlantCLEF 2024,
