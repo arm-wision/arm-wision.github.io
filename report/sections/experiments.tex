@@ -69,8 +69,8 @@ separately (\S\ref{sec:head_repr}).
 
 The one head-adjacent factor we swept within a single experiment is the number of unfrozen
 transformer blocks. Within experiment~010 (the $1.41$M-image single-plant manifest, fixed optimiser
-and head configuration) we progressively unfroze the last $0$, $4$, $8$ and $12$ blocks --- each
-stage warm-starting from the previous and training for five epochs --- and finally attempted a full
+and head configuration) we progressively unfroze the last $0$, $4$, $8$ and $12$ blocks (each
+stage warm-starting from the previous and training for five epochs), and finally attempted a full
 fine-tune. This is a staged warm-start sweep rather than a strictly controlled single-variable
 ablation, but it is the cleanest within-recipe evidence we have. Table~\ref{tab:blocks} reports
 public and private Macro F1 under the common \texttt{grid\_4x4}/softmax-mean pipeline.
@@ -89,7 +89,7 @@ public and private Macro F1 under the common \texttt{grid\_4x4}/softmax-mean pip
     32 (full fine-tune)  & 0.301 & 0.296 & 0.934 \\
     \bottomrule
   \end{tabular}
-  \caption{Unfrozen-blocks sweep within experiment~010 (BioCLIP~2.5 ViT-H/14, $1.41$M-image single-plant manifest; each stage warm-starts from the previous, block stages train five epochs). Public Macro F1 peaks at eight unfrozen blocks; the private split is flatter, with the four-, eight- and twelve-block runs within $0.006$ of one another ($0.383$--$0.389$), so the optimum is a moderate-unfreeze plateau rather than a single sharp peak. Held-out validation top-5 rises monotonically through twelve blocks --- the validation/leaderboard decoupling of \S\ref{sec:val_lb}. The full fine-tune was submitted but scored far below the plateau on both splits (public $0.301$, private $0.296$); its validation top-5 ($0.934$) had already dropped below the 12-block run and its validation loss rose after epoch~7 (overfitting), so we did not carry it forward. Each cell is the best-public or best-private selection for that stage; selection rules differ across cells.}
+  \caption{Unfrozen-blocks sweep within experiment~010 (BioCLIP~2.5 ViT-H/14, $1.41$M-image single-plant manifest; each stage warm-starts from the previous, block stages train five epochs). Public Macro F1 peaks at eight unfrozen blocks; the private split is flatter, with the four-, eight- and twelve-block runs within $0.006$ of one another ($0.383$--$0.389$), so the optimum is a moderate-unfreeze plateau rather than a single sharp peak. Held-out validation top-5 rises monotonically through twelve blocks: the validation/leaderboard decoupling of \S\ref{sec:val_lb}. The full fine-tune was submitted but scored far below the plateau on both splits (public $0.301$, private $0.296$); its validation top-5 ($0.934$) had already dropped below the 12-block run and its validation loss rose after epoch~7 (overfitting), so we did not carry it forward. Each cell is the best-public or best-private selection for that stage; selection rules differ across cells.}
   \label{tab:blocks}
 \end{table}
 
@@ -116,8 +116,8 @@ shallower: public Macro F1 peaks at \emph{four} blocks and eight blocks is worse
 four-block checkpoint as the anchor. Because the manifest, schedule and head topology all differ
 from the 010 sweep, the two are not directly comparable; we read the shift only as suggestive
 evidence that a larger manifest reduces the useful unfreeze depth. The headline anchor uses this four-block
-checkpoint served as a $224{+}336$ ensemble with logit adjustment (\S\ref{sec:infer_ablations}) ---
-the same \emph{number} of unfrozen blocks as the 010 four-block row, not the identical run.
+checkpoint served as a $224{+}336$ ensemble with logit adjustment (\S\ref{sec:infer_ablations});
+this is the same \emph{number} of unfrozen blocks as the 010 four-block row, not the identical run.
 
 \begin{table}[ht]
   \centering
