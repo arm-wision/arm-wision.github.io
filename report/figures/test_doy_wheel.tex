@@ -90,27 +90,29 @@
 % Placed at world y = -5.4 — well below the lowest wheel label (Aug at
 % y ≈ -4.65) so there's no risk of bumping into any of the month
 % annotations around the perimeter.
-\begin{scope}[shift={(-4.5, -5.4)}]
-  % Each entry is one swatch + label group; entries are spaced 2.4 apart.
+\begin{scope}[shift={(-3.6, -5.4)}]
+  % Each entry is one swatch + label group; entries spaced 2.0 apart.
+  % Labels are intentionally short; the "exact vs aggregate" distinction
+  % is in the figure caption, not duplicated here.
   % Entry 1: Aug
   \draw[fill=red!30, draw=red!80, line width=0.3pt] (0, 0) rectangle ++(0.25, 0.18);
   \node[anchor=west, font=\sffamily\scriptsize] at (0.32, 0.09)
-    {Aug (668), exact};
+    {Aug (668)};
 
   % Entry 2: Jul
-  \draw[fill=orange!25, draw=orange!70, line width=0.3pt] (2.4, 0) rectangle ++(0.25, 0.18);
-  \node[anchor=west, font=\sffamily\scriptsize] at (2.72, 0.09)
-    {Jul (517), exact};
+  \draw[fill=orange!25, draw=orange!70, line width=0.3pt] (2.0, 0) rectangle ++(0.25, 0.18);
+  \node[anchor=west, font=\sffamily\scriptsize] at (2.32, 0.09)
+    {Jul (517)};
 
   % Entry 3: Apr–Jun
-  \draw[fill=blue!18, draw=blue!55, line width=0.3pt] (4.8, 0) rectangle ++(0.25, 0.18);
-  \node[anchor=west, font=\sffamily\scriptsize] at (5.12, 0.09)
-    {Apr--Jun (607 total)};
+  \draw[fill=blue!18, draw=blue!55, line width=0.3pt] (4.0, 0) rectangle ++(0.25, 0.18);
+  \node[anchor=west, font=\sffamily\scriptsize] at (4.32, 0.09)
+    {Apr--Jun (607)};
 
   % Entry 4: Sep–Mar
-  \draw[fill=gray!18, draw=gray!50, line width=0.3pt] (7.4, 0) rectangle ++(0.25, 0.18);
-  \node[anchor=west, font=\sffamily\scriptsize] at (7.72, 0.09)
-    {Sep--Mar (313 total)};
+  \draw[fill=gray!18, draw=gray!50, line width=0.3pt] (6.2, 0) rectangle ++(0.25, 0.18);
+  \node[anchor=west, font=\sffamily\scriptsize] at (6.52, 0.09)
+    {Sep--Mar (313)};
 \end{scope}
 
 \end{tikzpicture}
