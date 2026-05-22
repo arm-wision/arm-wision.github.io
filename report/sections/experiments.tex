@@ -50,7 +50,7 @@ The decisive gains came from partially fine-tuning BioCLIP~2.5 ViT-H/14 with the
 taxonomy-aware multi-task head of \S\ref{sec:bioclip25_010}. The first strong model,
 experiment~010 (shared-trunk head, five taxonomic levels, original $1.41$M-image manifest,
 five epochs), reached a best single-configuration public Macro F1 of $0.391$ (private
-$0.389$); the four-block checkpoint we use as the reference point for the ablations below
+$0.383$); the four-block checkpoint we use as the reference point for the ablations below
 scores $0.38333$. The deployed model, experiment~i002 (per-head MLPs, three taxonomic levels,
 the larger $2.65$M-image i001 manifest, ten epochs), reached $0.41165$ public / $0.38132$
 private at single-resolution inference, our best single-configuration result before
@@ -67,36 +67,77 @@ separately (\S\ref{sec:head_repr}).
 \subsection{Backbone Unfreezing}
 \label{sec:blocks_ablation}
 
-The one head-adjacent factor we did isolate is the number of unfrozen transformer blocks. We
-ran an ablation on the broader BioCLIP~2.5 fine-tune family with identical optimiser and head
-configuration and a per-stage epoch budget matched to 010's standard schedule (ten epochs for
-$n{=}0$ and full fine-tune, five epochs for intermediate $n$), varying only the number of
-unfrozen blocks. Table~\ref{tab:blocks} reports the resulting public Macro F1: performance is a
-sharp optimum, not a plateau. The head-only row is sourced from experiment 006, the all-blocks
-(full fine-tune) row from experiment 009, the four-block row from experiment 010, and the three-
-and five-block rows from the dedicated 014 unfrozen-blocks sweep.
+The one head-adjacent factor we swept within a single experiment is the number of unfrozen
+transformer blocks. Within experiment~010 (the $1.41$M-image single-plant manifest, fixed optimiser
+and head configuration) we progressively unfroze the last $0$, $4$, $8$ and $12$ blocks --- each
+stage warm-starting from the previous and training for five epochs --- and finally attempted a full
+fine-tune. This is a staged warm-start sweep rather than a strictly controlled single-variable
+ablation, but it is the cleanest within-recipe evidence we have. Table~\ref{tab:blocks} reports
+public and private Macro F1 under the common \texttt{grid\_4x4}/softmax-mean pipeline.
 
 \begin{table}[ht]
   \centering
   \small
-  \begin{tabular}{lc}
+  \begin{tabular}{lccc}
     \toprule
-    Unfrozen blocks & Public Macro F1 \\
+    Unfrozen blocks & Best public F1 & Best private F1 & Val top-5 \\
     \midrule
-    0 (head only) & 0.330 \\
-    3 blocks & 0.374 \\
-    \textbf{4 blocks} & \textbf{0.38333} \\
-    5 blocks & 0.369 \\
-    All 32 blocks (full FT) & 0.208 \\
+    0 (head only)        & 0.362 & 0.376 & 0.921 \\
+    4 blocks             & 0.383 & \textbf{0.389} & 0.932 \\
+    \textbf{8 blocks}    & \textbf{0.391} & 0.383 & 0.936 \\
+    12 blocks            & 0.375 & 0.384 & 0.940 \\
+    32 (full fine-tune)  & 0.301 & 0.296 & 0.934 \\
     \bottomrule
   \end{tabular}
-  \caption{Unfrozen-blocks ablation on the BioCLIP~2.5 fine-tune family (matched optimiser and head configuration; epoch budget per 010's standard schedule: ten epochs for $n{=}0$ and full fine-tune, five epochs for intermediate $n$). Rows are drawn from experiment 006 ($n{=}0$, head only), experiment 010 ($n{=}4$, the four-block reference), experiment 014 ($n{=}3, 5$, the dedicated sweep), and experiment 009 ($n{=}32$, full fine-tune). Performance peaks sharply at four blocks; one block too few costs $0.009$ Macro F1, one block too many costs $0.014$. Full fine-tuning collapses the Tree-of-Life prior and is catastrophic.}
+  \caption{Unfrozen-blocks sweep within experiment~010 (BioCLIP~2.5 ViT-H/14, $1.41$M-image single-plant manifest; each stage warm-starts from the previous, block stages train five epochs). Public Macro F1 peaks at eight unfrozen blocks; the private split is flatter, with the four-, eight- and twelve-block runs within $0.006$ of one another ($0.383$--$0.389$), so the optimum is a moderate-unfreeze plateau rather than a single sharp peak. Held-out validation top-5 rises monotonically through twelve blocks --- the validation/leaderboard decoupling of \S\ref{sec:val_lb}. The full fine-tune was submitted but scored far below the plateau on both splits (public $0.301$, private $0.296$); its validation top-5 ($0.934$) had already dropped below the 12-block run and its validation loss rose after epoch~7 (overfitting), so we did not deploy it. Each cell is the best-public or best-private selection for that stage; selection rules differ across cells.}
   \label{tab:blocks}
 \end{table}
 
-The lesson is that partial unfreezing is essential but easily overdone: unfreezing the last
-four blocks beats both a frozen backbone and deeper unfreezing, and a full fine-tune destroys
-the pretrained taxonomy prior. The same four-block setting is used by the deployed i002 anchor.
+\begin{figure}[!htbp]
+  \centering
+  \input{figures/unfreeze_sweep}
+  \caption{Unfrozen-blocks sweep visualised with both metrics. Held-out validation top-5 (dashed, right axis) rises monotonically with unfrozen depth ($n{=}0\rightarrow12$), but leaderboard Macro F1 (solid, left axis) peaks at $n{=}8$ and declines by $n{=}12$; the full fine-tune ($n{=}32$) drops further still. The disagreement between the two curves is examined in \S\ref{sec:val_lb}: validation accuracy on the single-plant distribution does not predict multi-species quadrat Macro F1.}
+  \label{fig:unfreeze_sweep}
+\end{figure}
+
+Public Macro F1 rises from the head-only baseline ($0.362$) to a peak at \emph{eight} unfrozen
+blocks ($0.391$) and then declines at twelve. The private split is flatter: the four-, eight- and
+twelve-block runs are statistically indistinguishable ($0.383$--$0.389$), so the takeaway is a
+moderate-unfreeze optimum rather than a single sharp peak. Both observations hold even though
+held-out validation top-5 keeps rising monotonically with depth. The full fine-tune performs
+substantially worse on both splits ($0.301$ public, $0.296$ private): unfreezing the entire backbone
+trades the pretrained representation for single-plant fit faster than the leaderboard rewards. The
+lesson is that partial unfreezing helps but is easily overdone, and that the single-plant validation
+metric over-rewards capacity relative to quadrat Macro F1 (\S\ref{sec:val_lb}).
+
+The deployed model (experiment~i002) repeated this staged unfreezing on its larger $2.65$M-image
+manifest, but only as far as eight blocks (Table~\ref{tab:blocks_i002}). Here the optimum is
+shallower: public Macro F1 peaks at \emph{four} blocks and eight blocks is worse, so we deployed the
+four-block checkpoint. Because the manifest, schedule and head topology all differ from the 010
+sweep, the two are not directly comparable; we read the shift only as suggestive evidence that a
+larger manifest reduces the useful unfreeze depth. The deployed anchor uses this four-block
+checkpoint served as a $224{+}336$ ensemble with logit adjustment (\S\ref{sec:infer_ablations}) ---
+the same \emph{number} of unfrozen blocks as the 010 four-block row, not the identical run.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{lcc}
+    \toprule
+    i002 stage (2.65M manifest) & Best public F1 & Best private F1 \\
+    \midrule
+    head only (0 blocks)         & 0.394 & 0.388 \\
+    \textbf{4 blocks (deployed)} & \textbf{0.412} & 0.389 \\
+    8 blocks                     & 0.405 & 0.375 \\
+    \midrule
+    \multicolumn{3}{l}{\emph{inference enhancements on the 4-block checkpoint}}\\
+    \quad + logit adj.\ ($\tau{=}0.25$, $T{=}0.03$) & 0.406 & \textbf{0.406} \\
+    \quad + $224{+}336$ ensemble (anchor)            & \textbf{0.418} & 0.403 \\
+    \bottomrule
+  \end{tabular}
+  \caption{i002 staged unfreeze sweep on the larger $2.65$M-image manifest (ten epochs per stage, three taxonomy heads). Unlike the 010 sweep, public Macro F1 peaks at \emph{four} blocks and eight blocks is worse, so the four-block checkpoint was deployed; the larger manifest already makes the head-only baseline strong ($0.394$). This sweep is partial (no twelve-block or full-fine-tune run) and is \emph{not} directly comparable to the 010 sweep, which differs in manifest, schedule and head topology. The bottom rows show the logit-adjustment and resolution-ensemble inference steps that produce the deployed anchor (\S\ref{sec:infer_ablations}).}
+  \label{tab:blocks_i002}
+\end{table}
 
 \subsection{Tile Aggregation}
 \label{sec:tile_aggregation}
