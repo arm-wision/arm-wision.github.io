@@ -1,4 +1,4 @@
-\Title{Partial Fine-Tuning of BioCLIP 2.5 with Taxonomic Auxiliary Heads for Multi-Label Plant Species Identification in Vegetation Plots: ANU at PlantCLEF 2026}
+\Title{Fine-Tuning of BioCLIP 2.5 with Taxonomic Heads for Multi-Species Plant Identification}
 \Author{Arjun Raj\sep Manindra de Mel\sep Razeen Wasif\sep William Brake}
 \Keywords{plant identification \sep multi-label classification \sep partial fine-tuning \sep BioCLIP \sep taxonomic auxiliary loss \sep vegetation plot analysis \sep PlantCLEF 2026}
 \Subject{Layout by CEURART v0.6.2}
