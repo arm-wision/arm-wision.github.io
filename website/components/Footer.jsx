@@ -8,9 +8,7 @@ export default function Footer() {
             <span>PlantCLEF&nbsp;2026 · Submission recap</span>
           </div>
           <p className="brand-tag">
-            By Arjun Raj, Manindra de Mel, Razeen Wasif, Will Brake. Our
-            submission to the 7th edition of the LifeCLEF plant
-            identification challenge.
+            By Arjun Raj, Manindra de Mel, Razeen Wasif, Will Brake.
           </p>
         </div>
         <div className="foot-links">

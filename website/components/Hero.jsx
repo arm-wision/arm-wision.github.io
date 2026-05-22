@@ -17,7 +17,7 @@ export default function Hero() {
         <div className="badges">
           <span className="badge-pill">PlantCLEF · 2026</span>
           <span className="badge-pill">Submission recap</span>
-          <span className="badge-pill">CLEF 2026</span>
+          <span className="badge-pill">7th place · private F1</span>
         </div>
 
         <h1>
@@ -27,7 +27,8 @@ export default function Hero() {
 
         <p className="subhead">
           Submission to the 7th LifeCLEF plant identification challenge.
-          Best public Kaggle F1 <b>0.41826</b>, private F1 <b>0.40283</b>.
+          Best public Kaggle F1 <b>0.41826</b>, private F1 <b>0.40283</b>,
+          good for <b>7th place</b> on the private leaderboard.
         </p>
 
         <div className="cta-row">
