@@ -118,7 +118,7 @@ Figure~\ref{fig:aggregation_results}.
 \end{figure*}
 
 The first stage is the earlier experiment 010 head-only checkpoint, where we swept all three
-rules at a matched tile geometry (\texttt{grid\_4x4}, tile size $448$, overlap $0.5$). Because
+rules at a matched tile geometry (\texttt{grid\_4x4}, overlap $0.5$). Because
 the checkpoint and grid are held fixed, this is a clean comparison, and plain mean was clearly
 the weakest: its best public Macro F1 was $0.25784$ (private $0.32028$) against $0.33830$
 (private $0.34039$) for max and $0.34042$ (private $0.37642$) for softmax-mean, roughly $0.08$
@@ -138,7 +138,7 @@ softmax-mean with an adaptive probability threshold for the final system.
 \begin{figure*}[t]
   \centering
   \input{figures/aggregation_results_figure}
-  \caption{Two-stage tile-aggregation comparison (public and private Macro F1). The left panel is the earlier experiment 010 head-only checkpoint at matched tile geometry (\texttt{grid\_4x4}, tile size $448$, overlap $0.5$), where plain mean was explored and found weakest, so it was dropped. The right panel is the final i002 four-block checkpoint (\texttt{grid\_4x4}, no overlap, $224$ pixels), where the submitted comparison was max against softmax-mean only; plain mean is intentionally absent from this panel because it was not re-submitted on this checkpoint. Softmax-mean improves on max on both splits, and softmax-mean with logit adjustment ($\tau{=}0.25$) is the most robust on the private split. Each bar is the best-public or best-private selection for that mode.}
+  \caption{Two-stage tile-aggregation comparison (public and private Macro F1). The left panel is the earlier experiment 010 head-only checkpoint at matched tile geometry (\texttt{grid\_4x4}, overlap $0.5$), where plain mean was explored and found weakest, so it was dropped. The right panel is the final i002 four-block checkpoint (\texttt{grid\_4x4}, no overlap, $224$ pixels), where the submitted comparison was max against softmax-mean only; plain mean is intentionally absent from this panel because it was not re-submitted on this checkpoint. Softmax-mean improves on max on both splits, and softmax-mean with logit adjustment ($\tau{=}0.25$) is the most robust on the private split. Each bar is the best-public or best-private selection for that mode.}
   \label{fig:aggregation_results}
 \end{figure*}
 
@@ -224,7 +224,7 @@ final-submission table below rather than collapsing to a single number.
 \label{sec:final_results}
 
 Our headline configuration is the deployed i002 four-block checkpoint under the full inference
-recipe of \S\ref{sec:final_submission}: $4{\times}4$ tiling at tile size $448$, a $224{+}336$
+recipe of \S\ref{sec:final_submission}: $4{\times}4$ grid tiling, a $224{+}336$
 resolution ensemble, softmax-mean aggregation, logit adjustment ($\tau{=}0.25$), and adaptive
 probability-threshold selection ($T{=}0.03$, $k_{\min}{=}2$, $k_{\max}{=}10$). It scores
 \textbf{0.418265} public and $0.40283$ private Macro F1, the best public result of the project.
