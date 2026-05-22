@@ -285,7 +285,7 @@ configurations.
     \hspace{1em}+ Pheno., $\beta{=}1.0$ & 0.41346 & $-0.005$ \\
     \bottomrule
   \end{tabular}
-  \caption{All four submitted configurations on the PlantCLEF 2026 hidden test set (public Macro F1). The cRT pivot is strongly negative; the genus rerank and the phenology prior move the anchor by $-0.006$ and $-0.005$ respectively, magnitudes comfortably inside the run-to-run leaderboard noise floor we characterise at ${\sim}0.002$ but consistent in sign. We read this as the BioCLIP 2.5 posterior implicitly absorbing both signals through training-distribution co-occurrence; the orthogonality argument is developed in \S\ref{sec:orthogonality}.}
+  \caption{All four submitted configurations on the PlantCLEF 2026 hidden test set (public Macro F1). The cRT pivot is strongly negative; the genus rerank and the phenology prior move the anchor by $-0.006$ and $-0.005$ respectively, magnitudes small (about two to three times the run-to-run leaderboard noise floor we characterise at ${\sim}0.002$) but consistent in sign. We read this as the BioCLIP 2.5 posterior implicitly absorbing both signals through training-distribution co-occurrence; the orthogonality argument is developed in \S\ref{sec:orthogonality}.}
   \label{tab:summary}
 \end{table}
 
@@ -300,13 +300,13 @@ a peakier posterior whose high-confidence wrong picks dominate the mix.
 \textbf{Pivot 2: genus/family co-occurrence reranking.} A ``siblings stick together'' log-prior
 built from the anchor's own aggregated genus/family supports, applied at matched volume
 ($\alpha_g{=}0.1$, Jaccard $0.887$ with the anchor), swapped $11\%$ of selections but moved the
-score by only $\mathbf{0.41246}$ ($\Delta{=}{-}0.006$, inside the noise floor). A prior derived
+score by only $\mathbf{0.41246}$ ($\Delta{=}{-}0.006$, about three times the noise floor). A prior derived
 from the model's own logits carries essentially no new information.
 
 \textbf{Pivot 3: seasonal phenology prior.} A date-conditioned prior over GBIF day-of-year
 histograms, combined multiplicatively with the visual posterior at $\beta{=}1.0$ (full method in
 Appendix~\ref{sec:phenology}), flipped $12.8\%$ of top-one picks but scored $\mathbf{0.41346}$
-($\Delta{=}{-}0.005$, inside the noise floor). Date is information-theoretically orthogonal to the
+($\Delta{=}{-}0.005$, about twice the noise floor). Date is information-theoretically orthogonal to the
 image, yet the gain is negligible: the visual model trained on dated images already encodes
 seasonal phenotype, and the GBIF effort itself is summer-biased. We retain phenology as a novelty
 contribution and discuss why it (and the other pivots) fail to add signal in \S\ref{sec:orthogonality}.
