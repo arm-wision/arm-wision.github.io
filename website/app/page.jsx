@@ -1,5 +1,6 @@
 import Topbar from "@/components/Topbar";
 import Hero from "@/components/Hero";
+import Pipeline from "@/components/Pipeline";
 import Stats from "@/components/Stats";
 import Abstract from "@/components/Abstract";
 import Tasks from "@/components/Tasks";
@@ -16,6 +17,7 @@ export default function Page() {
     <>
       <Topbar />
       <Hero />
+      <Pipeline />
       <Stats />
       <Abstract />
       <Tasks />

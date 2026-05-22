@@ -21,18 +21,24 @@ export default function Abstract() {
             </p>
             <p>
               Our pipeline is a single fine tuned BioCLIP 2.5 ViT H/14 with
-              the last 4 transformer blocks unfrozen, taxonomic auxiliary
-              heads at genus, family, order, class, and 4 by 4 tile inference.
-              Long tail data capping with extra under 100 species images is
-              what pushed us to the best score.
+              only the last 4 of 32 transformer blocks unfrozen, per task
+              MLP heads at species, genus and family, and a 4 by 4 tile
+              inference at two resolutions. More clean training data
+              without a per species cap (the 2.65 million image i001
+              manifest combining PlantCLEF 2024 with research grade
+              iNaturalist) is what gave the best result; an explicit cap
+              and tail augmentation in i003 lowered public F1.
             </p>
             <p>
-              Across 18 experiments and 240 Kaggle submissions, the bottleneck
-              kept being <em>training data distribution</em>, not model
-              capacity. Validation accuracy proved to be a weak Kaggle
-              predictor. Best public F1 of <b>0.41826</b>, private F1 of
-              <b> 0.40283</b>, from a 224 plus 336 px ensemble of our
-              i002 checkpoint.
+              Across more than 20 experiments and 600+ Kaggle submissions,
+              the bottleneck kept being the <em>single plant to multi
+              species distribution shift</em>, not model capacity.
+              Held out single plant validation accuracy correlates with
+              quadrat F1 at only r ≈ 0.4. Best public F1 of <b>0.41826</b>,
+              private F1 of <b>0.40283</b>, from a 224 plus 336 px
+              ensemble of our i002 checkpoint with class prior logit
+              adjustment (τ = 0.25) and an adaptive probability threshold
+              (T = 0.03, k ∈ [2, 10]).
             </p>
           </div>
         </Reveal>

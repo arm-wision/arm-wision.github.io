@@ -31,8 +31,7 @@ export default function Hero() {
         </p>
 
         <div className="cta-row">
-          <a className="btn" href="https://github.com/arm-wision/arm-wision.github.io">GitHub <span className="arrow">→</span></a>
-          <a className="btn btn--outline" href="https://www.imageclef.org/PlantCLEF2026">
+          <a className="btn" href="https://www.imageclef.org/PlantCLEF2026">
             Competition page&nbsp;<span className="arrow">↗</span>
           </a>
         </div>

@@ -29,7 +29,6 @@ export default function Topbar() {
           <a href="#cite">Cite</a>
         </nav>
         <div className="nav-right">
-          <a href="https://github.com/arm-wision/arm-wision.github.io" className="nav-link">GitHub</a>
           <a href="https://www.imageclef.org/PlantCLEF2026" className="nav-link external">
             Competition&nbsp;<span className="ext-arrow">↗</span>
           </a>

@@ -1388,3 +1388,25 @@ section.white { background: var(--surface-card); }
   color: var(--muted);
   vertical-align: middle;
 }
+
+/* ── Pipeline video section ─────────────────────────────────────────────── */
+
+.pipeline-section {
+  padding: var(--sp-xxl) 0;
+  background: var(--canvas);
+}
+.pipeline-section .section-head { margin-bottom: var(--sp-xl); }
+
+.video-frame {
+  position: relative;
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-xl);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+.video-frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
