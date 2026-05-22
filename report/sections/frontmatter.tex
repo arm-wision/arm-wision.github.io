@@ -53,7 +53,29 @@
 %%
 %% Abstract.
 \begin{abstract}
-This paper describes the system submitted by the Australian National University team to the PlantCLEF 2026 challenge, which tasks participants with predicting all plant species present in high-resolution vegetation quadrat images. The core difficulty lies in the domain shift between the training data, comprising individually photographed single-plant specimens, and the test data, consisting of dense multi-species vegetation plots. A secondary challenge is the long-tail distribution of the training data, where common species have thousands of images while rare species have fewer than ten. Our final submission centres on a partial fine-tune of BioCLIP 2.5 (ViT-H/14) in which only the last four transformer blocks together with the final layer norm and projection are unfrozen, while the lower twenty-eight blocks are kept frozen to preserve the Tree-of-Life prior. The encoder is trained on the enlarged PlantCLEF 2024 single-plant manifest with auxiliary cross-entropy heads at the genus and family levels, supplying a structural regulariser without adding inference-time cost. Inference decomposes each quadrat into a non-overlapping $4{\times}4$ grid of sixteen tiles, forwards each tile through the encoder at both $224$ and $336$ pixels, and aggregates the tile distributions by per-species softmax mean across the sixteen tiles and across the two resolutions; class-prior logit adjustment ($\tau{=}0.25$) is then applied and an adaptive probability threshold ($T{=}0.03$, $k_{\min}{=}2$, $k_{\max}{=}10$) selects the emitted species set. Beyond this anchor we report three architecture-orthogonal pivots that we submitted but that did not improve over the visual posterior: a triple-backbone classifier retrained on frozen BioCLIP 2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank; and a seasonal phenology prior derived from GBIF month-of-observation histograms. Across all four submitted configurations, our best public Macro F1 is \textbf{0.418265} and our best private Macro F1 is \textbf{0.40283}.
+We describe ANU's submission to PlantCLEF 2026, where the task is to
+predict every species present in a vegetation-quadrat image. The
+central challenge is a domain shift where training images show single
+plants and test images show dense multi-species plots which is further compounded by a
+long-tailed label distribution.
+
+Our system is BioCLIP~2.5 ViT-H/14 where
+only the last four transformer blocks plus the final layer norm and
+projection are unfrozen, while the lower twenty-eight blocks stay
+frozen to preserve the Tree-of-Life prior. We train on the
+PlantCLEF~2024 single-plant manifest with auxiliary genus- and
+family-level cross-entropy heads that regularise the species head
+without adding inference cost.
+
+At inference each quadrat is split into a $4{\times}4$ grid of
+sixteen tiles, each tile is forwarded through the encoder at both
+$224$ and $336$ pixels, the per-tile softmax distributions are
+averaged across tiles and across resolutions, class-prior logit
+adjustment is applied, and an adaptive probability threshold selects
+the emitted species set.
+
+Our best public Macro F1 is \textbf{0.41826} and our best private
+Macro F1 is \textbf{0.40283}.
 \end{abstract}
 
 %%
