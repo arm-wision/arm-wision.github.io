@@ -56,14 +56,15 @@
 We describe ANU's submission to PlantCLEF 2026, where the task is to
 predict every species present in a vegetation-quadrat image. The
 central challenge is a domain shift where training images show single
-plants and test images show dense multi-species plots which is further compounded by a
-long-tailed label distribution. Our system is BioCLIP~2.5 ViT-H/14 where
-only the last four transformer blocks plus the final layer norm and
-projection are unfrozen, while the lower twenty-eight blocks stay
-frozen to preserve the Tree-of-Life prior. We train on the
-PlantCLEF~2024 single-plant manifest with auxiliary genus- and
-family-level cross-entropy heads that regularise the species head
-without adding inference cost. At inference each quadrat is split into a $4{\times}4$ grid of
+plants while test images show dense multi-species plots; this is
+further compounded by a long-tailed label distribution. Our system is
+BioCLIP~2.5 ViT-H/14 where only the last four transformer blocks plus
+the final layer norm and projection are unfrozen, while the lower
+twenty-eight blocks stay frozen to preserve the Tree-of-Life prior. We
+train on an enlarged manifest that combines PlantCLEF~2024 with a
+research-grade iNaturalist pull (2.65~million single-plant images,
+7{,}806 species) with auxiliary genus- and family-level cross-entropy
+heads that regularise the species head without adding inference cost. At inference each quadrat is split into a $4{\times}4$ grid of
 sixteen tiles, each tile is forwarded through the encoder at both
 $224$ and $336$ pixels, the per-tile softmax distributions are
 averaged across tiles and across resolutions, class-prior logit

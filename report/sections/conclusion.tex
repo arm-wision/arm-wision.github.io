@@ -3,10 +3,10 @@
 
 We presented the ANU team's submission to PlantCLEF 2026. Our headline system, specified in full
 in \S\ref{sec:final_submission}, is a partial fine-tune of BioCLIP 2.5 ViT-H/14 with only the last
-four transformer blocks unfrozen, trained on the enlarged PlantCLEF 2024 manifest with
-taxonomy-aware auxiliary heads and deployed under tiled softmax-mean inference with class-prior
+four transformer blocks unfrozen, trained on the enlarged PlantCLEF~2024 + iNaturalist (i001) manifest
+with taxonomy-aware auxiliary heads and deployed under tiled softmax-mean inference with class-prior
 logit adjustment and a $224{+}336$ resolution ensemble. It reached a public Macro F1 of
-\textbf{0.418265} and a private Macro F1 of \textbf{0.40283}.
+\textbf{0.41826} and a private Macro F1 of \textbf{0.40283}.
 
 Three findings carry the bulk of what this benchmark taught us. The first is that partial unfreeze
 is a sharp, not a plateau, design choice on BioCLIP 2.5: $n{=}4$ unfrozen blocks is the empirical
