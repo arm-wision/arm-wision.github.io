@@ -74,6 +74,6 @@ src_experiments/**/outputs/
 src_experiments/**/inference/
 src_experiments/**/logs/
 src_experiments/**/scores*.csv
-
+*.mp4
 # Claude Code session artifacts
 .claude/scheduled_tasks.lock
