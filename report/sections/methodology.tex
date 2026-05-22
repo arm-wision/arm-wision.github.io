@@ -71,14 +71,14 @@ prior, and it is more resilient to optimiser noise on a long-tailed training set
 fine-tuning. The number of unfrozen blocks is itself a sharp design variable; we report the
 ablation that locates its optimum in Section~\ref{sec:experiments}.
 
-Training runs in bfloat16 across two RTX~5090 GPUs with a low backbone learning rate
-($1{\times}10^{-6}$) and a higher head learning rate ($1{\times}10^{-4}$), one epoch of linear
-warmup followed by cosine decay, weight decay $1{\times}10^{-4}$, and label smoothing $0.1$. The
-final model is the second stage of a two-stage schedule: ten epochs of head-only training on the
-enlarged manifest with the backbone fully frozen, which initialises the per-head MLPs of
-\S\ref{sec:bioclip25_010}, then a further ten epochs with the last four blocks unfrozen, resuming
-the model weights only. Full optimiser and hardware settings are listed in
-Appendix~\ref{app:experiment_summary}.
+Training is staged in two phases. An initial ten epochs of head-only training on the enlarged
+manifest with the backbone fully frozen initialises the per-head MLPs of
+\S\ref{sec:bioclip25_010}; a further ten epochs with the last four transformer blocks unfrozen
+then produce the deployed checkpoint, resuming the model weights only. Both stages train in
+bfloat16 across two RTX~5090 GPUs under cross entropy with linear warmup and cosine decay; the
+complete hyperparameter specification (learning rates, batch sizes, gradient accumulation,
+augmentations, image transforms, and the validation split) is given in
+Appendix~\ref{sec:training_config}, Table~\ref{tab:training_config}.
 
 \subsection{Taxonomy-aware Heads}
 \label{sec:bioclip25_010}

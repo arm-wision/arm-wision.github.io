@@ -9,6 +9,62 @@
 % already opened the \appendix; no second \appendix is needed here.
 % ============================================================================
 
+\section{Deployed Model Training Configuration}
+\label{sec:training_config}
+
+The deployed i002 model is the second stage of a two-stage schedule on the i001 manifest of
+\S\ref{sec:cap_extra}. Stage~1 trains the head MLPs and the species, genus and family classifiers
+with the BioCLIP~2.5 backbone fully frozen; Stage~2 resumes the model weights only and additionally
+unfreezes the last four transformer blocks together with the final layer norm and projection.
+Both stages share the data, loss, optimiser family, schedule, precision, and augmentation
+pipeline; they differ only in the trainable surface and in the effective batch size used.
+Table~\ref{tab:training_config} gives the full specification.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \setlength{\tabcolsep}{6pt}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    Parameter & Stage 1 (head only) & Stage 2 (last-4 blocks) \\
+    \midrule
+    Trainable surface         & head MLPs + classifiers       & + last 4 transformer blocks + \texttt{ln\_post} + \texttt{proj} \\
+    Initialisation            & random head, frozen backbone  & Stage 1 best checkpoint (weights only) \\
+    Epochs                    & $10$                          & $10$ \\
+    Per-GPU batch size        & $512$                         & $128$ \\
+    Gradient accumulation     & $2$                           & $4$ \\
+    Effective batch           & $2048$                        & $1024$ \\
+    Total optimisation steps  & $11{,}680$                    & $23{,}350$ \\
+    Warmup steps (1 epoch)    & $1{,}168$                     & $2{,}335$ \\
+    \midrule
+    \multicolumn{3}{@{}l}{\emph{Shared across both stages}} \\
+    \midrule
+    Backbone                  & \multicolumn{2}{l}{BioCLIP~2.5 ViT-H/14 (\texttt{hf-hub:imageomics/bioclip-2.5-vith14})} \\
+    Head MLP (per task)       & \multicolumn{2}{l}{LayerNorm $\to$ Linear($1024 {\to} 1024$) $\to$ GELU $\to$ Dropout($0.2$)} \\
+    Classifiers               & \multicolumn{2}{l}{species ($7{,}806$), genus ($1{,}446$), family ($181$)} \\
+    Loss                      & \multicolumn{2}{l}{$\mathcal{L}_{\text{species}} + 0.30\,\mathcal{L}_{\text{genus}} + 0.15\,\mathcal{L}_{\text{family}}$, cross entropy with label smoothing $0.1$} \\
+    Missing taxonomy labels   & \multicolumn{2}{l}{encoded as $-1$ and masked out of the auxiliary loss} \\
+    Optimiser                 & \multicolumn{2}{l}{AdamW; head LR $1{\times}10^{-4}$, backbone LR $1{\times}10^{-6}$, weight decay $1{\times}10^{-4}$} \\
+    LR schedule               & \multicolumn{2}{l}{linear warmup for one epoch, then cosine decay to $1\%$ of peak} \\
+    Gradient clip             & \multicolumn{2}{l}{$1.0$ (global norm)} \\
+    Precision                 & \multicolumn{2}{l}{bfloat16 AMP, no \texttt{GradScaler}} \\
+    Hardware                  & \multicolumn{2}{l}{$2 \times$ NVIDIA RTX~5090, DDP via \texttt{torchrun --nproc\_per\_node=2}} \\
+    Training image size       & \multicolumn{2}{l}{$224 \times 224$} \\
+    Train augmentations       & \multicolumn{2}{l}{RandomResizedCrop (scale $0.5{-}1.0$, bicubic); HFlip $p{=}0.5$; VFlip $p{=}0.2$; rotation $\pm 20^{\circ}$;} \\
+                              & \multicolumn{2}{l}{ColorJitter (brightness/contrast/saturation $=0.2$, hue $=0.03$); RandomGrayscale $p{=}0.05$; CLIP normalisation} \\
+    Validation transform      & \multicolumn{2}{l}{resize shortest side to $256$, CenterCrop $224 \times 224$, CLIP normalisation} \\
+    Train / val split         & \multicolumn{2}{l}{stratified per species, $10\%$ to validation, seed $42$, species with $<\!5$ images held in train} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Complete training-configuration specification for the deployed i002 model. The two
+  rows above the horizontal divider differ between the two stages; everything below the divider
+  is identical across stages. Numbers in the ``Total optimisation steps'' and ``Warmup steps''
+  rows correspond to the two-GPU run on the train split of $2{,}391{,}457$ images
+  (Table~\ref{tab:i001_manifest}). The head architecture and loss weights are also discussed
+  qualitatively in \S\ref{sec:bioclip25_010}.}
+  \label{tab:training_config}
+\end{table}
+
 \section{Long-tail Rebalancing: More Data vs.\ Per-Species Capping}
 \label{sec:cap_extra_detail}
 
