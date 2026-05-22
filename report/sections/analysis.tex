@@ -151,8 +151,9 @@ reweighting with auxiliary priors (\S\ref{sec:discussion}).
 \label{sec:longtail}
 
 The cleanest near-controlled counterfactual in the project concerns the long tail. Experiment
-i003 takes the i002 manifest, augments the tail with $161{,}686$ validated images for the
-$2{,}022$ species with fewer than one hundred training examples, and then caps every species at
+i003 takes the i002 manifest, augments the tail with $148{,}063$ GBIF-sourced images
+(of $161{,}686$ candidates, after dropping $13{,}623$ that failed image decoding) for the
+$2{,}020$ species with fewer than one hundred training examples, and then caps every species at
 five hundred images, flattening the head of the distribution (Figure~\ref{fig:long_tail}).
 Because i003 changes only the training manifest relative to i002, the leaderboard outcome is
 unusually interpretable, and it is a surprise: this flatter distribution \emph{hurt}, with the

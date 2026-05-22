@@ -60,7 +60,7 @@ controlled ablation; see the caveats in Section~\ref{sec:appendix_caveats}.}
 014 & Unfrozen-blocks sweep (no folder) & 0.375 & 0.343 & Diag. & informs & Confirms an interior optimum in unfrozen-block count. \\
 i001 & Data download / manifest construction & [ns] & [ns] & Deep & Yes & Larger clean genus/family-filled manifest enabled the i002 jump. \\
 \textbf{i002} & \textbf{BioCLIP 2.5, \emph{per-head} MLPs, more data, no cap} & \textbf{0.412} & \textbf{0.406} & Deep & \textbf{Yes} & Final model: more clean data + per-head MLPs + softmax-mean give the project best. \\
-i003 & i002 + 500/species cap + extra GBIF & 0.400 & 0.402 & Deep & No & Capping/flattening hurt public; more clean data beat a balanced smaller set. \\
+i003 & i002 + $148$k GBIF images for $<\!100$-image species, $500$/species cap & 0.400 & 0.402 & Deep & No & Capping/flattening hurt public; more clean data beat a balanced smaller set. \\
 \bottomrule
 \end{tabularx}
 \end{table}

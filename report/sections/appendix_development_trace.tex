@@ -86,19 +86,22 @@ substantial: top 5 accuracy on the held out split rises from 0.9214 (010 head on
 (010 last four blocks) to 0.9505 (i002 head only), 0.9583 (i002 last four blocks), and 0.9615
 (i002 last eight blocks).
 
-\textbf{Experiment i003 -- capped manifest with tail augmentation.} Experiment i003 takes the
-i002 manifest and explicitly attacks both ends of the long tail. We augment it with an additional
-161,686 validated images for 2,022 of the species with fewer than one hundred training examples
-(the subset for which extra validated images could be sourced from iNaturalist and GBIF),
-decoded through a full Python Imaging Library verification pass to remove truncated, non-image, or
-oversized files. The augmented manifest is then deduplicated by image path and capped at five
-hundred images per species through a seeded random subsample, applied once offline at manifest
-construction time rather than at every epoch. This trims the heaviest bins (the twelve species
-above one thousand images and the 2,263 species in the 501 to 1,000 image bin both collapse into
-the 251 to 500 bin) and produces a flatter distribution. The leaderboard outcome of this
-capped manifest (a public Macro F1 of $0.40041$ against $0.41826$ for the uncapped i002
-checkpoint) is analysed in \S\ref{sec:longtail}, together with the before/after distribution
-(Figure~\ref{fig:long_tail}).
+\textbf{Experiment i003 -- GBIF tail augmentation with a 500-image cap.} Experiment i003 builds
+directly on i002 by adding GBIF-sourced images for under-represented species and then capping
+every species at five hundred images. We queried the GBIF occurrence API for additional records
+of the 2,020 species that had fewer than one hundred images in the i002 manifest, yielding
+$161{,}686$ candidate images; $13{,}623$ failed a full Python Imaging Library decode (truncated,
+oversized, or non-image files) and were dropped, leaving $148{,}063$ validated GBIF images that
+were merged into the i002 manifest. The combined manifest was then deduplicated by image path and
+capped at five hundred images per species through a seeded random subsample, applied once offline
+at manifest construction time rather than at every epoch. The cap trims the heaviest bins (the
+twelve species above one thousand images and the $2{,}263$ species in the $501$ to $1{,}000$ image
+bin both collapse into the $251$ to $500$ bin) and produces a flatter distribution with
+$2{,}223{,}516$ training rows. No new species are introduced; all $2{,}020$ GBIF-supplemented
+species already exist in the i002 manifest, so the augmentation lifts only the head of the tail,
+not its left edge. The leaderboard outcome of this capped, GBIF-augmented manifest (a public
+Macro F1 of $0.40041$ against $0.41826$ for the uncapped i002 checkpoint) is analysed in
+\S\ref{sec:longtail}, together with the before/after distribution (Figure~\ref{fig:long_tail}).
 
 \section{Seasonal Phenology Prior: Full Method}
 \label{sec:phenology}
