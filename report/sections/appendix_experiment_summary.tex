@@ -54,6 +54,7 @@ controlled ablation; see the caveats in Section~\ref{sec:appendix_caveats}.}
 004 & BioCLIP few-shot support bank & 0.307 & 0.296 & Mod. & No & Prototypes beat the probe but stay well short of fine-tuning. \\
 005 & DINOv3 SSL + fine-tune & 0.140 & 0.142 & Shal. & No & DINOv3 SSL-adapt scored far below BioCLIP fine-tunes. \\
 006 & BioCLIP 2.5 partial fine-tune (linear head) & 0.222 & 0.272 & Mod. & partial & Unfreezing raised val but not public; needed a richer head + better inference. \\
+007 & BioCLIP zero-shot + SAM vegetation mask & 0.140 & 0.142 & Drop. & No & SAM-weighted aggregation did not improve on plain zero-shot ($\sim$70~h inference). \\
 008 & DINOv3+PlantNet fine-tune (no local folder) & 0.375 & 0.351 & Mod. & No & Strongest non-BioCLIP line, still below 010/i002. \\
 009 & BioCLIP 2.5 + PlantNet data & 0.208 & 0.248 & Shal. & No & PlantNet data worse than PlantCLEF 2024 single-plant. \\
 015 & PlantCLEF24 + iNaturalist mix (no folder) & 0.380 & 0.342 & Shal. & No & Higher val, lower public: a validation/leaderboard mismatch case. \\
@@ -86,7 +87,7 @@ development trace, not a controlled ablation; see Section~\ref{sec:appendix_cave
 Agg. & softmax-mean vs max vs mean (pooling) & 0.412 & 0.406 & Deep & Yes & softmax-mean beats max ($+0.037$) and avoids mean dilution; the production aggregator. \\
 mean & plain logit-mean (010 head-only only) & 0.258 & 0.320 & Drop. & No & Dilutes a species strong in 1--2 tiles across background; dropped before i002. \\
 LA & logit adjustment $\tau$ sweep & 0.406 & \textbf{0.406} & Deep & Yes & Mild $\tau{=}0.25$ lowers public slightly but gives the best private; $\tau{\geq}0.5$ harmful. \\
-Sel. & selection rule (probT / top-$k$ / relT / gap) & 0.412 & 0.406 & Deep & Yes & Probability thresholding ($T{\sim}0.03$--$0.05$) beats top-$k$/gap/relT. \\
+Sel. & selection rule (probT / top-$k$ / relT / gap) & 0.406 & 0.406 & Deep & Yes & Probability thresholding ($T{=}0.03$) at $\tau{=}0.25$ beats top-$k$/gap/relT (no-LA peak is 0.412 at $T{=}0.05$). \\
 \textbf{Ens.} & \textbf{224+336 resolution ensemble (headline)} & \textbf{0.418} & 0.403 & Deep & \textbf{Yes} & Multi-resolution average of one checkpoint: best public overall. \\
 Ens.2 & i002 + 010 ensemble & 0.389 & 0.405 & Shal. & No & Hurt public, near-best private: vivid public/private disagreement. \\
 Piv.1 & cRT triple-backbone classifier & 0.382 & [nf] & Drop. & No & A different classifier diverged into wrong answers, not productive diversity. \\

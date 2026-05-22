@@ -88,7 +88,8 @@ substantial: top 5 accuracy on the held out split rises from 0.9214 (010 head on
 
 \textbf{Experiment i003 -- capped manifest with tail augmentation.} Experiment i003 takes the
 i002 manifest and explicitly attacks both ends of the long tail. We augment it with an additional
-161,686 validated images sourced for 2,022 species with fewer than one hundred training examples,
+161,686 validated images for 2,022 of the species with fewer than one hundred training examples
+(the subset for which extra validated images could be sourced from iNaturalist and GBIF),
 decoded through a full Python Imaging Library verification pass to remove truncated, non-image, or
 oversized files. The augmented manifest is then deduplicated by image path and capped at five
 hundred images per species through a seeded random subsample, applied once offline at manifest
@@ -133,7 +134,7 @@ which returns a 12-bin month histogram in one request. We then build a 365-day p
 \end{equation}
 with $\epsilon{=}0.05$ and $c_{s,m}$ the GBIF count for species $s$ in month $m$.
 
-\paragraph{Coverage.} We fetched histograms for all 7{,}796 species with valid GBIF identifiers (10 of 7{,}806 lack a GBIF mapping). Two passes were required: a first pass at 12 worker threads (~3 req/s, ~21\% rate-limit drops), then a retry pass at 4 worker threads (GBIF aggressively throttled a saturated client). Final coverage: \textbf{6{,}957 / 7{,}806 species (89.2\%)}; the remaining 849 species fall back to a uniform DOY pdf and contribute no phenological signal.
+\paragraph{Coverage.} We fetched histograms for all 7{,}796 species with valid GBIF identifiers (10 of 7{,}806 lack a GBIF mapping). Two passes were required: a first pass at 12 worker threads (~3 req/s, ~21\% rate-limit drops), then a retry pass at 4 worker threads (GBIF aggressively throttled a saturated client). Final coverage: \textbf{6{,}957 / 7{,}806 species (89.1\%)}; the remaining 849 species fall back to a uniform DOY pdf and contribute no phenological signal.
 
 \paragraph{Submission pipeline.} Beyond the phenology log-prior itself, the seasonal phenology submission departs from the anchor inference scaffold (Figure~\ref{fig:pipeline}) in three ways, illustrated architecturally in Figure~\ref{fig:phenology_pipeline} and visually in Figure~\ref{fig:phenology_illustration}. First, an Excess Green index $\mathrm{ExG}_t = 2G_t - R_t - B_t$ is computed per tile and tiles with fewer than $15\%$ green pixels are dropped before the encoder forward pass, removing tiles that contain no vegetation. Second, the surviving tiles are aggregated with a per-tile Bayesian weight $w_t \propto \exp(-H_t)\cdot\mathrm{ExG}_t$, where $H_t$ is the predictive entropy of tile $t$, yielding a softmax-weighted mean rather than the anchor's unweighted mean. Third, the input quadrat is processed at two grid scales ($1.0$ and $0.8$) in addition to the two inference resolutions ($224$ and $336$ pixels), with all per-tile distributions pooled into a single posterior before the phenology prior is added. Logit adjustment ($\tau{=}0.25$) and adaptive threshold selection ($T{=}0.03$) then follow as in the anchor.
 
@@ -208,7 +209,7 @@ with $p_s$ within a fraction of the top) both underperform the probability-thres
 
 \textbf{Noisy-or aggregation mixture.} On the earlier 010 four-block anchor we additionally swept
 softmax-mean against a mixture $\alpha \cdot \text{softmax\_mean} + (1{-}\alpha) \cdot
-\text{noisy\_or}$ across $\alpha \in \{0.25, 0.50, 0.75, 1.0\}$. All variants land within $0.0005$
+\text{noisy\_or}$ across $\alpha \in \{0.25, 0.50, 0.75, 1.0\}$. All variants land within $0.001$
 Macro F1 of the softmax-mean anchor at $0.38333$, with the second-best, $\alpha{=}0.75$, at
 $0.38278$, so on that earlier posterior the choice of aggregator is essentially flat. On the
 fine-tuned i002 checkpoint, by contrast, softmax-mean pulls clearly ahead of max
