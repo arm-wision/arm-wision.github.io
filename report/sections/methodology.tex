@@ -183,7 +183,7 @@ Our final system is a single BioCLIP~2.5 ViT-H/14 backbone trained under the two
 schedule of \S\ref{sec:backbone} on the enlarged i001 manifest. Only the last four transformer
 blocks (plus the final layer norm and projection) are unfrozen in the second stage, and both
 stages share the joint species/genus/family cross-entropy loss of \S\ref{sec:bioclip25_010}. At
-inference (Figure~\ref{fig:pipeline}), each quadrat is
+inference (Figure~\ref{fig:inference_pipeline}), each quadrat is
 partitioned into a non-overlapping $4\times4$ grid of sixteen tiles; every tile is forwarded
 through the encoder at both $224$ and $336$ pixels. Per-tile softmax probabilities are aggregated
 by species-wise mean across the sixteen tiles, the two resolutions are averaged, class-prior logit
