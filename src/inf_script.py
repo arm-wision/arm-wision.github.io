@@ -36,12 +36,14 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import sys
 import time
 from pathlib import Path
 
 import pandas as pd
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 
@@ -73,6 +75,42 @@ K_MIN          = 2
 K_MAX          = 10
 
 
+# ─── Positional-embedding resampling (single source of truth, local) ─────
+# open_clip ships ViT-H/14 with pos_embed sized for the model's native
+# 224 px input (16×16 patch grid + CLS = 257 entries). Forwarding a
+# 336 px tile produces 24×24 = 576 patch tokens → shape mismatch crash on
+# the `tokens + positional_embedding` add inside the transformer. open_clip
+# does NOT auto-interpolate on forward.
+#
+# This helper resamples pos_embed bicubically for any target resolution.
+# Call once per model instance after load; we keep it inline here (not
+# only on the model class) so that the fix works even when the workstation
+# copy of i002/model.py hasn't been synced. Idempotent at the trained
+# resolution.
+
+def _resample_pos_embed(model, res: int) -> None:
+    visual     = model.backbone.visual
+    patch_size = visual.conv1.kernel_size[0]    # 14 for ViT-H/14
+    new_grid   = res // patch_size
+
+    pe       = visual.positional_embedding      # (N+1, D)
+    cls_pe   = pe[:1]
+    grid_pe  = pe[1:]
+    old_grid = int(math.sqrt(grid_pe.shape[0]))
+    if old_grid == new_grid:
+        return
+
+    embed_dim = grid_pe.shape[-1]
+    grid_pe = grid_pe.reshape(1, old_grid, old_grid, embed_dim).permute(0, 3, 1, 2)
+    grid_pe = F.interpolate(
+        grid_pe, size=(new_grid, new_grid),
+        mode='bicubic', align_corners=False,
+    )
+    grid_pe = grid_pe.permute(0, 2, 3, 1).reshape(new_grid * new_grid, embed_dim)
+
+    visual.positional_embedding = nn.Parameter(torch.cat([cls_pe, grid_pe], dim=0))
+
+
 # ─── Prior ────────────────────────────────────────────────────────────────
 
 def build_log_prior(metadata_csv: Path, idx_to_species: list[str]) -> torch.Tensor:
@@ -87,8 +125,36 @@ def build_log_prior(metadata_csv: Path, idx_to_species: list[str]) -> torch.Tens
     """
     if not metadata_csv.is_file():
         raise SystemExit(f"--metadata-csv not found: {metadata_csv}")
-    df = pd.read_csv(metadata_csv, usecols=["species_id"])
-    counts_by_id = df["species_id"].astype(str).value_counts().to_dict()
+    
+    # Robust reading supporting both comma and semicolon separators
+    try:
+        df = pd.read_csv(metadata_csv, sep=None, engine='python', usecols=lambda col: col in ["species_id", "species_ids"])
+    except Exception:
+        try:
+            df = pd.read_csv(metadata_csv, sep=';', usecols=lambda col: col in ["species_id", "species_ids"])
+        except Exception:
+            try:
+                df = pd.read_csv(metadata_csv)
+            except Exception as e:
+                raise SystemExit(f"Failed to read metadata CSV: {e}")
+            
+    # Find species column name
+    species_col = None
+    for col in ["species_id", "species_ids"]:
+        if col in df.columns:
+            species_col = col
+            break
+    if species_col is None:
+        # Search for any column containing 'species'
+        for col in df.columns:
+            if "species" in col.lower():
+                species_col = col
+                break
+    
+    if species_col is None:
+        raise SystemExit(f"Could not find species_id column in metadata CSV. Columns: {list(df.columns)}")
+
+    counts_by_id = df[species_col].astype(str).value_counts().to_dict()
     counts = torch.tensor(
         [counts_by_id.get(str(s), 0) for s in idx_to_species],
         dtype=torch.float32,
@@ -121,7 +187,7 @@ def forward_tiles_at_resolution(
     for i in range(0, len(tile_pils), batch_size):
         batch = tile_pils[i : i + batch_size]
         x = torch.stack([transform(im) for im in batch]).to(device)
-        with amp_autocast(amp_enabled, amp_dtype):
+        with amp_autocast(device, amp_enabled, amp_dtype):
             sp_logits, _, _ = model(x)
         # Cast to fp32 before softmax — log/exp on bf16 can be ugly with
         # 7,806 classes.
@@ -198,9 +264,22 @@ def main() -> None:
     amp_dtype   = torch.float16 if args.precision == "fp16" else torch.bfloat16
 
     print(f"[inf_script] device={device}  precision={args.precision}")
-    print(f"[inf_script] loading checkpoint  {args.checkpoint}")
-    model, encoders, _ = load_checkpoint_model(str(args.checkpoint), device=device)
-    model.eval()
+    print(f"[inf_script] loading checkpoint @ {len(RESOLUTIONS)} resolutions  {args.checkpoint}")
+
+    # One model instance per resolution. open_clip's pos_embed is sized at
+    # load time for the model's training resolution; running the same
+    # instance at a different size would crash on the pos_embed add. Cost
+    # is ~1.2 GB extra GPU mem for the second ViT-H/14 backbone (well
+    # within a 4090's 24 GB).
+    models_by_size: dict[int, object] = {}
+    encoders = None
+    for sz in RESOLUTIONS:
+        m, enc, _ = load_checkpoint_model(str(args.checkpoint), device=device)
+        _resample_pos_embed(m, sz)
+        m.eval()
+        models_by_size[sz] = m
+        if encoders is None:
+            encoders = enc
     idx_to_species = encoders["idx_to_species"]
     print(f"[inf_script] {len(idx_to_species):,} species classes")
 
@@ -250,7 +329,7 @@ def main() -> None:
         per_res_image_probs = []
         for sz in RESOLUTIONS:
             tile_probs = forward_tiles_at_resolution(
-                model, tile_pils, transforms_by_size[sz], device,
+                models_by_size[sz], tile_pils, transforms_by_size[sz], device,
                 args.batch_size, amp_enabled, amp_dtype,
             )                                      # (N_tiles, K)
             per_res_image_probs.append(tile_probs.mean(dim=0))   # (K,)
@@ -282,3 +361,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
