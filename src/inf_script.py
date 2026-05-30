@@ -26,7 +26,7 @@ Usage:
 The model loader, preprocessing transform, and tile-extraction code
 live at the absolute path
 
-    /workspace/scratch_space_arjun/PlantCLEF2026/src_experiments/i002_bioclip25_cap_image
+    /workspace/scratch_space_arjun/PlantCLEF20../experiments/i002_bioclip25_cap_image
 
 — this script imports them by path so there's a single source of truth
 and no duplication.
@@ -48,9 +48,10 @@ import torch.nn.functional as F
 from PIL import Image
 
 # Pull in the trained model + transforms + tiling helpers from the i002
-# experiment directory. Absolute path so this script runs from anywhere
-# on the workstation.
-EXP_DIR = Path("/workspace/scratch_space_arjun/PlantCLEF2026/src_experiments/i002_bioclip25_cap_image")
+# experiment directory. Resolved relative to this file so the script
+# remains portable across hosts.
+EXP_DIR = (Path(__file__).resolve().parent.parent
+           / "experiments" / "i002_bioclip25_cap_image")
 if not EXP_DIR.is_dir():
     raise SystemExit(
         f"Expected experiment dir not found: {EXP_DIR}\n"
@@ -238,7 +239,7 @@ def format_species_ids(species: list[str]) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description="Oracle headline inference — 0.418265 Macro F1 recipe",
+        description="Headline inference recipe (public Macro F1 0.41826)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ap.add_argument("--checkpoint", required=True, type=Path,

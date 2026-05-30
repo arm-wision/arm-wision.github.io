@@ -1,80 +1,74 @@
-# General
+# Python
 __pycache__/
-.ipynb_checkpoints/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.mypy_cache/
 .venv/
 venv/
 
-# Local AI assistant project notes (machine-specific)
-CLAUDE.md
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.stylelintcache
+.next
+out/
+.nuxt
+dist/
 
-# IDEs / editors
+# Rust
+target/
+**/*.rs.bk
+
+# Compiled Binaries
+coordinator/go/coord
+coordinator/go/expert/expert_launcher
+coordinator/go/inf/inf_launcher
+
+# Large Data/Models/Notebooks (selective)
+*.pdf
+*.ipynb
+*.pth
+*.h5
+*.bin
+*.csv
+*.wasm
+*.node
+
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# OS files
+# OS
 .DS_Store
-
-# Environment variables / secrets
-.env
-.env.*
-*.env
-
-# Data & Models
-data/
-datasets/
-models/
-!models/*.py
-
-# Logs & Visualization
-wandb/
-src/wandb/
-artifacts/
-*.log
-errors.log
-scores.csv
-
-# C++ Extensions build artifacts
-src/extensions/build/
-src/extensions/plantclef_ext.egg-info/
-
-# LaTeX build artifacts
-*.aux
-*.synctex.gz
-*.fls
-*.fdb_latexmk
-*.toc
-*.out
-*.bbl
-*.blg
-*.pdf
-*.abs
-*.xmpi
-
-node_modules/
-.next/
-out/
-.env*.local
-*.log
-.DS_Store
-.claude
-
-# Local scratch / comparison images
-tmp_compare/
-
-# Submissions
-submission_plantclef*.csv
-results.txt
-tasks.txt
-
-# Per-experiment run artifacts (CSVs, logs, npz, ckpts) — keep code and summaries
-src_experiments/**/outputs/
-src_experiments/**/inference/
-src_experiments/**/logs/
-src_experiments/**/scores*.csv
-*.mp4
-!website/public/pipeline.mp4
-# Claude Code session artifacts
-.claude/scheduled_tasks.lock
+Thumbs.db
