@@ -1,9 +1,31 @@
-% As written in the PDF: Keep in mind that this is just a template to save you time!
-% You can still make it appear as if you like it the most!
 \ifLongThesisStyle
 \chapter*{Abstract}
 \else%
 \par\bigskip\textbf{Abstract.}
 \fi
 %
-\emph{An abstract is a very short summary (around 15 lines) of your entire work (that doesn't use citations by convention). There are plenty of examples you can take a look at -- simply take a look at some papers in the field of your thesis' research, or by your supervisor.}
+We describe ANU's submission to PlantCLEF 2026, where the task is to
+predict every species present in a vegetation-quadrat image. The
+central challenge is a domain shift where training images show single
+plants while test images show dense multi-species plots; this is
+further compounded by a long-tailed label distribution. Our system is
+BioCLIP~2.5 ViT-H/14 where only the last four transformer blocks plus
+the final layer norm and projection are unfrozen, while the lower
+twenty-eight blocks stay frozen to preserve the Tree-of-Life prior. We
+train on an enlarged manifest that combines PlantCLEF~2024 with a
+research-grade iNaturalist pull (2.65~million single-plant images,
+7{,}806 species) with auxiliary genus- and family-level cross-entropy
+heads that regularise the species head without adding inference cost. At inference each quadrat is split into a $4{\times}4$ grid of
+sixteen tiles, each tile is forwarded through the encoder at both
+$224$ and $336$ pixels, the per-tile softmax distributions are
+averaged across tiles and across resolutions, class-prior logit
+adjustment is applied, and an adaptive probability threshold selects
+the emitted species set. Our best public Macro F1 is \textbf{0.41826}; the same
+configuration scores \textbf{0.40283} private (the strongest private
+result of the project, $0.40600$, comes from a logit-adjusted
+single-resolution variant). Project website: \url{https://arm-wision.github.io/}.
+
+\medskip
+\noindent\textbf{Keywords:} plant identification; multi-label classification;
+partial fine-tuning; BioCLIP; taxonomic auxiliary loss; vegetation plot
+analysis; PlantCLEF 2026.

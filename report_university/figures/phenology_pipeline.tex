@@ -1,0 +1,68 @@
+% Phenology-submission pipeline figure (HORIZONTAL layout).
+%
+% Required preamble:
+%   \usepackage{tikz}
+%   \usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric}
+%
+% This figure depicts the SEASONAL PHENOLOGY (Pivot 3) submission, which
+% used a richer inference scaffold than the anchor: multi-scale grid tiling,
+% ExG vegetation screening, entropy-weighted Bayesian aggregation, and a
+% Boltzmann-weighted day-of-year prior layered on top of logit adjustment.
+% Public Macro-F1: 0.41346 (Delta = -0.005 vs the anchor at 0.41826).
+% Laid out left-to-right so the figure occupies a short horizontal strip;
+% wrap with \resizebox{\linewidth}{!}{...} in the host document.
+
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  node distance=5pt and 7pt,
+  >={Stealth[length=4pt,width=4pt]},
+  every node/.style={transform shape},
+  stage/.style={
+    draw=black!75, line width=0.4pt, rounded corners=2.4pt, fill=black!3,
+    text width=21mm, minimum height=16mm, align=center, inner sep=3pt
+  },
+  io/.style={
+    draw=black!75, line width=0.4pt, rounded corners=2.4pt, fill=white,
+    text width=17mm, minimum height=16mm, align=center, inner sep=3pt
+  },
+  emph/.style={
+    draw=black!75, line width=0.4pt, rounded corners=2.4pt, fill=black!8,
+    text width=23mm, minimum height=16mm, align=center, inner sep=3pt
+  },
+  flow/.style={->, line width=0.45pt, draw=black!70},
+  scope/.style={draw=black!55, line width=0.3pt, dashed, rounded corners=3pt, inner sep=5pt},
+  scopelabel/.style={fill=white, inner sep=2pt, font=\sffamily\scriptsize\itshape, text=black!65},
+]
+
+% ----- Row of stages (left to right) ---------------------------------
+\node[io]    (img)   {Quadrat image};
+\node[stage] (tiles) [right=of img]   {Multi-scale tiling \\[1pt] {\tiny $4{\times}4$ grid, scales $\{1.0, 0.8\}$}};
+\node[stage] (veg)   [right=of tiles] {ExG veg.\ filter \\[1pt] {\tiny drop tiles $<\!15\%$ green}};
+\node[emph]  (fwd)   [right=of veg]   {BioCLIP 2.5 \\ ViT-H/14 \\[1pt] {\tiny last 4 unfrozen; $224{+}336$\,px}};
+\node[stage] (agg)   [right=of fwd]   {Bayesian agg. \\ + cross-res \\[1pt] {\tiny $w_t \!\propto\! e^{-H_t}\mathrm{ExG}_t$}};
+\node[stage] (phen)  [right=of agg]   {Phenology prior \\[1pt] {\tiny GBIF day-of-year, $\beta{=}1.0$}};
+\node[stage] (la)    [right=of phen]  {Logit adjust. \\[1pt] {\tiny $\ell'_s\!=\!\ell_s\!-\!\tau\log\tilde{\pi}_s$, $\tau{=}0.25$}};
+\node[stage] (thr)   [right=of la]    {Adaptive thresh. \\[1pt] {\tiny $T{=}0.03$, $k\!\in\![2,10]$}};
+\node[io]    (out)   [right=of thr]   {Species set \\[1pt] {\tiny Macro-F1 $0.41346$}};
+
+% ----- Sequential arrows ---------------------------------------------
+\draw[flow] (img)   -- (tiles);
+\draw[flow] (tiles) -- (veg);
+\draw[flow] (veg)   -- (fwd);
+\draw[flow] (fwd)   -- (agg);
+\draw[flow] (agg)   -- (phen);
+\draw[flow] (phen)  -- (la);
+\draw[flow] (la)    -- (thr);
+\draw[flow] (thr)   -- (out);
+
+% ----- Stage groupings (dashed, labelled above) ----------------------
+\begin{pgfonlayer}{background}
+  \node[scope, fit=(tiles)(veg)]      (s1) {};
+  \node[scopelabel, anchor=south] at ($(s1.north)+(0,1pt)$) {Pre-processing};
+  \node[scope, fit=(fwd)(agg)]        (s2) {};
+  \node[scopelabel, anchor=south] at ($(s2.north)+(0,1pt)$) {Visual posterior};
+  \node[scope, fit=(phen)(la)(thr)]   (s3) {};
+  \node[scopelabel, anchor=south] at ($(s3.north)+(0,1pt)$) {Post-processing};
+\end{pgfonlayer}
+
+\end{tikzpicture}

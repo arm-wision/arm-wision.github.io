@@ -56,6 +56,21 @@ citecolor   = blue
 \usepackage{paralist}                                % provides compactitem, a more compact itemize
 \usepackage{wrapfig}
 \usepackage{needspace}
+\usepackage{tabularx}                                % X-columns, used by the experiment-summary tables
+\usepackage[section]{placeins}                       % provides \FloatBarrier
+\usepackage{tikz}                                    % the report's diagrams are native TikZ
+\usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric}
+\usepackage{pgfplots}                                % the report's plots are pgfplots
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+
+% Compatibility shim carried over from the original report preamble:
+% colortbl >= v1.0k references \insert@pcolumn for paragraph / X columns,
+% which array.sty < 2024 does not define. Alias it to the older token so
+% tabularx X-columns compile on mixed package sets.
+\makeatletter
+\@ifundefined{insert@pcolumn}{\let\insert@pcolumn\insert@column}{}
+\makeatother
 
 \begin{document}
 
@@ -73,26 +88,18 @@ citecolor   = blue
   \pagenumbering{arabic}
 \fi
 
-% actual report content
-\input{1-introduction}                  % introduction
-\input{2-background}                    % background/framework
-\input{3-relatedWork}                   % related work
-\input{4-setup}                         % How to Use This Template
-\input{5-writingAdvice}                 % general writing advice
-\input{6-latexAdvice}                   % latex advice
-\input{7-marking}                       % notes on marking
-\input{8-evaluation}                    % evaluation
-\input{9-conclusion}                    % conclusion
+% actual report content (ported from the CEUR-ART working note in ../report)
+\input{sections/introduction}           % introduction
+\input{sections/related_work}           % related work
+\input{sections/methodology}            % method
+\input{sections/experiments}            % experiments
+\input{sections/analysis}               % analysis
+\input{sections/phenology}              % seasonal phenology prior (main-body section)
+\input{sections/discussion}             % discussion
+\input{sections/conclusion}             % conclusion
 
-\appendix
-\input{z-appendix-1}                    % appendix 1
-\ifLongThesisStyle
-  % these two appendixes explain some specifics 
-  % about the book documentclass, which is only 
-  % relevant for long theses.
-  \input{z-appendix-2}                    % appendix 2
-  \input{z-appendix-3}                    % appendix 3
-\fi
+% Flush any floats still queued before the bibliography begins.
+\FloatBarrier
 
 % literature
 \bibliographystyle{anuthesis} % or plainnat or whatever
@@ -100,6 +107,6 @@ citecolor   = blue
   % this page break is only shown in the long thesis style
   \cleardoublepage\phantomsection
 \fi
-\bibliography{bib}
+\bibliography{plantclef-refs}
 
 \end{document}

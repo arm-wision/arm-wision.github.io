@@ -73,3 +73,27 @@ coordinator/go/inf/inf_launcher
 .DS_Store
 Thumbs.db
 CLAUDE.md
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.out
+*.brf
+*.bcf
+*.run.xml
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.abs
+*.xmpi
+*.idx
+*.ilg
+*.ind
+.buildtarget
