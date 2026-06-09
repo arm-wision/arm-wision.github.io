@@ -1,0 +1,37 @@
+[
+  {
+    "n": 0,
+    "label": "head only",
+    "val_top5": 0.918,
+    "kaggle": 0.33,
+    "note": "= 006 frozen prototype"
+  },
+  {
+    "n": 3,
+    "label": "n=3",
+    "val_top5": 0.932,
+    "kaggle": 0.37455,
+    "note": ""
+  },
+  {
+    "n": 4,
+    "label": "n=4 anchor",
+    "val_top5": 0.9323,
+    "kaggle": 0.38333,
+    "note": "TEAM BEST"
+  },
+  {
+    "n": 5,
+    "label": "n=5",
+    "val_top5": 0.9327,
+    "kaggle": 0.36919,
+    "note": ""
+  },
+  {
+    "n": 32,
+    "label": "full FT",
+    "val_top5": 0.68,
+    "kaggle": 0.20777,
+    "note": "collapsed"
+  }
+]

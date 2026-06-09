@@ -1,0 +1,137 @@
+% Note that the template has originally been designed for Honours theses.
+% Since these are usually very long (often 80 to 120 pages), the scrbook
+% documentclass was most appropriate. This uses chapters, as it's a *book*
+% format.
+%
+% However, this template is also used by 6 pt and 12 pt projects, which are
+% significantly shorter. For those, the style "book" is not appropriate.
+%
+% Hence, *this file here* does various re-definitions to re-use the book-
+% specific commands to be used in a more compact document class.
+
+\ifLongThesisStyle
+
+% ---------- LONG STYLE (scrbook) ----------
+\RedeclareSectionCommand[
+  beforeskip=3.0ex plus 1ex minus .2ex,
+  afterskip=2.0ex plus .2ex
+]{chapter}
+
+% Force serif for chapter title (in case something elsewhere switches to sans)
+\setkomafont{chapter}{\rmfamily\bfseries\huge}
+\setkomafont{chapterprefix}{\rmfamily\Large}
+
+\makeatletter
+\renewcommand*\chapterlinesformat[3]{%
+  % "Chapter i" top-right, but only for numbered chapters, and without trailing dot
+  \par\noindent
+  \Ifstr{#1}{chapter}{%
+    \ifnum\value{chapter}>0\relax
+      \hfill{\usekomafont{chapterprefix}\chapapp~\thechapter}\par
+    \fi
+  }{}%
+  % rule above title
+  \noindent\rule{\linewidth}{0.4pt}\par\vspace{0.9ex}%
+  % title left-aligned
+  {\raggedright\usekomafont{chapter}#3\par}%
+  \vspace{-2ex}%
+  % rule below title
+  \noindent\rule{\linewidth}{0.4pt}\par
+}
+\makeatother
+
+\else
+
+% ---------- COMPACT STYLE (scrartcl) ----------
+\areaset{17cm}{26.5cm}
+\setlength{\footskip}{12mm}
+
+% Normal section spacing (this is NOT your pseudo-chapter spacing!)
+\RedeclareSectionCommand[
+  beforeskip=1.0ex plus .2ex minus .2ex,
+  afterskip= 0.01pt plus .1ex
+]{section} % section literally means what's called 'section' syntactically,
+           % i.e., in the compiled PDF that behaves like a subsection.
+\RedeclareSectionCommand[
+  beforeskip=0.8ex plus .2ex minus .2ex,
+  afterskip=0.01pt plus .1ex
+]{subsection}
+\RedeclareSectionCommand[
+  beforeskip=0.6ex plus .2ex minus .2ex,
+  afterskip=0.01pt plus .1ex
+]{subsubsection}
+
+% --- emulate chapters in scrartcl ---
+\newcounter{chapter}
+
+% reset deeper levels and make numbering  <chapter>.<section>.<subsection>...
+\makeatletter
+\@addtoreset{section}{chapter}
+\@addtoreset{subsection}{section}
+\@addtoreset{subsubsection}{subsection}
+\makeatother
+
+\renewcommand\thechapter{\arabic{chapter}}
+\renewcommand\thesection{\thechapter.\arabic{section}}
+\renewcommand\thesubsection{\thesection.\arabic{subsection}}
+\renewcommand\thesubsubsection{\thesubsection.\arabic{subsubsection}}
+
+% make section headings print the number + space
+\renewcommand*\sectionformat{\thesection\quad}
+
+
+% define a font element for our pseudo-chapter heading
+\newkomafont{pseudochapter}{\normalfont\Large\bfseries}
+
+% ---- TUNE THESE TWO VALUES (this is what you asked for) ----
+% "2px more above" -> increase this a bit
+\newlength{\PseudoChapterBeforeskip}
+\setlength{\PseudoChapterBeforeskip}{1.5ex}
+
+% "2px less below" -> decrease this a bit
+\newlength{\PseudoChapterAfterskip}
+\setlength{\PseudoChapterAfterskip}{0.0ex}
+% -----------------------------------------------------------
+
+\makeatletter
+\newcommand*\pseudochapter@nostar[1]{%
+  % ensure heading + at least a bit of following text fits (prevents orphan headings)
+  \Needspace{4\baselineskip}%
+  \par\addvspace{\PseudoChapterBeforeskip}%
+  \refstepcounter{chapter}%
+  \addcontentsline{toc}{section}{\thechapter\quad #1}%
+  {\usekomafont{pseudochapter}\thechapter\quad #1\par}%
+  \nopagebreak[4]%
+  \vspace{\PseudoChapterAfterskip}%
+}
+
+\newcommand*\pseudochapter@star[1]{%
+  \Needspace{4\baselineskip}%
+  \par\addvspace{\PseudoChapterBeforeskip}%
+  \addcontentsline{toc}{section}{#1}%
+  {\usekomafont{pseudochapter}#1\par}%
+  \nopagebreak[4]%
+  \vspace{\PseudoChapterAfterskip}%
+}
+
+% in scrartcl, \chapter is undefined -> define it (with star form)
+\newcommand*\chapter{%
+  \@ifstar{\pseudochapter@star}{\pseudochapter@nostar}%
+}
+\makeatother
+
+% demote the existing levels visually (as you had)
+\setkomafont{section}{\normalfont\large\bfseries}
+\setkomafont{subsection}{\normalfont\normalsize\bfseries}
+\setkomafont{subsubsection}{\normalfont\normalsize\bfseries}
+
+\makeatletter
+\providecommand{\chaptertitlename}{Chapter}
+\providecommand{\@chapapp}{Chapter}
+
+\def\@listi{\leftmargin\leftmargini
+  \topsep=0pt \partopsep=0pt \parsep=0pt}
+\let\@listI\@listi
+\makeatother
+
+\fi

@@ -1,0 +1,112 @@
+Overview
+This challenge seeks to identify all plant species present in a high-resolution image of a vegetation plot defined by a square frame placed on the ground to mark out a specific area for sampling. The challenge focuses on addressing the complexities of fine-grained classification and the impact of environmental variability.
+
+Start
+
+2 months ago
+Close
+a month to go
+Description
+Context
+
+Vegetation plot images provide a standardized way to assess biodiversity, support long term monitoring, and enable large scale ecological surveys. These images usually cover 50 × 50 cm quadrats, where botanists identify all visible species and quantify their abundance using biomass, cover, or related indicators.
+
+The Challenge
+
+Integrating AI can improve the efficiency of specialists and help scale up ecological studies. However, building AI models for multi label vegetation identification remains technically challenging.
+
+In theory, robust models would be trained on large collections of high resolution plot images fully annotated with all species present. In practice, producing such datasets at scale is extremely difficult because a single flora can contain thousands of species. By contrast, very large datasets of single plant images already exist, which makes them easier to use for training highly efficient classification models.
+
+PlantCLEF 2026 Challenge
+
+Building on the strong participation and results of the 2025 edition, the 2026 challenge follows a similar format, using the same datasets and the same Kaggle platform.
+
+The PlantCLEF 2026 challenge focuses on predicting the species present in vegetation plot images, while relying on training data composed of single label images of individual plants.
+
+The task is framed as a multi label classification problem, where the objective is to predict all plant species visible in high resolution quadrat images. The main technical bottleneck is the domain shift between the training data single plant images and the test data, which consists of complex, high resolution, multi species vegetation scenes.
+
+shift domain illustration
+
+Evaluation
+The goal of this challenge is to predict the presence of one or more plant species in each high-resolution quadrat image, selecting from thousands of possible species. Quadrat images typically cover 50×50 cm, meaning that while multiple species may be present, it is uncommon to have dozens of species simultaneously.
+
+To rank participant submissions, we use an F1 score-based metric, designed to balance recall and precision. This ensures that models do not over-predict species (leading to low precision) nor under-predict species (resulting in low recall). There are several variations of the F1 score (macro-averaged per sample, macro-averaged per class, and micro-averaged). For this challenge, we use the macro-averaged F1 score per sample, which is particularly suited for multi-label classification problems. This approach ensures a fair evaluation of each image independently, rather than being influenced by class distribution.
+
+The competition test set consists of several quadrat images, each representing a sample of specific area within a selected site (a 5m*1m area in Pyrenees for example). This surveying process, commonly known in ecology literature as a 'transect', is designed to assess biodiversity across a broad section of the site. To mitigate bias from over-sampled areas, the macro-averaged F1 scores are firstly computed across all the different transects in the test set and then averaged to return the final score.
+
+The final score is then computed as:
+
+
+where:
+
+ is the total number of transects.
+ is the number of quadrats in transect 
+.
+ is the macro-averaged F1-score per sample of transect 
+.
+ is the F1 score for test image 
+, calculated as:
+
+Precision and Recall for test image 
+ are defined as:
+
+
+where for each test image 
+:
+
+ (True Positives): number of plant species correctly predicted.
+ (False Positives): number of plant species incorrectly predicted.
+ (False Negatives): number of plant species missed.
+Example on a test quadrat image: example
+
+For more details on the F1 score, see: scikit-learn documentation.
+
+Submission File
+For each ID in the test set, you must predict a list of species IDs. The file format must be a CSV, with coma separators, all quoted, and must report two columns: quadrat_id and species_ids. The species_ids column must be consistently enclosed in double square brackets [] and must provide a list of species ID. The list must be enclosed in double square brackets, and the species_ids must be separated by a comma and a space on the same line. In the case where there is only one species_id, it must also be enclosed in double square brackets.
+
+The submission file should contain a header and have the following format:
+
+"quadrat_id","species_ids"
+"CBN-Pla-B1-20130724","[1395806]"
+"CBN-PdlC-A1-20130807","[1351284, 1494911, 1381367, 1396535, 1412857, 1295807]"
+etc.
+Given a run with predictions stored in a pandas DataFrame df_run, the to_csv function can be called with these parameters to obtain the expected format:
+
+import pandas as pd
+import csv
+df_run.to_csv("my_run.csv", sep=',', index=False, quoting=csv.QUOTE_ALL)
+Timeline
+November 2025: Registration opens for all CLEF challenges (registration is free of charge)
+1 February 2026: Competition Start
+23 April 2026: Registration closes for all CLEF challenges
+7 May 2026: Competition Deadline
+28 May 2026: Deadline for submission of working note papers by participants [CEUR-WS proceedings]
+30 June 2026: Notification of acceptance of working note papers [CEUR-WS proceedings]
+6 July 2026: Camera-ready deadline for working note papers.
+21-24 Sept 2026: CLEF 2026 Jena - Germany
+All deadlines are at 11:59 PM CET of the corresponding day unless otherwise stated.
+
+The competition organizers reserve the right to update the contest timeline if they deem it necessary.
+
+CVPR26 and CLEF26 Context
+This competition is held jointly as part of:
+
+the LifeCLEF 2026 lab of the CLEF 2026 conference, and of
+the FGVC13 workshop organized in conjunction with the CVPR 2026 conference.
+Being part of scientific research, the participants are encouraged to participate to both events. In particular, only participants who submitted a working note paper to LifeCLEF (see below) will be part of the officially published ranking used for scientific communication.
+
+FGVC13 at CVPR 2026
+This competition is part of the 13th Fine-Grained Visual Categorization (FGVC13) workshop in June at the Computer Vision and Pattern Recognition Conference CVPR 2026. The task results will be presented at the workshop, and the contribution of the winning team(s) will be highlighted. Attending the workshop is not required to participate in the competition.
+
+CVPR 2026 will take place in Denver, Colorado, USA, on June 3-7, 2026.
+
+PLEASE NOTE: CVPR frequently sells out early; we cannot guarantee CVPR registration after the competition's end. If you are interested in attending, please plan ahead.
+
+You can see a list of the FGVC competitions here.
+
+LifeCLEF 2026 at CLEF 2026
+LifeCLEF lab is part of the Conference and Labs of the Evaluation Forum (CLEF). CLEF consists of independent peer-reviewed workshops on a broad range of challenges in multilingual and multimodal information access evaluation and benchmarking activities in various labs designed to test different aspects of mono and cross-language Information retrieval systems.
+
+CLEF 2026 will take place in Jena, Germany, on September 21-24, 2026.
+
+You can find more details on the CLEF 2026 website.

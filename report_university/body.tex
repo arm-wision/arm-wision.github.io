@@ -1,0 +1,105 @@
+% This template has been created by:
+%   Pascal Bercher, 
+%   - pascal.bercher@anu.edu.au, 
+%   - https://bercher.net
+%
+% The newest version can be found on:
+% https://gitlab.anu.edu.au/u1092535/latex-templates/
+%
+% Version number and history:
+%   Provided separately in the file readme-and-changelog.txt
+%
+% License:
+% I did't create one yet, but you are free to use this for
+% your own personal use; just don't share. 
+%
+% Good luck with your thesis, and enjoy the journey  --  Pascal
+
+\input{configuration}   % to specify data used in the title page
+\input{style-switch}    % if the short thesis layout was chosen, its style gets set here.
+
+\usepackage{xurl}       % allows long URLs to break at any position
+
+\ifLongThesisStyle
+  % we only need this for the title page of the long thesis style
+  \usepackage[a4paper]{geometry}  
+\fi
+
+\usepackage[backref=page]{hyperref}  % defines style of references / links
+\hypersetup{
+linktocpage,                         % in the table of contents, the numbers serve as links, not the entries
+colorlinks  = true,                  % the items are colored instead of colored boxes around them
+urlcolor    = cyan,                  % was written in the PDF, all of this can be changed!
+linkcolor   = red,                   
+citecolor   = blue
+}
+
+% the following makes back references more appealing.
+% Taken from: https://tex.stackexchange.com/questions/183702/formatting-back-references-in-bibliography-bibtex
+\renewcommand*{\backref}[1]{}
+\renewcommand*{\backrefalt}[4]{[%
+\ifcase #1 Not cited.%
+  \or Cited on page~#2.%
+  \else Cited on pages #2.%
+\fi]}
+
+\usepackage{datetime}                                % to be able to print month & year on the title page
+  \newdateformat{monthonly}{\monthname[\THEMONTH]}
+  \newdateformat{monthyeardate}{\monthname[\THEMONTH] \THEYEAR}
+\usepackage{amssymb,amsthm,amsmath}                  % standard math packages; often used
+\usepackage{graphicx}                                % allows including graphics
+\usepackage{natbib}                                  % a specific citation style
+\usepackage{floatrow}                                % allows to place a caption next to a figure
+  \floatsetup[table]{capposition=top}                 % forces table captions to appear on top.
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e} % used for depicting algorithms
+\usepackage{booktabs}                                % for tables that actually look nice!
+\usepackage{paralist}                                % provides compactitem, a more compact itemize
+\usepackage{wrapfig}
+\usepackage{needspace}
+
+\begin{document}
+
+\input{macros}                                    % define all your macros here
+
+\input{0-titlepage}                               % define your title page
+\input{0-declaration}                             % includes the declaration of authorship
+\input{0-acknowledgements}                        % optional acknowledgements
+\input{0-abstract}                                % your abstract
+
+\ifLongThesisStyle
+  % table of contents (shown only in the long thesis style)
+  \renewcommand{\contentsname}{Table of Contents}   % would otherwise just be "Contents",
+  \cleardoublepage\tableofcontents\cleardoublepage  % which might sound less nice
+  \pagenumbering{arabic}
+\fi
+
+% actual report content
+\input{1-introduction}                  % introduction
+\input{2-background}                    % background/framework
+\input{3-relatedWork}                   % related work
+\input{4-setup}                         % How to Use This Template
+\input{5-writingAdvice}                 % general writing advice
+\input{6-latexAdvice}                   % latex advice
+\input{7-marking}                       % notes on marking
+\input{8-evaluation}                    % evaluation
+\input{9-conclusion}                    % conclusion
+
+\appendix
+\input{z-appendix-1}                    % appendix 1
+\ifLongThesisStyle
+  % these two appendixes explain some specifics 
+  % about the book documentclass, which is only 
+  % relevant for long theses.
+  \input{z-appendix-2}                    % appendix 2
+  \input{z-appendix-3}                    % appendix 3
+\fi
+
+% literature
+\bibliographystyle{anuthesis} % or plainnat or whatever
+\ifLongThesisStyle
+  % this page break is only shown in the long thesis style
+  \cleardoublepage\phantomsection
+\fi
+\bibliography{bib}
+
+\end{document}

@@ -1,0 +1,146 @@
+[
+  {
+    "id": "001_bioclip_tile_zero_shot",
+    "label": "001",
+    "n_submissions": 0,
+    "best_public": 0.05,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "002_bioclip_tile_zero_shot_v2",
+    "label": "002",
+    "n_submissions": 0,
+    "best_public": 0.07,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "003_bioclip25_linear_probe",
+    "label": "003",
+    "n_submissions": 0,
+    "best_public": 0.18,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "004_bioclip_few_shot",
+    "label": "004",
+    "n_submissions": 0,
+    "best_public": 0.2,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "005_dinov3_multilabel",
+    "label": "005",
+    "n_submissions": 0,
+    "best_public": 0.13,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "006_bioclip25_finetune",
+    "label": "006",
+    "n_submissions": 0,
+    "best_public": 0.33,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "007_plantnet_dinov2_collages",
+    "label": "007",
+    "n_submissions": 0,
+    "best_public": 0.17476,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "008_dinov3_plantnet_finetune",
+    "label": "008",
+    "n_submissions": 0,
+    "best_public": 0.305,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "009_bioclip25_plantnet_finetune",
+    "label": "009",
+    "n_submissions": 0,
+    "best_public": 0.20777,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "010_bioclip25_end_to_end_finetune_multitask",
+    "label": "010",
+    "n_submissions": 0,
+    "best_public": 0.38333,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "010_outputs",
+    "label": "010 fusion",
+    "n_submissions": 0,
+    "best_public": 0.34671,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "011_bioclip25_aggregation_sweep",
+    "label": "011 agg-sweep",
+    "n_submissions": 0,
+    "best_public": 0.38278,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "012_bioclip25_ssl_lucas",
+    "label": "012 SSL+linear",
+    "n_submissions": 0,
+    "best_public": 0.30261,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "013_bioclip25_ssl_lucas_multitask",
+    "label": "013 SSL+multitask",
+    "n_submissions": 0,
+    "best_public": 0.33185,
+    "best_private": null,
+    "best_recipe": "(no recorded submission \u2014 reference value)"
+  },
+  {
+    "id": "014_unfreeze_sweep",
+    "label": "014b unfreeze-N",
+    "n_submissions": 3,
+    "best_public": 0.37455,
+    "best_private": null,
+    "best_recipe": "unfreeze3"
+  },
+  {
+    "id": "015_pc24_inat_mix",
+    "label": "015 PC24+iNat",
+    "n_submissions": 2,
+    "best_public": 0.37956,
+    "best_private": null,
+    "best_recipe": "015 ep5"
+  },
+  {
+    "id": "i002_bioclip25_cap_image",
+    "label": "i002 cap+extra",
+    "n_submissions": 163,
+    "best_public": 0.41165,
+    "best_private": 0.38132,
+    "best_recipe": "last_blocks_infer_softmax_mean / softmax_mean_probT0.05"
+  },
+  {
+    "id": "i003_bioclip25_cap_image_extra500",
+    "label": "i003 cap500",
+    "n_submissions": 60,
+    "best_public": 0.40041,
+    "best_private": 0.36078,
+    "best_recipe": "last_blocks_infer / softmax_mean_top3"
+  }
+]

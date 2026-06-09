@@ -1,0 +1,9 @@
+{
+  "n_images": 2105,
+  "n_errors": 0,
+  "total_secs": 162.1,
+  "images_per_sec": 12.99,
+  "tile_mode": "grid_4x4",
+  "agg_mode": "softmax_mean",
+  "top_k": 3
+}

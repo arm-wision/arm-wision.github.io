@@ -1,0 +1,115 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{parskip}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=2pt}
+
+\begin{document}
+
+{\LARGE\bfseries COMP3242/COMP6242 SCRIPT}
+
+\vspace{4pt}
+
+\noindent\textbf{Slide 1 \quad Introduction \quad 20 seconds}
+
+Hi I'm Manindra and I'm here with Arjun, Razeen and Will and we will be presenting
+Fine-Tuning of BioCLIP~2.5 with Taxonomic Heads for Multi-Species Plant
+Identification.
+
+\vspace{6pt}
+
+\noindent\textbf{Slide 2 \quad Introduction -- Task + Motivation \quad 40 seconds}
+
+Monitoring plant biodiversity at scale is essential for understanding ecosystem
+health, tracking climate change, and informing conservation policy. Vegetation
+surveys today are slow and expensive: identifying plant species in field
+quadrats requires expert botanists on-site, and the supply of trained
+taxonomists doesn't scale to the area that needs monitoring. We tackle this by
+building a deep learning model that takes a single overhead quadrat photograph
+and predicts every plant species present, drawn from a catalogue of 7,800
+candidates. We're evaluated on 2,105 hidden test quadrats using macro-averaged
+F1, averaged first within each transect and then across transects, so that
+densely sampled sites don't dominate the final score.
+
+\vspace{6pt}
+
+\noindent\textbf{Slide 3 \quad Introduction -- Challenges \quad 40 seconds}
+
+Two challenges make this much harder than standard classification. The first
+is domain shift, illustrated in figure 1: training data is clean Pl@ntNet
+close-ups of one plant in isolation, while test images are dense in-situ
+quadrats where many species overlap and occlude one another. A model that
+excels on isolated specimens has to generalise to crowded scenes it has never
+been shown during training. The second is a severe long-tail: about twelve
+species have more than a thousand training images, but 145 carry only a single
+image, so standard cross-entropy training learns to over-predict common
+species, adding false positives on quadrats where they aren't present and
+missing the rare species that are. Both pull the per-quadrat F1 down, and
+therefore the macro-averaged score.
+
+\vspace{6pt}
+
+\noindent\textbf{Slide 4 \quad Method Final Model \quad 60 seconds}
+
+Our system has two stages. In the building stage, we take BioCLIP~2.5, a
+vision model pretrained on 10 million organism images, and partially fine-tune
+it on 2.65 million single-plant images. We freeze the lower 28 transformer
+blocks to preserve its biological knowledge and only update the last 4. Three
+auxiliary heads at the family, genus, and species levels regularise training,
+though only the species head is used at inference. In the inference stage,
+each quadrat is cut into a $4{\times}4$ grid of tiles. Each tile passes
+through the trained model, probabilities are averaged, and an adaptive
+threshold selects the final species set.
+
+\vspace{6pt}
+
+\noindent\textbf{Slide 5 \quad Ablations \quad 60 seconds}
+
+Our most significant ablation was testing the number of unfrozen transformer
+blocks in BioCLIP~2.5 to find the optimal number. As shown in the graph,
+public Macro F1 peaks at eight unfrozen blocks at 0.391, then declines while
+held-out validation accuracy kept rising. This finding showed that validation
+accuracy on single-plant images does not predict quadrat performance. Full
+fine-tuning collapsed to 0.301 as the model forgot its biological knowledge.
+On our larger final dataset the optimal number of blocks was 4, suggesting
+more data reduces the useful unfreeze depth. Beyond unfreezing, we also
+ablated tile aggregation, logit adjustment, threshold selection, and resolution
+ensembling on the final model.
+
+\vspace{6pt}
+
+\noindent\textbf{Slide 7 \quad Results \quad 40 seconds}
+
+Other positive results included a softmax-mean tile aggregation, dual-resolution
+ensembling at 224 and 336 pixels, logit adjustment to counteract long-tail
+bias, and an adaptive threshold that always predicts between 2 and 10 species
+per quadrat. Three additional pivots, a triple-backbone retrain, genus
+co-occurrence reranking, and a seasonal phenology prior, all failed to
+improve. Validation accuracy correlated weakly with quadrat leaderboard
+performance at $r{\approx}0.4$, showing that the domain shift is the primary
+bottleneck.
+
+\vspace{6pt}
+
+\noindent\textbf{Slide 8 \quad Further Research and Conclusion \quad 30 seconds}
+
+Our best result was 0.418 public Macro F1 from a partially fine-tuned
+BioCLIP~2.5 with tiled inference and dual-resolution ensembling, good for
+7th place on the private leaderboard. Future gains may require training on
+synthetic multi-species scenes that better match the test distribution.
+
+\vspace{10pt}
+
+\noindent\textbf{Marking Scheme}
+\begin{itemize}
+  \item Format and Communication (10 marks)
+  \item Problem and Motivation (8 marks) (80 seconds $\sim$ 130 words)
+  \item Method and Technical Content (12 marks) (120 seconds $\sim$ 200 words)
+  \item Results and Conclusion (10 marks) (100 seconds $\sim$ 160 words)
+\end{itemize}
+
+\end{document}

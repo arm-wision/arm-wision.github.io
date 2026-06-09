@@ -1,0 +1,62 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 3.2996,
+    "val_loss": 0.8783,
+    "top1": 0.8046,
+    "top5": 0.9519,
+    "genus": 0.9149,
+    "family": 0.949,
+    "order": 0.9448,
+    "class": 0.9846,
+    "kaggle": 0.37506
+  },
+  {
+    "epoch": 2,
+    "train_loss": 3.1261,
+    "val_loss": 0.8318,
+    "top1": 0.8143,
+    "top5": 0.9549,
+    "genus": 0.9198,
+    "family": 0.9528,
+    "order": 0.9507,
+    "class": 0.9875,
+    "kaggle": null
+  },
+  {
+    "epoch": 3,
+    "train_loss": 3.0182,
+    "val_loss": 0.8054,
+    "top1": 0.8207,
+    "top5": 0.957,
+    "genus": 0.9229,
+    "family": 0.9547,
+    "order": 0.9535,
+    "class": 0.9884,
+    "kaggle": null
+  },
+  {
+    "epoch": 4,
+    "train_loss": 2.9529,
+    "val_loss": 0.7924,
+    "top1": 0.8244,
+    "top5": 0.9582,
+    "genus": 0.9238,
+    "family": 0.9551,
+    "order": 0.9543,
+    "class": 0.9886,
+    "kaggle": null
+  },
+  {
+    "epoch": 5,
+    "train_loss": 2.9235,
+    "val_loss": 0.7881,
+    "top1": 0.8255,
+    "top5": 0.9584,
+    "genus": 0.924,
+    "family": 0.9553,
+    "order": 0.9544,
+    "class": 0.9886,
+    "kaggle": 0.37956
+  }
+]

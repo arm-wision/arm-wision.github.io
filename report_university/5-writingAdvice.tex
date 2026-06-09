@@ -1,0 +1,148 @@
+\chapter{General Rules and Writing Advice}\label{chap:abstractAdvice}
+
+This chapter provides general beginner's advice on writing a scientific report. It should be read once in advance before starting your work and then occasionally be used during writing as a checklist.
+
+\section{High-level Advice on Approaching Your Thesis}\label{chap:content}
+
+\begin{itemize}
+ \item \textbf{Start early.} 
+ Writing a report is hard and takes time. More than you think. \emph{Hofstadter's Law:} ``It always takes longer than you expect, even when you take into account Hofstadter's Law.'' -- \emph{So start early!} This refers especially to the writing part.
+ \item \textbf{Read and check your work!} Each \LaTeX{} editor has a spellchecker. Use it!! Read your work \emph{carefully} and \emph{multiple times} before showing it to your supervisor. And \emph{please} read the next sections before doing so! I \emph{guarantee} that it explains errors that you do! Prevent them! Use the next section as checklist!
+ \item \textbf{Read the section on marking.} This section gives some insights on expectations, so read it early. 
+ \item \textbf{Involve your supervisor!} Don't be afraid to reach out to your supervisor(s)! It's quite literally his/her/their job to supervise you and help you succeed! :) So make sure you get what you need to be successful, don't hold back. But make it easy for them. Most academics are overworked...
+\end{itemize}
+
+
+
+\section{Capitalization Rules}\label{sec:capitalization}
+
+In scientific works there are some rules on what and how to capitalize.
+
+\begin{itemize}
+  \item \textbf{Chapter, Section, and Subsection titles.} They all must be capitalized according to specific rules. Basically everything is written capitalized except for some specific words (like in, on, the, $\dots$). Just search for these capitalization rules. You can even find ``online title capitalization tools'', which make it easy for you \emph{and} establish consistency easily.
+  \item \textbf{Figure, Table, Listing, Equation, Chapter (etc.)\ references.} Whenever you cite something that has a number, you will have to write it capitalized. This very sentence, which cites Table~\ref{tab:meatPrices} for looking great as it uses the \textsc{booktabs} package, is an example of correct usage of capitalization. Note that we only capitalize if we cite something specific. So for example, in this very sentence, which is part of the current section, ``section'' is \emph{not} capitalized although we would have to if we had written that this sentence is part of Section~\ref{sec:capitalization} -- because then we actual reference something.
+\end{itemize}
+
+
+% Curious what the optional argument means here? 
+% That's how the section name appears in your TOC (table of contents)
+% In the actual section we want the linebreak to appear (it looks better!),
+% but in the TOC it would look strange and ugly, so we don't provide it there!
+\section[General Notes on Increasing Appearance -- Don't be Careless!]{General Notes on Increasing Appearance{\ifLongThesisStyle\newline\fi} -- Don't be Careless!}
+
+Don't forget that your work isn't parsed by a robot, but read by a human being. So make it pleasant for them, i.e., optically pleasing. Some rules to follow:
+
+\begin{itemize}
+  \item \emph{Page and Line Breaks:} 
+  \begin{itemize}
+    \item If some headline ends up at the end of a page, that might look ugly. Consider adding \verb!\pagebreak! right before it to force placing it on the next page. That will likely look much nicer. 
+    \item Sometimes you might also want to enforce a linebreak, for example within section titles or even the thesis title. Just decide what looks best! For example, this section title got a line break as I believe it looks nicer like this. In \LaTeX{}, the following three commands might be useful in this context:
+    \begin{itemize}
+      \item \verb!\\! is a linebreak that will not stretch the current line. Usually, you never use this command, maybe with the exception of the thesis title. (Or done for this section title as illustration.)
+      \item \verb!\pagebreak! also breaks the line, but it will stretch the entire line to the end so that the text remains in block mode.
+      \item \verb!\mbox{}! might be useful, which prevents a linebreak of the word(s) specified as argument.
+    \end{itemize}
+  \end{itemize}
+  \item \emph{Big Gaps in the Document:} Make sure that there are no huge gaps in the middle of your report/text, e.g.:
+  \begin{itemize}
+    \item For example, make sure that a chapter doesn't end with a single line on a new page, that's just ugly and thus careless. The same applies for the table of contents: If it happens to have so many entries (sections/subsections etc.) that it jumps to a next page just because of one or two lines/entries, then just search (e.g., using stackoverflow) how to reduce the space between the lines so that it fits. Show some effort.
+    \item Also make sure that when including figures or tables that there is no huge gap before them, that may happen depending on their size.
+  \end{itemize}
+  \item \emph{Respect Boundaries!} As children, most of us had those coloring books with pictures that we had to color in without going over the lines. The same basically remains true for scientific works; yet most make it wrong. This is actually strictly forbidden in the context of publishing a paper.
+  \begin{itemize}
+    \item When including graphics and in particular tables, make sure that they do not reach into the border. 
+    \item This also (very) often happens in text, and mostly for formulae. That is ugly and careless, so rephrase to prevent that.
+  \end{itemize}
+  To find those errors easily, you can add ``draft'' as optional package argument to the documentclass (first line in the mainfile). Then, every~\hbox{verylongwordthatdoesnotbreak} (which all produce an ``overfull box'') will be shown with a black box next to it. \textbf{\emph{Try it now!}} (You will find such a box here!)
+  \item \emph{Number of subsections and their introductions:}
+  \begin{itemize}
+    \item Always have at least one line of ``glue text'' between the chapter title and the first section, i.e., anything that briefly introduces what comes next.
+    \item Never use exactly one section. If you use sections, there should be at least two -- because otherwise it's just pointless; you could (if you had just one section) just eliminate it as otherwise the chapter title should then already reflect the content.
+  \end{itemize}
+\end{itemize}
+
+Do all of this only \emph{briefly before you hand in}, as all that depends on your final layout. Adding, changing, and removing text will of course change the appearance, so do all this in a very final step. \textbf{I advise that the entire Chapter~\ref{chap:abstractAdvice} and \ref{chap:LaTeXAdvice} are used as a checklist}, but this subsection in particular should be implemented when everything is final.
+    
+
+    
+\section{Bibliography / References}
+
+There are various points that you should consider when you add a publication into your bibtex file. The first basic rule is: \textbf{\emph{never blindly copy some bibtex entry from the internet}} -- most of them are of very poor quality (or contain lots of information that's usually not included). Instead, double-check each entry by hand via trustworthy sources, such as DBLP (\url{https://dblp.org/}), the publisher's webpage, or the websites by the authors. For each entry, consider the following:
+ 
+\begin{itemize}
+  \item \emph{Correctness:} Is all the data you put in correct? E.g.,
+  \begin{itemize}
+    \item is the type correct? For example, papers published in conferences should be ``inproceedings'', papers published in journals are ``article''. These are often wrong when using non-trustworthy internet sources.
+    \item is all information correct? For example, page numbers are often incorrect, the venue of publication might have some issue (e.g., it might say it's published at a specific conference, but in reality it was only accepted at one of its \emph{workshops}, which is not the same).
+    \item is everything capitalized correctly? Note that capitalization is automatically done by the used style, and often everything is written in lower-case letters. However several words have to be written according to specific capitalization rules. This is in particular true for abbreviations (e.g., ``IPC'' stands for the International Planning Competition). Just writing ``IPC'' in the bibtex will most likely however produce ``ipc'', or maybe even ``Ipc'', though both is wrong -- it \emph{has} to be ``IPC''. You can enforce this by putting curled parenthesis around the respective word. E.g., if your paper title contains ``IPC'', you would instead put ``\{IPC\}'' into the bibtex entry. Make sure to do this for all words that should be capitalized in a certain way.
+  \end{itemize}
+
+   
+  \item \emph{Completeness:} Make sure that each entry contains all fields that are required (like authors, title, booktitle etc.) but also those that are ``usually specified''. The latter is hard for a beginner, so this is the recommendation: Also provide page numbers, publisher, year. Also don't overdo ``completeness''. In particular when downloading bibtex entries from DBLP, you will often see lots of irrelevant information (like the conference venue or exact date), which one usually does not include in bibtex entries.
+  \item \emph{Consistency:} Make sure that the various entries are consistent to each other. For example, conference papers usually use acronyms. Make sure to either always add the respective acronym (preferred) or never. If you add it, add it always in the same way. E.g., don't add ``..., IJCAI-12'', ``... (IJCAI-12)'', ``... (IJCAI '13)'', ``... (IJCAI 2015)'' -- use always the the systematicity. Likewise with the conference titles. For example, do not write ``Proceedings'' for one but ``Proc.'' for another. Stay consistent.
+\end{itemize}
+    
+    
+
+
+\section{How to Cite Papers}
+
+In most cases, you place a citation right behind the respective proposition that you want to back up. Let's assume that the next citation backs up the sentence that you currently read \citep{Smith2021Wubalubadubdub}, it was thus plausible to put it exactly there -- and not at another position of this sentence.
+
+However, if for some reason you need or wish to use the \emph{paper explicitly} within your sentence, then refer to its \emph{authors} (not the paper). For example, I can claim that the work by \cite{Smith2021Wubalubadubdub} will be quite funny once it will have been done! This is just nicer than claiming that the work ``described in \citep{Smith2021Wubalubadubdub}'' will be influential. The reason is again consistency, because normally citations like the very first one (where everything is contained by parentheses, not just the year) are not objects of the sentence. So using them sometimes as objects and sometimes not would be inconsistent.
+ 
+Here are a few examples:
+\begin{itemize}
+  \item This is a statement \citep{Smith2021Wubalubadubdub}, followed by another that is not backed up. \textbf{Correct}: statements are backed up by citations after the respective statement.
+  \item \cite{Smith2021Wubalubadubdub} state X. \textbf{Correct}: A group of people can state something.
+  \item \cite{Smith2021Wubalubadubdub} states X. \textbf{Wrong}: This is a group of people, so we need plural.
+  \item In \cite{Smith2021Wubalubadubdub}, X was proved. \textbf{Wrong}: This is a group of people, not a paper. Nothing was proved in this group of people. It was proved in a paper! So, you would rephrase as below.
+  \item X was proved in \cite{Smith2021Wubalubadubdub}. \textbf{Wrong}: Same as above.
+  \item X was proved in \citep{Smith2021Wubalubadubdub}. \textbf{Wrong}: This kind of citation is used at the end of a statement, and it does \emph{not} form an object one can explicitly refer to.
+  \item X was proved by \citep{Smith2021Wubalubadubdub}. \textbf{Wrong}: As explained before.
+  \item X was proved by \cite{Smith2021Wubalubadubdub}. \textbf{Correct}: X was proved by that group of people.
+\end{itemize}
+
+\LaTeX{} provides different commands for these different kinds of citations. In this template, those those are \verb!citep{}! and \verb!cite{}!, but they may be different when using other authorkits. The command \verb!\citeauthor{}! is also sometimes useful. This just lists the author(s), but without the year. I.e., it's an alternative  to \verb!cite{}! that you should use when you want to mention the authors whereas you used similar citations before so that there is just no need to add the year again. (Make sure to never write out author names by hand! Always use a \LaTeX{} command to get them.) Finally, note that you can easily cite multiple works with one command as shown in (the code of) this sentence \citep{Cooper2015SuperfluidVacuumTheory,Smith2021Wubalubadubdub}.
+  
+    
+  
+\section{How to Provide Definitions and Theorems} 
+
+In theses or project reports in computer science or engineering you are bound to have definitions. It is at your discretion whether you provide some definition purely ``in-text'' or whether you make aware of it more prominently by using a definition environment. It's sometimes hard to judge what should go into the former and what should to into the latter, in particular for beginners. In my experience, beginners put too much into formal definitions, because they think everything is important. :) If in doubt, reach out to your supervisor early, he/she will know! My personal stands on that is that you should only use a formal definition environment if at least one of the following criteria is satisfied: The definition will be referenced/mentioned later on again (rather than just ``using'' it), or the defined concept is simply very ``important'' or ``central'' (again, it might be hard for you to judge what that means, so reach out to your supervisor if in doubt).
+  
+For a sake of providing an example for how it looks in this (PDF) document, but also so that you can see how to use the \LaTeX{} commands, I borrow from some simple concepts of AI planning.
+  
+\begin{quote}In planning, we talk about \emph{states}. States are subsets of \emph{propositions} or \emph{facts} taken from a finite set of available fact $F$ that can used to describe our system/world. Thus, states $s\subseteq F$ are those facts which are true in the respective current world state $s$. $\dots$ The finite set of actions $A$ is given by $\dots$ A given sequence of actions $\bar{a}=a_1\dots a_n$ applied to a state $s\in 2^F$ leads to a state $s'\in 2^F$ if and only if $\dots$\end{quote}
+  
+Note that all concepts described here are of course quite foundational, but none of them seems to be ``evolved enough'' to warrant putting them into a formal definition environment. It is much more natural so simply introduce these (formal!) definitions within plain text. Some of these components introduced above together form the components of a \emph{planning problem}, which is essentially the main concept in AI planning. If thus deserves its own \emph{formal} definition, which will appear as follows:
+  
+\begin{defn}[Planning Problem]\label{def:planningProblem}A \emph{planning problem} is a 4-tuple $\langle F, A, s_0, G\rangle$ consisting of:
+    \begin{compactitem}
+      \item $F$, a finite set of \emph{facts},
+      \item $A\subseteq F\times F\times F$, a finite set of \emph{actions},
+      \item $s_0\in 2^F$, the \emph{initial state},
+      \item $G\subseteq F$, the \emph{goal description}.
+    \end{compactitem}
+    Some text that's still part of the definition, which defines, but does \emph{not} explain.
+\end{defn}
+  
+You may see that sometimes it's hard to recognize where a definition ends and where the normal thesis/report text continues. For this reason I added a black box at the end of all definitions. If you don't like it, use the ``definition'' environment rather than this ``defn'' environment. Also note that your definition gets numbered! This for example is Def.~\ref{def:planningProblem}. You can configure how definition numbers are shown, e.g., whether they are simply consecutive (as it's right now) or whether these numbers are prepended by the chapter/section number to make finding them easier. Just use the \textsc{amsthm}'s package manual, stackoverflow, and of course some LLM to find out how!
+  
+Finally, but \emph{really} important for any beginner: Note that formal definitions can \emph{never} contain explanations. They only contain plain boring definitions themselves (as above). Explanations thereof must come after the respective definition, but they can't be part of it!
+  
+Depending on your work you might also need theorems such as the following one:
+\begin{thm}\label{thm:hardnessOfPlanningProblems}%
+  Let \emph{PLANEX} $:= \{\mathcal{P} \mid \mathcal{P}=\langle F, A, s_0, G\rangle$ is a planning problem and has a solution$\}$. Deciding \emph{PLANEX} is \textbf{PSPACE-complete}.
+\end{thm}
+  
+Note that you might not only need theorems, but also Propositions, Lemmata, and Corollaries. You find their definitions (i.e., environment names) as well as a very short explanation on when to use which in the macros.tex file.
+  
+Finally, every theorem (etc.) needs a proof!
+  
+\begin{proof}%
+  \emph{Membership:} We show how we can $\dots$\\
+  \emph{Hardness:} For hardness we reduce from $\dots$
+\end{proof}
+  
+There is a box again! This wasn't added by me but it's already standard behavior by the respective package. A white empty box at the end of proofs is a general convention to have to indicate the respective proof's end. (You can google its origin if interested!) In older papers or maths scripts you might also find ``q.e.d.'' instead, Latin for ``quod erat demonstrandum'' (Eng.: ``what was to be shown'').

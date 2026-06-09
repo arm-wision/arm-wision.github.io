@@ -1,0 +1,2162 @@
+[
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 04:31:19.750000",
+    "description": "ensemble i002_last_blocks @224 + @336 (50/50 softmax avg) la_tau=0.25 probT=0.03 [1,10]",
+    "public": 0.41826,
+    "private": 0.40283,
+    "exp_id": null,
+    "recipe": "50 softmax avg) la_tau=0.25 probT=0.03 [1,10]"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 00:20:53.663000",
+    "description": "i002 224+336 LA tau=0.25 + GBIF DOY phenology Boltzmann prior beta=1.0 (sigma=18d circular Gaussian, 89% species coverage), probT=0.03",
+    "public": 0.41346,
+    "private": 0.38766,
+    "exp_id": null,
+    "recipe": "i002 224+336 LA tau=0.25 + GBIF DOY phenology Boltzmann prio"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:54:11.543000",
+    "description": "i002 224+336 LA tau=0.25 + genus rerank (a_g=0.1, a_f=0.0) at probT=0.035 (isovolumetric vs SOTA)",
+    "public": 0.41246,
+    "private": 0.39946,
+    "exp_id": null,
+    "recipe": "i002 224+336 LA tau=0.25 + genus rerank (a_g=0.1, a_f=0.0) a"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:26:23.917000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_probT0.05__submission.csv__20260504T092622Z",
+    "public": 0.41165,
+    "private": 0.38132,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 04:28:13.093000",
+    "description": "i002_last_blocks 336x336 (pos_embed 16x16->24x24 bicubic) softmax_mean la_tau=0.25 probT=0.03 [1,10]",
+    "public": 0.41117,
+    "private": 0.38376,
+    "exp_id": null,
+    "recipe": "i002_last_blocks 336x336 (pos_embed 16x16->24x24 bicubic) so"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 10:50:24.260000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_probT0.03__submission.csv__20260504T105022Z",
+    "public": 0.4059,
+    "private": 0.406,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:38:53.770000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_top3__submission.csv__20260505T003852Z",
+    "public": 0.40486,
+    "private": 0.35614,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:29:34.873000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_top3__submission.csv__20260504T092933Z",
+    "public": 0.40451,
+    "private": 0.3638,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:27:15.297000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_relT0.3__submission.csv__20260504T092713Z",
+    "public": 0.40363,
+    "private": 0.37544,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:18:02.403000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_probT0.05__submission.csv__20260504T091800Z",
+    "public": 0.40163,
+    "private": 0.37616,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:21:52.593000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_top3__submission.csv__20260504T092151Z",
+    "public": 0.40147,
+    "private": 0.36767,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:42:20.980000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_top3__submission.csv__20260507T074219Z",
+    "public": 0.40041,
+    "private": 0.36078,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:28:58.103000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_top2__submission.csv__20260504T092856Z",
+    "public": 0.40022,
+    "private": 0.37275,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:28:37.790000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_top1__submission.csv__20260504T092836Z",
+    "public": 0.40022,
+    "private": 0.37275,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:27:40.997000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_relT0.15__submission.csv__20260504T092739Z",
+    "public": 0.39989,
+    "private": 0.37511,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:26:49.440000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_relT0.2__submission.csv__20260504T092648Z",
+    "public": 0.39983,
+    "private": 0.37483,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:28:06.607000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_relT0.25__submission.csv__20260504T092805Z",
+    "public": 0.39979,
+    "private": 0.37507,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:17:17.090000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_top2__submission.csv__20260504T111715Z",
+    "public": 0.39878,
+    "private": 0.35886,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 23:18:24.573000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_probT0.03__submission.csv__20260504T231823Z",
+    "public": 0.39813,
+    "private": 0.37166,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:25:58.397000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_probT0.03__submission.csv__20260504T092557Z",
+    "public": 0.39768,
+    "private": 0.38883,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:17:43.150000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_top3__submission.csv__20260504T111741Z",
+    "public": 0.39731,
+    "private": 0.37136,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:38:05.887000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_probT0.05__submission.csv__20260507T073804Z",
+    "public": 0.39673,
+    "private": 0.37571,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:17:17.840000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_probT0.03__submission.csv__20260504T091716Z",
+    "public": 0.39649,
+    "private": 0.3822,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:03:43.433000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_top3__submission.csv__20260505T000341Z",
+    "public": 0.39645,
+    "private": 0.35005,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:37:20.640000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_probT0.03__submission.csv__20260507T073719Z",
+    "public": 0.39603,
+    "private": 0.38937,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:18:26.323000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_relT0.2__submission.csv__20260504T091824Z",
+    "public": 0.39477,
+    "private": 0.36858,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:35:21.407000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_probT0.03__submission.csv__20260505T003519Z",
+    "public": 0.39475,
+    "private": 0.37466,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:19:35.197000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_relT0.15__submission.csv__20260504T091933Z",
+    "public": 0.39469,
+    "private": 0.36923,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_relT0.15"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_top4__submission.csv__20260503T214227Z",
+    "public": 0.39416,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:21:07.760000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_top2__submission.csv__20260504T092106Z",
+    "public": 0.39388,
+    "private": 0.36606,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:20:43.727000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_top1__submission.csv__20260504T092042Z",
+    "public": 0.39388,
+    "private": 0.36606,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:35:47.897000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_probT0.05__submission.csv__20260505T003546Z",
+    "public": 0.39324,
+    "private": 0.36317,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:35:04.250000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_gap0.5__submission.csv__20260507T073502Z",
+    "public": 0.39221,
+    "private": 0.36275,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:04:09.637000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_top4__submission.csv__20260505T000407Z",
+    "public": 0.39189,
+    "private": 0.34638,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:18:50.627000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_relT0.3__submission.csv__20260504T091849Z",
+    "public": 0.39091,
+    "private": 0.36653,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:20:19.627000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_relT0.25__submission.csv__20260504T092018Z",
+    "public": 0.39039,
+    "private": 0.36881,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:39:19.690000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_top4__submission.csv__20260505T003918Z",
+    "public": 0.39012,
+    "private": 0.34193,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:24:35.417000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_gap0.5__submission.csv__20260504T092434Z",
+    "public": 0.38974,
+    "private": 0.37089,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:24:04.260000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_gap0.4__submission.csv__20260504T092402Z",
+    "public": 0.38968,
+    "private": 0.37298,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:39:34.630000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_probT0.03__submission.csv__20260507T203933Z",
+    "public": 0.38919,
+    "private": 0.37765,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:27:35.907000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_top2__submission.csv__20260504T112734Z",
+    "public": 0.38908,
+    "private": 0.36283,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 03:05:24.253000",
+    "description": "i002_last_blocks softmax_mean la_tau=0.275 probT=0.025 [1,10] - looser threshold + stronger LA test",
+    "public": 0.3889,
+    "private": 0.395,
+    "exp_id": null,
+    "recipe": "i002_last_blocks softmax_mean la_tau=0.275 probT=0.025 [1,10"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 03:43:46.903000",
+    "description": "ensemble i002_last_blocks + 010_last_blocks_8 (50/50 softmax avg) la_tau=0.25 probT=0.03 [1,10]",
+    "public": 0.38874,
+    "private": 0.40534,
+    "exp_id": null,
+    "recipe": "50 softmax avg) la_tau=0.25 probT=0.03 [1,10]"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:15:21.090000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_gap0.4__submission.csv__20260504T091519Z",
+    "public": 0.38865,
+    "private": 0.37471,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_gap0.4"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_probT0.03__submission.csv__20260503T213731Z",
+    "public": 0.38773,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:36:39.557000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_relT0.3__submission.csv__20260505T003638Z",
+    "public": 0.38772,
+    "private": 0.3429,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:36:18.057000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_top3__submission.csv__20260507T203616Z",
+    "public": 0.38761,
+    "private": 0.35113,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:41:35.607000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_top2__submission.csv__20260507T074133Z",
+    "public": 0.38553,
+    "private": 0.35778,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:41:10.990000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_top1__submission.csv__20260507T074109Z",
+    "public": 0.38553,
+    "private": 0.35778,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 00:30:04.300000",
+    "description": "010_last8 grid_4x4 softmax_mean gap0.5 [2,5] + hflip TTA",
+    "public": 0.38545,
+    "private": 0.39192,
+    "exp_id": null,
+    "recipe": "010_last8 grid_4x4 softmax_mean gap0.5 [2,5] + hflip TTA"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:34:18.990000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_gap0.4__submission.csv__20260507T073417Z",
+    "public": 0.38508,
+    "private": 0.37401,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:43:06.463000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_top4__submission.csv__20260507T074304Z",
+    "public": 0.38494,
+    "private": 0.35348,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:40:00.910000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_relT0.15__submission.csv__20260507T073959Z",
+    "public": 0.38482,
+    "private": 0.35993,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:01:05.450000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_probT0.03__submission.csv__20260504T110103Z",
+    "public": 0.3844,
+    "private": 0.39997,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:38:51.220000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_relT0.2__submission.csv__20260507T073849Z",
+    "public": 0.38438,
+    "private": 0.36708,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:30:00.497000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_top4__submission.csv__20260504T092959Z",
+    "public": 0.38425,
+    "private": 0.35789,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:40:46.317000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_relT0.25__submission.csv__20260507T074044Z",
+    "public": 0.38364,
+    "private": 0.36683,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:32:15.460000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_probT0.03__submission.csv__20260507T203213Z",
+    "public": 0.38355,
+    "private": 0.38125,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 23:16:35.607000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_gap0.4__submission.csv__20260504T231634Z",
+    "public": 0.38335,
+    "private": 0.35141,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:01:37.353000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_relT0.3__submission.csv__20260505T000136Z",
+    "public": 0.38313,
+    "private": 0.34737,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:28:02.090000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_top3__submission.csv__20260504T112800Z",
+    "public": 0.38247,
+    "private": 0.36371,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:39:11.677000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_probT0.02__submission.csv__20260507T203910Z",
+    "public": 0.38202,
+    "private": 0.36561,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:46:28.977000",
+    "description": "cRT (head_a/b avg) w=0.3 + i002 224+336 ensemble at probT=0.03, LA tau=0.25",
+    "public": 0.38195,
+    "private": 0.37102,
+    "exp_id": null,
+    "recipe": "b avg) w=0.3 + i002 224+336 ensemble at probT=0.03, LA tau=0"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:16:05.707000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_gap0.5__submission.csv__20260504T091604Z",
+    "public": 0.38151,
+    "private": 0.35974,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:02:29.097000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_relT0.25__submission.csv__20260505T000227Z",
+    "public": 0.38105,
+    "private": 0.34624,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:18:09.103000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_top4__submission.csv__20260504T111807Z",
+    "public": 0.38042,
+    "private": 0.36448,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 23:17:32.943000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_gap0.6__submission.csv__20260504T231731Z",
+    "public": 0.37999,
+    "private": 0.35306,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_gap0.6"
+  },
+  {
+    "source": "local:src_experiments/015_pc24_inat_mix/scores_ep5.csv",
+    "date": "",
+    "description": "__c__Users__manin__Documents__ANU__Deep_Learning__Plant_Clef__src_experiments__015_pc24_inat_mix__outputs__submission_015_ep5.csv__20260503T070723Z",
+    "public": 0.37956,
+    "private": null,
+    "exp_id": "015_pc24_inat_mix",
+    "recipe": "015 ep5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 00:53:47.393000",
+    "description": "010_last8 multiscale (whole+grid_2x2+grid_4x4=21 tiles) softmax_mean gap0.5 [2,5]",
+    "public": 0.37942,
+    "private": 0.37721,
+    "exp_id": null,
+    "recipe": "010_last8 multiscale (whole+grid_2x2+grid_4x4=21 tiles) soft"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:39:36.447000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_relT0.3__submission.csv__20260507T073934Z",
+    "public": 0.37891,
+    "private": 0.37241,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:32:47.623000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_probT0.05__submission.csv__20260507T203246Z",
+    "public": 0.37867,
+    "private": 0.37102,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:33:21.073000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_gap0.4__submission.csv__20260505T003319Z",
+    "public": 0.37819,
+    "private": 0.35316,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:36:40.997000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_top4__submission.csv__20260507T203639Z",
+    "public": 0.37818,
+    "private": 0.34119,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 23:17:01.543000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_gap0.5__submission.csv__20260504T231700Z",
+    "public": 0.37806,
+    "private": 0.34822,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:25:32.783000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_probT0.02__submission.csv__20260504T092531Z",
+    "public": 0.37767,
+    "private": 0.38136,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:34:50.023000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_probT0.02__submission.csv__20260505T003448Z",
+    "public": 0.37761,
+    "private": 0.36812,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:38:22.467000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_top2__submission.csv__20260505T003821Z",
+    "public": 0.37747,
+    "private": 0.33804,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:37:56.797000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_top1__submission.csv__20260505T003755Z",
+    "public": 0.37747,
+    "private": 0.33804,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:10:37.390000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_relT0.3__submission.csv__20260504T091035Z",
+    "public": 0.37745,
+    "private": 0.34192,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_relT0.3"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_probT0.02__submission.csv__20260503T213646Z",
+    "public": 0.37742,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:37:05.220000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_relT0.15__submission.csv__20260505T003703Z",
+    "public": 0.3774,
+    "private": 0.33756,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:36:13.883000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_relT0.2__submission.csv__20260505T003612Z",
+    "public": 0.37725,
+    "private": 0.33897,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:37:30.980000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_relT0.25__submission.csv__20260505T003729Z",
+    "public": 0.37721,
+    "private": 0.34013,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:43:04.303000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_top3__submission.csv__20260507T204302Z",
+    "public": 0.37699,
+    "private": 0.34824,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:35:49.650000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_gap0.6__submission.csv__20260507T073547Z",
+    "public": 0.37666,
+    "private": 0.35637,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:11:25.310000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_relT0.25__submission.csv__20260504T091124Z",
+    "public": 0.3763,
+    "private": 0.34166,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:11:01.423000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_relT0.15__submission.csv__20260504T091100Z",
+    "public": 0.3763,
+    "private": 0.34198,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:10:13.257000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_relT0.2__submission.csv__20260504T091011Z",
+    "public": 0.3763,
+    "private": 0.34219,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:12:33.963000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_top2__submission.csv__20260504T091232Z",
+    "public": 0.37616,
+    "private": 0.34171,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:11:49.340000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_top1__submission.csv__20260504T091147Z",
+    "public": 0.37616,
+    "private": 0.34171,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:34:18.203000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_gap0.6__submission.csv__20260505T003416Z",
+    "public": 0.37595,
+    "private": 0.34938,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:16:53.890000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_probT0.02__submission.csv__20260504T091652Z",
+    "public": 0.37575,
+    "private": 0.37003,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_probT0.02"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_top3__submission.csv__20260503T214142Z",
+    "public": 0.37572,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:36:35.367000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_probT0.02__submission.csv__20260507T073633Z",
+    "public": 0.37559,
+    "private": 0.36855,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:31:52.487000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_probT0.02__submission.csv__20260507T203150Z",
+    "public": 0.37546,
+    "private": 0.36558,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 08:58:58.133000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_probT0.02__submission.csv__20260504T085856Z",
+    "public": 0.37509,
+    "private": 0.35065,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_probT0.02"
+  },
+  {
+    "source": "local:src_experiments/015_pc24_inat_mix/scores.csv",
+    "date": "",
+    "description": "__c__Users__manin__Documents__ANU__Deep_Learning__Plant_Clef__src_experiments__015_pc24_inat_mix__outputs__submission_015_ep1.csv__20260503T003607Z",
+    "public": 0.37506,
+    "private": null,
+    "exp_id": "015_pc24_inat_mix",
+    "recipe": "015 ep1"
+  },
+  {
+    "source": "local:src_experiments/014_unfreeze_sweep/scores.csv",
+    "date": "",
+    "description": "__c__Users__manin__Documents__ANU__Deep_Learning__Plant_Clef__src_experiments__014_unfreeze_sweep__outputs__unfreeze3__submission_unfreeze3.csv__20260502T120543Z",
+    "public": 0.37455,
+    "private": null,
+    "exp_id": "014_unfreeze_sweep",
+    "recipe": "unfreeze3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:33:46.967000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_gap0.5__submission.csv__20260505T003345Z",
+    "public": 0.37454,
+    "private": 0.35801,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:03:17.307000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_top2__submission.csv__20260505T000316Z",
+    "public": 0.37428,
+    "private": 0.34038,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:02:49.303000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_top1__submission.csv__20260505T000247Z",
+    "public": 0.37428,
+    "private": 0.34038,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:48:12.470000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_probT0.02__submission.csv__20260506T214810Z",
+    "public": 0.37421,
+    "private": 0.38482,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:02:03.233000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_relT0.15__submission.csv__20260505T000201Z",
+    "public": 0.37411,
+    "private": 0.34304,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:34:18.677000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_relT0.15__submission.csv__20260507T203417Z",
+    "public": 0.37343,
+    "private": 0.36461,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:33:18.890000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_relT0.2__submission.csv__20260507T203317Z",
+    "public": 0.37343,
+    "private": 0.36497,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:34:44.343000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_relT0.25__submission.csv__20260507T203442Z",
+    "public": 0.37339,
+    "private": 0.36513,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:09:28.667000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_probT0.05__submission.csv__20260504T090927Z",
+    "public": 0.37337,
+    "private": 0.35395,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:53:39.397000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_top3__submission.csv__20260506T215337Z",
+    "public": 0.37319,
+    "private": 0.37217,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:25:01.023000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_gap0.6__submission.csv__20260504T092459Z",
+    "public": 0.37304,
+    "private": 0.35897,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:33:44.687000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_relT0.3__submission.csv__20260507T203343Z",
+    "public": 0.37292,
+    "private": 0.36369,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:01:11.703000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_relT0.2__submission.csv__20260505T000110Z",
+    "public": 0.37291,
+    "private": 0.34107,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:22:37.203000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_top4__submission.csv__20260504T092235Z",
+    "public": 0.37282,
+    "private": 0.36102,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 23:17:58.633000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_probT0.02__submission.csv__20260504T231757Z",
+    "public": 0.37247,
+    "private": 0.36706,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:06:25.727000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_gap0.4__submission.csv__20260504T090624Z",
+    "public": 0.37222,
+    "private": 0.34556,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:35:46.930000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_top2__submission.csv__20260507T203545Z",
+    "public": 0.37179,
+    "private": 0.36451,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:35:18.547000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_top1__submission.csv__20260507T203517Z",
+    "public": 0.37179,
+    "private": 0.36451,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:28:28.193000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_top4__submission.csv__20260504T112826Z",
+    "public": 0.37155,
+    "private": 0.36098,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:08:44.263000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_probT0.03__submission.csv__20260504T090842Z",
+    "public": 0.37135,
+    "private": 0.35259,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_probT0.03"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_gap0.5__submission.csv__20260503T214651Z",
+    "public": 0.37134,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:16:29.800000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_gap0.6__submission.csv__20260504T091628Z",
+    "public": 0.37131,
+    "private": 0.35277,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:12:58.030000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_top3__submission.csv__20260504T091256Z",
+    "public": 0.37116,
+    "private": 0.35087,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_top3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 08:59:22.157000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_probT0.03__submission.csv__20260504T085920Z",
+    "public": 0.37114,
+    "private": 0.35724,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:30:29.087000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_gap0.4__submission.csv__20260507T203027Z",
+    "public": 0.37045,
+    "private": 0.36422,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:39:45.790000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer_e5__softmax_mean_top5__submission.csv__20260505T003943Z",
+    "public": 0.37001,
+    "private": 0.33106,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer_e5 / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:07:59.427000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_probT0.02__submission.csv__20260504T090757Z",
+    "public": 0.36989,
+    "private": 0.34923,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_probT0.02"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:43:27.350000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_top4__submission.csv__20260507T204325Z",
+    "public": 0.36988,
+    "private": 0.33677,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:40:02.983000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_probT0.05__submission.csv__20260507T204001Z",
+    "public": 0.36985,
+    "private": 0.36833,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:40:25.933000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_relT0.2__submission.csv__20260507T204024Z",
+    "public": 0.36973,
+    "private": 0.3612,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_relT0.2"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_probT0.05__submission.csv__20260503T213755Z",
+    "public": 0.36972,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:41:22.610000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_relT0.15__submission.csv__20260507T204121Z",
+    "public": 0.36963,
+    "private": 0.36057,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:40:54.313000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_relT0.3__submission.csv__20260507T204052Z",
+    "public": 0.36945,
+    "private": 0.3584,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_relT0.3"
+  },
+  {
+    "source": "local:src_experiments/014_unfreeze_sweep/scores.csv",
+    "date": "",
+    "description": "__c__Users__manin__Documents__ANU__Deep_Learning__Plant_Clef__src_experiments__014_unfreeze_sweep__outputs__submission_unfreeze5.csv__20260502T120517Z",
+    "public": 0.36919,
+    "private": null,
+    "exp_id": "014_unfreeze_sweep",
+    "recipe": "unfreeze5"
+  },
+  {
+    "source": "local:src_experiments/014_unfreeze_sweep/scores.csv",
+    "date": "",
+    "description": "__c__Users__manin__Documents__ANU__Deep_Learning__Plant_Clef__src_experiments__014_unfreeze_sweep__outputs__unfreeze5__submission_unfreeze5.csv__20260502T120630Z",
+    "public": 0.36919,
+    "private": null,
+    "exp_id": "014_unfreeze_sweep",
+    "recipe": "unfreeze5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:30:57.817000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_gap0.5__submission.csv__20260507T203056Z",
+    "public": 0.36902,
+    "private": 0.35965,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:07:10.310000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_gap0.5__submission.csv__20260504T090708Z",
+    "public": 0.36891,
+    "private": 0.34921,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:41:45.470000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_relT0.25__submission.csv__20260507T204143Z",
+    "public": 0.36855,
+    "private": 0.3598,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 00:04:35.940000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_8_infer__softmax_mean_top5__submission.csv__20260505T000434Z",
+    "public": 0.36738,
+    "private": 0.33608,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_8_infer / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:04:40.533000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_top3__submission.csv__20260504T090439Z",
+    "public": 0.36738,
+    "private": 0.34202,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_top3"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_gap0.6__submission.csv__20260503T214735Z",
+    "public": 0.36687,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_gap0.6"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_gap0.4__submission.csv__20260503T214606Z",
+    "public": 0.36538,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:37:56.533000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_gap0.4__submission.csv__20260507T203754Z",
+    "public": 0.36508,
+    "private": 0.35999,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 07:43:31.310000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_infer__softmax_mean_top5__submission.csv__20260507T074329Z",
+    "public": 0.36448,
+    "private": 0.33392,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_infer / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 10:50:50.627000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_probT0.05__submission.csv__20260504T105049Z",
+    "public": 0.36423,
+    "private": 0.38479,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-03 22:03:58.653000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_top4__submission.csv__20260503T220357Z",
+    "public": 0.36325,
+    "private": 0.32003,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_top4"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_probT0.03__submission.csv__20260503T214844Z",
+    "public": 0.36297,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 08:57:25.613000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_gap0.4__submission.csv__20260504T085724Z",
+    "public": 0.36284,
+    "private": 0.34684,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:07:34.510000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_gap0.6__submission.csv__20260504T090733Z",
+    "public": 0.36283,
+    "private": 0.33743,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:38:42.893000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_gap0.6__submission.csv__20260507T203841Z",
+    "public": 0.36279,
+    "private": 0.34845,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:30:32.227000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean__softmax_mean_top5__submission.csv__20260504T093030Z",
+    "public": 0.36267,
+    "private": 0.34052,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:31:23.933000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_gap0.6__submission.csv__20260507T203122Z",
+    "public": 0.3626,
+    "private": 0.35034,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:01:38.510000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_relT0.3__submission.csv__20260504T090137Z",
+    "public": 0.36256,
+    "private": 0.33833,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_relT0.3"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_top3__submission.csv__20260503T215336Z",
+    "public": 0.36252,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_top3"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_probT0.02__submission.csv__20260503T214800Z",
+    "public": 0.36229,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_probT0.02"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_probT0.05__submission.csv__20260503T214929Z",
+    "public": 0.36222,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:54:24.977000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_top4__submission.csv__20260506T215423Z",
+    "public": 0.36203,
+    "private": 0.34794,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:38:19.500000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_gap0.5__submission.csv__20260507T203817Z",
+    "public": 0.36144,
+    "private": 0.35326,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:00:06.737000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_probT0.05__submission.csv__20260504T090005Z",
+    "public": 0.36127,
+    "private": 0.35252,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:42:40.820000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_top2__submission.csv__20260507T204239Z",
+    "public": 0.36042,
+    "private": 0.3608,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:42:12.467000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_top1__submission.csv__20260507T204210Z",
+    "public": 0.36042,
+    "private": 0.3608,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:46:16.203000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_gap0.4__submission.csv__20260506T214614Z",
+    "public": 0.36025,
+    "private": 0.38545,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:18:29.350000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_top5__submission.csv__20260504T111827Z",
+    "public": 0.35959,
+    "private": 0.34375,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:02:26.300000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_relT0.25__submission.csv__20260504T090224Z",
+    "public": 0.35878,
+    "private": 0.33654,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:00:54.060000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_relT0.2__submission.csv__20260504T090052Z",
+    "public": 0.35792,
+    "private": 0.33684,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:03:35.427000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_top2__submission.csv__20260504T090334Z",
+    "public": 0.35778,
+    "private": 0.33027,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:02:50.273000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_top1__submission.csv__20260504T090248Z",
+    "public": 0.35778,
+    "private": 0.33027,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:02:02.367000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_relT0.15__submission.csv__20260504T090201Z",
+    "public": 0.35778,
+    "private": 0.33646,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:47:01.887000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_gap0.5__submission.csv__20260506T214700Z",
+    "public": 0.35685,
+    "private": 0.36714,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:50:53.943000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_relT0.3__submission.csv__20260506T215052Z",
+    "public": 0.35681,
+    "private": 0.39569,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_relT0.3"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_gap0.5__submission.csv__20260503T213558Z",
+    "public": 0.35619,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 08:58:10.163000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_gap0.5__submission.csv__20260504T085808Z",
+    "public": 0.35599,
+    "private": 0.34132,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_gap0.5"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_gap0.4__submission.csv__20260503T213513Z",
+    "public": 0.35562,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:13:22.183000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_top4__submission.csv__20260504T091320Z",
+    "public": 0.35505,
+    "private": 0.32956,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:47:47.680000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_gap0.6__submission.csv__20260506T214745Z",
+    "public": 0.35459,
+    "private": 0.353,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_gap0.6"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_relT0.25__submission.csv__20260503T215227Z",
+    "public": 0.35447,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_relT0.25"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_relT0.3__submission.csv__20260503T215058Z",
+    "public": 0.35348,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:48:57.810000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_probT0.03__submission.csv__20260506T214856Z",
+    "public": 0.35286,
+    "private": 0.40075,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_probT0.03"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_probT0.02__submission.csv__20260503T215812Z",
+    "public": 0.3528,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_probT0.02"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_probT0.05__submission.csv__20260503T215921Z",
+    "public": 0.3528,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_probT0.05"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_top2__submission.csv__20260503T215251Z",
+    "public": 0.35244,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_top2"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_relT0.15__submission.csv__20260503T215143Z",
+    "public": 0.35243,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_relT0.15"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_relT0.2__submission.csv__20260503T215013Z",
+    "public": 0.35223,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:28:59.947000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_top5__submission.csv__20260504T112858Z",
+    "public": 0.35195,
+    "private": 0.33838,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_top5"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_relT0.2__submission.csv__20260503T213839Z",
+    "public": 0.35149,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_relT0.2"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_top2__submission.csv__20260503T214057Z",
+    "public": 0.35129,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_top2"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_relT0.15__submission.csv__20260503T214009Z",
+    "public": 0.35124,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:37:04.163000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer__softmax_mean_top5__submission.csv__20260507T203702Z",
+    "public": 0.35088,
+    "private": 0.32598,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 10:51:22.057000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_probT0.07__submission.csv__20260504T105120Z",
+    "public": 0.35069,
+    "private": 0.37107,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_probT0.07"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_probT0.03__submission.csv__20260503T215837Z",
+    "public": 0.35069,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_probT0.03"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:49:43.140000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_probT0.05__submission.csv__20260506T214941Z",
+    "public": 0.35065,
+    "private": 0.40109,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_probT0.05"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_relT0.25__submission.csv__20260503T214033Z",
+    "public": 0.35036,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:23:01.537000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_softmax_mean_epoch_5__softmax_mean_top5__submission.csv__20260504T092300Z",
+    "public": 0.35018,
+    "private": 0.34115,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_softmax_mean_epoch_5 / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:14:36.113000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_gap0.6__submission.csv__20260504T111434Z",
+    "public": 0.34996,
+    "private": 0.37296,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_gap0.6"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_relT0.3__submission.csv__20260503T213924Z",
+    "public": 0.34954,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:05:25.457000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_top4__submission.csv__20260504T090524Z",
+    "public": 0.34919,
+    "private": 0.32647,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_top4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-07 20:43:50.067000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__last_blocks_8_infer_la_025__softmax_mean_top5__submission.csv__20260507T204348Z",
+    "public": 0.34802,
+    "private": 0.32462,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "last_blocks_8_infer_la_025 / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:24:17.953000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_gap0.5__submission.csv__20260504T112416Z",
+    "public": 0.34786,
+    "private": 0.37802,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:24:49.750000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_gap0.6__submission.csv__20260504T112448Z",
+    "public": 0.34713,
+    "private": 0.37439,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:51:39.343000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_relT0.15__submission.csv__20260506T215137Z",
+    "public": 0.34651,
+    "private": 0.40209,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:50:29.037000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_relT0.2__submission.csv__20260506T215027Z",
+    "public": 0.34651,
+    "private": 0.3988,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 12:41:23.447000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.75__softmax_mean_gap0.5__submission.csv__20260504T124121Z",
+    "public": 0.3462,
+    "private": 0.37005,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.75 / softmax_mean_gap0.5"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_gap0.6__submission.csv__20260503T215727Z",
+    "public": 0.34606,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-03 22:03:34.477000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_top3__submission.csv__20260503T220332Z",
+    "public": 0.34603,
+    "private": 0.34927,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_top3"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer__softmax_mean_gap0.6__submission.csv__20260503T213622Z",
+    "public": 0.34593,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:55:10.393000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_top5__submission.csv__20260506T215508Z",
+    "public": 0.34587,
+    "private": 0.32392,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:52:03.907000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_relT0.25__submission.csv__20260506T215202Z",
+    "public": 0.34442,
+    "private": 0.39643,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_relT0.25"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_0.25_ol__softmax_mean_top4__submission.csv__20260503T215400Z",
+    "public": 0.34299,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_0.25_ol / softmax_mean_top4"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_gap0.4__submission.csv__20260503T215558Z",
+    "public": 0.34102,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:01:42.830000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_probT0.05__submission.csv__20260504T110141Z",
+    "public": 0.34047,
+    "private": 0.37115,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_probT0.05"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 08:58:34.190000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_gap0.6__submission.csv__20260504T085832Z",
+    "public": 0.33897,
+    "private": 0.33722,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:52:53.600000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_top2__submission.csv__20260506T215252Z",
+    "public": 0.33716,
+    "private": 0.39869,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-06 21:52:28.747000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i003_bioclip25_cap_image_extra500__outputs__head_only_infer__softmax_mean_top1__submission.csv__20260506T215227Z",
+    "public": 0.33716,
+    "private": 0.39869,
+    "exp_id": "i003_bioclip25_cap_image_extra500",
+    "recipe": "head_only_infer / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-03 22:04:22.793000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_top5__submission.csv__20260503T220421Z",
+    "public": 0.33698,
+    "private": 0.30052,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:14:04.033000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_gap0.5__submission.csv__20260504T111402Z",
+    "public": 0.33664,
+    "private": 0.36934,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:15:27.967000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_relT0.3__submission.csv__20260504T111526Z",
+    "public": 0.33623,
+    "private": 0.35607,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_relT0.3"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_gap0.5__submission.csv__20260503T215643Z",
+    "public": 0.33503,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_gap0.5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:13:46.220000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer_epoch_5__max_top5__submission.csv__20260504T091344Z",
+    "public": 0.3344,
+    "private": 0.31504,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer_epoch_5 / max_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 12:41:43.867000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.75__softmax_mean_gap0.6__submission.csv__20260504T124142Z",
+    "public": 0.33423,
+    "private": 0.36136,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.75 / softmax_mean_gap0.6"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 09:05:49.633000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__last_blocks_infer__max_top5__submission.csv__20260504T090548Z",
+    "public": 0.33246,
+    "private": 0.30534,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "last_blocks_infer / max_top5"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:13:38.007000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_gap0.4__submission.csv__20260504T111336Z",
+    "public": 0.33199,
+    "private": 0.37286,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-03 22:02:01.357000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_relT0.25__submission.csv__20260503T220159Z",
+    "public": 0.3305,
+    "private": 0.35114,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_relT0.25"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_relT0.2__submission.csv__20260503T215945Z",
+    "public": 0.3305,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_relT0.2"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_relT0.3__submission.csv__20260503T220030Z",
+    "public": 0.3305,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 12:40:51.790000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.75__softmax_mean_gap0.4__submission.csv__20260504T124050Z",
+    "public": 0.32793,
+    "private": 0.36652,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.75 / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-03 22:03:10.207000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_top2__submission.csv__20260503T220308Z",
+    "public": 0.32776,
+    "private": 0.34717,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_top2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-03 22:02:25.467000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_top1__submission.csv__20260503T220224Z",
+    "public": 0.32776,
+    "private": 0.34717,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_top1"
+  },
+  {
+    "source": "local:src_experiments/i002_bioclip25_cap_image/scores_head_only.csv",
+    "date": "",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__head_only_infer_grid_max__max_relT0.15__submission.csv__20260503T220115Z",
+    "public": 0.32668,
+    "private": null,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "head_only_infer_grid_max / max_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:25:41.253000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_relT0.3__submission.csv__20260504T112540Z",
+    "public": 0.32548,
+    "private": 0.36372,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_relT0.3"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:23:51.850000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_gap0.4__submission.csv__20260504T112350Z",
+    "public": 0.32484,
+    "private": 0.37454,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_gap0.4"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:02:08.640000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_probT0.07__submission.csv__20260504T110207Z",
+    "public": 0.32248,
+    "private": 0.36016,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_probT0.07"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:26:44.263000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_relT0.25__submission.csv__20260504T112642Z",
+    "public": 0.31892,
+    "private": 0.35651,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:16:19.680000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_relT0.25__submission.csv__20260504T111618Z",
+    "public": 0.31823,
+    "private": 0.34947,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_relT0.25"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:15:01.883000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_relT0.2__submission.csv__20260504T111500Z",
+    "public": 0.31704,
+    "private": 0.33709,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:15:53.787000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_relT0.15__submission.csv__20260504T111552Z",
+    "public": 0.31348,
+    "private": 0.33853,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:25:15.480000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_relT0.2__submission.csv__20260504T112514Z",
+    "public": 0.31026,
+    "private": 0.35261,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_relT0.2"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:26:12.610000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_relT0.15__submission.csv__20260504T112611Z",
+    "public": 0.29525,
+    "private": 0.3464,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_relT0.15"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:16:45.420000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.25__softmax_mean_top1__submission.csv__20260504T111644Z",
+    "public": 0.28633,
+    "private": 0.32092,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.25 / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 11:27:10.030000",
+    "description": "__root__workspace__PlantCLEF2026__src_experiments__i002_bioclip25_cap_image__outputs__la_tau0.5__softmax_mean_top1__submission.csv__20260504T112708Z",
+    "public": 0.28326,
+    "private": 0.32513,
+    "exp_id": "i002_bioclip25_cap_image",
+    "recipe": "la_tau0.5 / softmax_mean_top1"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-05 22:04:04.350000",
+    "description": "Your message here",
+    "public": 0.23474,
+    "private": 0.20282,
+    "exp_id": null,
+    "recipe": "Your message here"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 03:23:07.813000",
+    "description": "BioCLIP vith14, Multi-Scale Thermodynamic Decoder (FW + Ising), Phenology GDD Mask, Allelopathic Repulsion, PageRank Diffusion, Pauli NMS, TTT Episodic Memory.",
+    "public": 0.01757,
+    "private": 0.00651,
+    "exp_id": null,
+    "recipe": "BioCLIP vith14, Multi-Scale Thermodynamic Decoder (FW + Isin"
+  },
+  {
+    "source": "kaggle_cli",
+    "date": "2026-05-04 13:36:50.820000",
+    "description": "BioCLIP vith14 @ 224px, Multi-Scale Thermodynamic Decoder (FW+Ising), Phenology GDD, Allelopathic Repulsion, PageRank Diffusion, Pauli NMS, Episodic TTT. 881 unique species.",
+    "public": 0.00169,
+    "private": 0.00149,
+    "exp_id": null,
+    "recipe": "BioCLIP vith14 @ 224px, Multi-Scale Thermodynamic Decoder (F"
+  }
+]

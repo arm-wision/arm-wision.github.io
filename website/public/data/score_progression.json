@@ -1,0 +1,110 @@
+[
+  {
+    "id": "001_bioclip_tile_zero_shot",
+    "label": "001",
+    "this": 0.05,
+    "best_so_far": 0.05
+  },
+  {
+    "id": "002_bioclip_tile_zero_shot_v2",
+    "label": "002",
+    "this": 0.07,
+    "best_so_far": 0.07
+  },
+  {
+    "id": "003_bioclip25_linear_probe",
+    "label": "003",
+    "this": 0.18,
+    "best_so_far": 0.18
+  },
+  {
+    "id": "004_bioclip_few_shot",
+    "label": "004",
+    "this": 0.2,
+    "best_so_far": 0.2
+  },
+  {
+    "id": "005_dinov3_multilabel",
+    "label": "005",
+    "this": 0.13,
+    "best_so_far": 0.2
+  },
+  {
+    "id": "006_bioclip25_finetune",
+    "label": "006",
+    "this": 0.33,
+    "best_so_far": 0.33
+  },
+  {
+    "id": "007_plantnet_dinov2_collages",
+    "label": "007",
+    "this": 0.17476,
+    "best_so_far": 0.33
+  },
+  {
+    "id": "008_dinov3_plantnet_finetune",
+    "label": "008",
+    "this": 0.305,
+    "best_so_far": 0.33
+  },
+  {
+    "id": "009_bioclip25_plantnet_finetune",
+    "label": "009",
+    "this": 0.20777,
+    "best_so_far": 0.33
+  },
+  {
+    "id": "010_bioclip25_end_to_end_finetune_multitask",
+    "label": "010",
+    "this": 0.38333,
+    "best_so_far": 0.38333
+  },
+  {
+    "id": "010_outputs",
+    "label": "010 fusion",
+    "this": 0.34671,
+    "best_so_far": 0.38333
+  },
+  {
+    "id": "011_bioclip25_aggregation_sweep",
+    "label": "011 agg-sweep",
+    "this": 0.38278,
+    "best_so_far": 0.38333
+  },
+  {
+    "id": "012_bioclip25_ssl_lucas",
+    "label": "012 SSL+linear",
+    "this": 0.30261,
+    "best_so_far": 0.38333
+  },
+  {
+    "id": "013_bioclip25_ssl_lucas_multitask",
+    "label": "013 SSL+multitask",
+    "this": 0.33185,
+    "best_so_far": 0.38333
+  },
+  {
+    "id": "014_unfreeze_sweep",
+    "label": "014b unfreeze-N",
+    "this": 0.37455,
+    "best_so_far": 0.38333
+  },
+  {
+    "id": "015_pc24_inat_mix",
+    "label": "015 PC24+iNat",
+    "this": 0.37956,
+    "best_so_far": 0.38333
+  },
+  {
+    "id": "i002_bioclip25_cap_image",
+    "label": "i002 cap+extra",
+    "this": 0.41165,
+    "best_so_far": 0.41165
+  },
+  {
+    "id": "i003_bioclip25_cap_image_extra500",
+    "label": "i003 cap500",
+    "this": 0.40041,
+    "best_so_far": 0.41165
+  }
+]

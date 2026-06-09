@@ -1,0 +1,43 @@
+{
+  "bins": [
+    "1",
+    "2",
+    "3\u20135",
+    "6\u201310",
+    "11\u201320",
+    "21\u201350",
+    "51\u2013100",
+    "101\u2013250",
+    "251\u2013500",
+    "501\u20131000",
+    ">1000"
+  ],
+  "before_cap": [
+    145,
+    109,
+    445,
+    349,
+    445,
+    698,
+    595,
+    1358,
+    1387,
+    2263,
+    12
+  ],
+  "after_cap": [
+    8,
+    9,
+    58,
+    71,
+    138,
+    496,
+    1120,
+    2244,
+    3662,
+    0,
+    0
+  ],
+  "note": "before_cap = i001/i002 raw distribution; after_cap = i003 manifest after 500-cap (post train-split)",
+  "source": "src_experiments/i003_bioclip25_cap_image_extra500/report.md \u00a76.2"
+}

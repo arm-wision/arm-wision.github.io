@@ -1,0 +1,86 @@
+[
+  {
+    "x": 0.7475,
+    "y": 0.38333,
+    "label": "010 last_blocks-4",
+    "fam": "010",
+    "color": "ours"
+  },
+  {
+    "x": 0.7726,
+    "y": 0.30261,
+    "label": "012 SSL + linear",
+    "fam": "012",
+    "color": "ssl"
+  },
+  {
+    "x": 0.7329,
+    "y": 0.33185,
+    "label": "013 SSL + multitask",
+    "fam": "013",
+    "color": "ssl"
+  },
+  {
+    "x": 0.7858,
+    "y": 0.37421,
+    "label": "i003 head-only",
+    "fam": "i003",
+    "color": "cap"
+  },
+  {
+    "x": 0.8103,
+    "y": 0.40041,
+    "label": "i003 last_blocks-4",
+    "fam": "i003",
+    "color": "cap"
+  },
+  {
+    "x": 0.8204,
+    "y": 0.38761,
+    "label": "i003 last_blocks-8",
+    "fam": "i003",
+    "color": "cap"
+  },
+  {
+    "x": 0.732,
+    "y": 0.37455,
+    "label": "014b n=3",
+    "fam": "014",
+    "color": "sweep"
+  },
+  {
+    "x": 0.7475,
+    "y": 0.38333,
+    "label": "014b n=4 (anchor)",
+    "fam": "014",
+    "color": "sweep"
+  },
+  {
+    "x": 0.7327,
+    "y": 0.36919,
+    "label": "014b n=5",
+    "fam": "014",
+    "color": "sweep"
+  },
+  {
+    "x": 0.8046,
+    "y": 0.37506,
+    "label": "015 ep1",
+    "fam": "015",
+    "color": "inat"
+  },
+  {
+    "x": 0.8255,
+    "y": 0.37956,
+    "label": "015 ep5",
+    "fam": "015",
+    "color": "inat"
+  },
+  {
+    "x": 0.8103,
+    "y": 0.41165,
+    "label": "i002 last_blocks-4 \u2605",
+    "fam": "i002",
+    "color": "best"
+  }
+]

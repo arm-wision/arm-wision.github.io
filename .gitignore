@@ -72,3 +72,4 @@ coordinator/go/inf/inf_launcher
 # OS
 .DS_Store
 Thumbs.db
+CLAUDE.md
