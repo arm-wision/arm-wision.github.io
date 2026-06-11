@@ -53,7 +53,7 @@ rather than as a controlled study of rebalancing.
     \hspace{1em}Val (stratified 10\%)   & $262{,}324$     & $123{,}768$     & $7{,}309$ & $1{,}429$ \\
     \bottomrule
   \end{tabular}
-  \caption{Composition of the i001 training manifest used by the i002 model. The PlantCLEF~2024 row reproduces the dataset overview from~\cite{joly2024overview}; the iNaturalist row reflects the research-grade pull we de-duplicated and image-verified before adding to the manifest. All iNaturalist species are a subset of the PlantCLEF~2024 taxonomy, so the union species and genus counts match the PlantCLEF~2024 row; iNaturalist therefore covers $5{,}037$ of the $7{,}806$ classes (the most populous head) rather than extending the long tail. The Train / Val rows are the deterministic stratified split applied at training time (10\% per species, seed $42$, species with fewer than five images held entirely in Train); the Val row drops to $7{,}309$ species because $497$ rare species fall below the five-image threshold and remain Train-only. Observations are reported only on the union and split rows where the field is well defined for iNaturalist sources, and they are omitted on the union total because the field is undefined for PlantCLEF~2024 rows in our merged manifest.}
+  \caption{Composition of the i001 training manifest used by the i002 model. The PlantCLEF~2024 row reproduces the dataset overview from~\cite{goeau2024plantclef}; the iNaturalist row reflects the research-grade pull we de-duplicated and image-verified before adding to the manifest. All iNaturalist species are a subset of the PlantCLEF~2024 taxonomy, so the union species and genus counts match the PlantCLEF~2024 row; iNaturalist therefore covers $5{,}037$ of the $7{,}806$ classes (the most populous head) rather than extending the long tail. The Train / Val rows are the deterministic stratified split applied at training time (10\% per species, seed $42$, species with fewer than five images held entirely in Train); the Val row drops to $7{,}309$ species because $497$ rare species fall below the five-image threshold and remain Train-only. Observations are reported only on the union and split rows where the field is well defined for iNaturalist sources, and they are omitted on the union total because the field is undefined for PlantCLEF~2024 rows in our merged manifest.}
   \label{tab:i001_manifest}
 \end{table}
 
@@ -141,6 +141,24 @@ at two resolutions, the encoder's native $224$ pixels and $336$ pixels (the ViT-
 tolerates the $1.5\times$ stretch via bicubic positional-embedding interpolation), giving a
 per-tile species distribution that the next stage pools.
 
+The $4\times4$ grid and the $\{224, 336\}$ resolutions were chosen as an initial compromise rather
+than tuned exhaustively. A coarse grid does risk down-sampling small plants: each tile covers a
+quarter of the quadrat in both dimensions, and on a typical $\sim$2000-pixel-wide quadrat a single
+$\sim$500-pixel tile is then resized to $224$ or $336$ pixels, so a small seedling occupying a few
+tens of pixels can be blurred away. We chose the configuration against three competing pressures.
+First, a denser grid (e.g.\ $6\times6$ or $8\times8$) multiplies the per-quadrat forward count
+quadratically ($16\to36\to64$ tiles, each run at two resolutions), which our submission-time
+compute budget did not allow at scale. Second, finer tiles increasingly slice individual plants
+across tile boundaries, fragmenting a single specimen's evidence across neighbouring tiles and
+working against the very single-plant framing the tiling is meant to recover. Third, the encoder is
+trained at $224$ pixels, so the $224$/$336$ pair keeps the inputs close to the training resolution
+while the $336$-pixel pass recovers some fine detail (its empirical lift is reported in
+\S\ref{sec:infer_ablations}). We did \emph{not} run a controlled sweep over grid density or tile
+size on the final checkpoint, again for want of submission budget and time, so we present
+$4\times4$ at $\{224, 336\}$ as a deliberate but unverified operating point rather than a
+demonstrated optimum; a systematic grid-density and tile-size ablation is an explicit item of
+future work (\S\ref{sec:discussion}).
+
 \subsection{Tile Aggregation and Selection}
 \label{sec:tile_agg_method}
 
@@ -195,15 +213,17 @@ headline submission, scoring $0.41826$ public and $0.40283$ private Macro~F1 on 
 leaderboard; the experiments that justify each component follow in Section~\ref{sec:experiments}.
 
 Beyond this anchor we submitted three architecture-orthogonal pivots that aimed to add information
-the visual encoder cannot read from a single tile: a triple-backbone classifier retrained on
-frozen BioCLIP~2.5, DINOv3, and ConvNeXt-V2-L features; a genus and family co-occurrence rerank;
+the visual encoder cannot read from a single tile: a triple-backbone late-fusion classifier,
+in which the frozen BioCLIP~2.5, DINOv3, and ConvNeXt-V2-L feature vectors are concatenated and a
+new head is trained on the concatenation (a feature-level late fusion, not an architectural change
+to any backbone); a genus and family co-occurrence rerank;
 and a seasonal phenology prior built from GBIF month-of-observation histograms (full method in
 Appendix~\ref{sec:phenology}). None improved over the visual anchor; all three are reported in
 Section~\ref{sec:experiments}.
 
 \begin{figure*}[t]
   \centering
-  \includegraphics[width=0.95\linewidth]{figures/inference_pipeline}
+  \resizebox{\linewidth}{!}{\input{figures/inference_pipeline_tikz}}
   \caption{Inference pipeline for the ANU PlantCLEF 2026 submission
 (public Macro F1 $0.418265$). Each quadrat is partitioned into a
 non-overlapping $4{\times}4$ grid of sixteen $448$-pixel tiles and

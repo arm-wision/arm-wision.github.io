@@ -54,3 +54,14 @@ the absence of test-site coordinates). Finally, per-class threshold calibration 
 multi-species validation set would target Macro F1 more directly than the global probability
 threshold we currently use, and could absorb residual species-frequency imbalance that our
 manifest leaves behind.
+
+Two inference-time knobs we fixed pragmatically also deserve a proper study. The calibration
+parameters ($\tau{=}0.25$, $T{=}0.03$) were selected by following our public-leaderboard score
+progression under a limited submission budget, not by held-out tuning; a rigorous joint
+hyperparameter sweep with a multi-species validation split would establish whether this operating
+point is genuinely optimal or merely adequate. Likewise, the $4\times4$ tiling at $\{224, 336\}$
+pixels was an initial trade-off we never ablated on the final checkpoint: because a coarse grid can
+down-sample small plants while a finer grid both fragments individual specimens across tile
+boundaries and multiplies inference cost quadratically, a systematic sweep over grid density and
+tile size (ideally with overlap and multi-scale tiling, as the phenology pivot already used) is
+required to confirm the trade-off rather than assume it.

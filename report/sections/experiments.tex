@@ -193,7 +193,13 @@ the joint sweep over $\tau \in \{0.25, 0.5\}$ and $T \in \{0.03, 0.05, 0.07\}$. 
 sharp: $\tau{=}0.25$, $T{=}0.03$ dominates every other cell by between $0.022$ and $0.083$ Macro
 F1, and Macro F1 falls off monotonically along both axes. Doubling $\tau$ from $0.25$ to $0.50$
 at fixed $T{=}0.03$ costs $0.022$, evidence that the long-tail boost saturates quickly and
-that pushing it harder starts emitting too many rare-but-implausible species.
+that pushing it harder starts emitting too many rare-but-implausible species. We stress that
+$\tau{=}0.25$ and $T{=}0.03$ were selected by following our public-leaderboard score progression
+across submissions rather than on a held-out multi-species validation set, which we lacked. The
+coarse two-by-three grid above is therefore a leaderboard-guided operating point chosen as a
+reasonable balance under a limited submission budget, not the output of a rigorous hyperparameter
+search; a finer joint sweep with proper held-out tuning is left to future work
+(\S\ref{sec:discussion}).
 
 \begin{table}[ht]
   \centering
@@ -289,7 +295,8 @@ configurations.
   \label{tab:summary}
 \end{table}
 
-\textbf{Pivot 1: triple-backbone classifier retraining (cRT).} We retrained two MLP heads on a
+\textbf{Pivot 1: triple-backbone late fusion (cRT).} This is a feature-level late fusion, not an
+architectural pivot: we retrained two MLP heads on a
 frozen $3328$-d concatenation of BioCLIP~2.5 ($1024$-d), DINOv3-Base ($768$-d), and ConvNeXt-V2-L
 ($1536$-d) features (best validation accuracy $63.95\%$) and mixed them with the anchor at $w{=}0.3$. A cheap pre-submission diagnostic
 gate (top-one agreement and submission Jaccard against the anchor) already flagged the head

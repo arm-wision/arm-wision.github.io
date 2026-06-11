@@ -87,7 +87,7 @@ LA & logit adjustment $\tau$ sweep & 0.406 & \textbf{0.406} & Deep & Yes & Mild 
 Sel. & selection rule (probT / top-$k$ / relT / gap) & 0.406 & 0.406 & Deep & Yes & Probability thresholding ($T{=}0.03$) at $\tau{=}0.25$ beats top-$k$/gap/relT (no-LA peak is 0.412 at $T{=}0.05$). \\
 \textbf{Ens.} & \textbf{224+336 resolution ensemble (headline)} & \textbf{0.418} & 0.403 & Deep & \textbf{Yes} & Multi-resolution average of one checkpoint: best public overall. \\
 Ens.2 & i002 + 010 ensemble & 0.389 & 0.405 & Shal. & No & Hurt public, near-best private: vivid public/private disagreement. \\
-Piv.1 & cRT triple-backbone classifier & 0.382 & [nf] & Drop. & No & A different classifier diverged into wrong answers, not productive diversity. \\
+Piv.1 & cRT triple-backbone late fusion & 0.382 & [nf] & Drop. & No & A different classifier diverged into wrong answers, not productive diversity. \\
 Piv.2 & genus/family co-occurrence rerank & 0.412 & 0.399 & Drop. & No & Priors from the model's own posterior add no information; near-neutral. \\
 Piv.3 & seasonal phenology prior (novelty) & 0.413 & 0.388 & Deep & novelty & Date is orthogonal in theory but not statistically; visual model already absorbs season. \\
 Diag.1 & head-architecture audit (010 vs i002) & [ns] & [ns] & Diag. & report & No clean ablation isolates head topology or taxonomy supervision. \\
@@ -183,7 +183,7 @@ on more clean data with no cap) gave the strongest checkpoint. On top of that
 checkpoint, the aggregation study selected softmax-mean over max and dropped plain mean,
 the selection study chose adaptive probability thresholding, light logit adjustment
 ($\tau{=}0.25$) gave the best private score, and a $224{+}336$ resolution ensemble gave
-the best public score of $0.41826$. The three pivots (a triple-backbone classifier, a
+the best public score of $0.41826$. The three pivots (a triple-backbone late-fusion classifier, a
 genus/family rerank, and a seasonal phenology prior) were all reranking attempts on this
 anchor; none improved it, and we report the phenology prior as a novelty contribution
 on its own terms.
