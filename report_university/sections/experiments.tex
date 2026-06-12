@@ -120,7 +120,11 @@ sweep (public Macro F1, single-resolution $224$-pixel unless noted).
 \textbf{Logit adjustment $\tau$ and threshold $T$.} A joint sweep over
 $\tau\in\{0.25,0.5\}$ and $T\in\{0.03,0.05,0.07\}$ has a sharp optimum at $\tau{=}0.25$,
 $T{=}0.03$, which dominates every other cell (Table~\ref{tab:tau_T}); Macro F1 falls off
-monotonically along both axes, and doubling $\tau$ at fixed $T$ already costs $0.022$.
+monotonically along both axes, and doubling $\tau$ at fixed $T$ already costs $0.022$. These
+two values were selected by following our public-leaderboard score progression rather than on a
+held-out multi-species validation set, which we lacked: they are a leaderboard-guided operating
+point chosen as a reasonable balance under a limited submission budget, not the product of a
+rigorous hyperparameter search, which we leave to future work (\S\ref{sec:discussion}).
 
 \begin{table}[ht]
   \centering
@@ -207,7 +211,8 @@ the anchor posterior with an additional signal (Table~\ref{tab:summary}):
   \label{tab:summary}
 \end{table}
 
-\textbf{Triple-backbone classifier (cRT).} Two MLP heads on a frozen $3328$-d concatenation
+\textbf{Triple-backbone late fusion (cRT).} This is a feature-level late fusion, not an
+architectural pivot. Two MLP heads on a frozen $3328$-d concatenation
 of BioCLIP~2.5, DINOv3-Base, and ConvNeXt-V2-L features, mixed with the anchor at $w{=}0.3$,
 scored $0.38195$ ($\Delta{=}{-}0.036$). A pre-submission gate already flagged the head as
 structurally divergent (top-one agreement $0.094$): the divergence was diversity going

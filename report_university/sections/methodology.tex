@@ -155,6 +155,17 @@ tiles contain only one or a few species --- closer to the training distribution.
 tile is forwarded at two resolutions, the native $224$ pixels and $336$ pixels (the
 ViT-H/14 tolerates the stretch via bicubic positional-embedding interpolation).
 
+The $4{\times}4$ grid and the $\{224, 336\}$ resolutions are an initial trade-off, not a tuned
+optimum. A coarse grid does risk down-sampling small plants --- on a $\sim$2000-pixel quadrat each
+$\sim$500-pixel tile is resized to $224$/$336$, so a small seedling can be blurred away --- but a
+denser grid multiplies the per-quadrat forward count quadratically ($16\to36\to64$ tiles, each at
+two resolutions) and increasingly slices individual plants across tile boundaries, fragmenting a
+single specimen's evidence. The $224$/$336$ pair also keeps the inputs near the encoder's $224$-pixel
+training resolution while recovering some fine detail. We did not run a controlled sweep over grid
+density or tile size on the final checkpoint, for want of submission budget, so we present this
+configuration as a deliberate but unverified operating point; a systematic grid-density and tile-size
+ablation is left to future work (\S\ref{sec:discussion}).
+
 \subsection{Tile Aggregation and Selection}
 \label{sec:tile_agg_method}
 
@@ -186,13 +197,15 @@ probabilities are averaged across the sixteen tiles and the two resolutions; cla
 logit adjustment ($\tau{=}0.25$) is applied; and every species above $T{=}0.03$ is
 emitted ($k_{\min}{=}2$, $k_{\max}{=}10$). This configuration scores $0.41826$ public /
 $0.40283$ private Macro~F1. Beyond it we submitted three architecture-orthogonal pivots
---- a triple-backbone classifier, a genus/family co-occurrence rerank, and a seasonal
+--- a triple-backbone late-fusion classifier (a feature-level concatenation of frozen
+BioCLIP~2.5, DINOv3, and ConvNeXt-V2-L features, not an architectural change to any
+backbone), a genus/family co-occurrence rerank, and a seasonal
 phenology prior (Section~\ref{sec:phenology}); none improved over the visual anchor
 (Section~\ref{sec:experiments}).
 
 \begin{figure*}[t]
   \centering
-  \includegraphics[width=0.95\linewidth]{figures/inference_pipeline}
+  \resizebox{\linewidth}{!}{\input{figures/inference_pipeline_tikz}}
   \caption{Inference pipeline for the ANU submission (public Macro~F1 $0.41826$). Each
   quadrat is partitioned into a non-overlapping $4{\times}4$ grid of sixteen tiles and
   forwarded through the partially fine-tuned BioCLIP~2.5 ViT-H/14 (lower 28 blocks frozen;

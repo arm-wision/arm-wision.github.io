@@ -1,0 +1,63 @@
+% Horizontal anchor inference-pipeline figure for archive/report/main.tex (CEUR-ART).
+% Replaces the externally-rendered figures/inference_pipeline.pdf, whose baked-in
+% fonts were too small to read. Authored in TikZ so the type size is controllable
+% and scales with the figure. Headline submission (public Macro F1 0.41826).
+%
+% Required preamble in the host document:
+%   \usepackage{tikz}
+%   \usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric}
+%
+% Inserted into a two-column figure* float, e.g.:
+%   \begin{figure*}[t]
+%     \centering
+%     \resizebox{\linewidth}{!}{\input{figures/inference_pipeline_tikz}}
+%     \caption{...}
+%   \end{figure*}
+
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  node distance=10mm,
+  >={Stealth[length=6pt,width=6pt]},
+  every node/.style={transform shape},
+  stage/.style={
+    draw=black!75, line width=0.5pt, rounded corners=3pt, fill=black!3,
+    minimum width=27mm, minimum height=22mm, align=center, inner sep=4pt
+  },
+  io/.style={
+    draw=black!75, line width=0.5pt, rounded corners=3pt, fill=white,
+    minimum width=24mm, minimum height=22mm, align=center, inner sep=4pt
+  },
+  emph/.style={
+    draw=black!75, line width=0.6pt, rounded corners=3pt, fill=black!8,
+    minimum width=30mm, minimum height=22mm, align=center, inner sep=4pt
+  },
+  flow/.style={->, line width=0.7pt, draw=black!75},
+]
+
+% ── Left-to-right pipeline ───────────────────────────────────────────────
+% A bare \footnotesize switch (no braces) keeps the \\ line breaks at the
+% node's top level, which TikZ requires for align=center to work.
+\node[io]    (img)  {Quadrat image \\[2pt] \footnotesize\itshape raw RGB};
+\node[stage] (tiles) [right=of img]
+  {$4{\times}4$ tile grid \\[2pt] \footnotesize 16 non-overlapping \\ tiles};
+\node[emph]  (fwd)   [right=of tiles]
+  {BioCLIP 2.5 \\ ViT-H/14 \\[2pt]
+   \footnotesize 28 frozen $\cdot$ last 4 \\ unfrozen; forward at \\ $224$ and $336$\,px};
+\node[stage] (heads) [right=of fwd]
+  {Taxonomy heads \\[2pt]
+   \footnotesize family $\cdot$ genus $\cdot$ \\ species (species head \\ used at inference)};
+\node[stage] (calib) [right=of heads]
+  {Aggregate \\ \& calibrate \\[2pt]
+   \footnotesize softmax-mean; \\ logit adj.\ $\tau{=}0.25$; \\
+   threshold $T{=}0.03$, \\ $k\in[2,10]$};
+\node[io]    (out)   [right=of calib]
+  {Species set \\[2pt] \footnotesize\itshape Macro-F1 $0.41826$};
+
+% ── Sequential arrows ────────────────────────────────────────────────────
+\draw[flow] (img)   -- (tiles);
+\draw[flow] (tiles) -- (fwd);
+\draw[flow] (fwd)   -- (heads);
+\draw[flow] (heads) -- (calib);
+\draw[flow] (calib) -- (out);
+
+\end{tikzpicture}

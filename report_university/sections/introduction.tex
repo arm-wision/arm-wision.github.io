@@ -1,9 +1,9 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Monitoring plant biodiversity at scale is essential for understanding ecosystem health, tracking the effects of climate change, and informing conservation policy. Traditionally, vegetation surveys require expert botanists to visit field sites, place standardised quadrats (typically 50$\times$50\,cm sampling frames), and manually identify every plant species visible within the frame. This process is labour-intensive, difficult to scale, and constrained by the availability of trained taxonomists~\cite{joly2024overview}.
+Monitoring plant biodiversity at scale is essential for understanding ecosystem health, tracking the effects of climate change, and informing conservation policy. Traditionally, vegetation surveys require expert botanists to visit field sites, place standardised quadrats (typically 50$\times$50\,cm sampling frames), and manually identify every plant species visible within the frame. This process is labour-intensive, difficult to scale, and constrained by the availability of trained taxonomists~\cite{lifeclef2026}.
 
-The PlantCLEF 2026 challenge~\cite{plantclef2026} seeks to automate this task by framing it as a multi-label classification problem: given a high-resolution photograph of a vegetation quadrat, predict the set of all plant species present. The challenge draws from a taxonomy of approximately 7,800 candidate species, and submissions are evaluated using a macro-averaged F1 score computed 
+The PlantCLEF 2026 challenge~\cite{plantclef2026, lifeclef2026} seeks to automate this task by framing it as a multi-label classification problem: given a high-resolution photograph of a vegetation quadrat, predict the set of all plant species present. The challenge draws from a taxonomy of approximately 7,800 candidate species, and submissions are evaluated using a macro-averaged F1 score computed 
 per quadrat image and then averaged across transects:
 \[
   \frac{1}{N}\sum_{i=1}^{N}\!\left(\frac{1}{T_i}
@@ -34,7 +34,7 @@ A central difficulty of this challenge is the \emph{domain shift} between the av
 
 A second major challenge is the \emph{long-tail distribution} of the training data. While common species may have thousands of training images, rare species, which are often the most ecologically important, can have fewer than ten. Standard cross-entropy training causes models to overwhelmingly predict common classes, yielding high micro-accuracy but poor macro-F1.
 
-In this paper, we present the system submitted by the Australian National University (ANU) team. Our approach centres on three key design decisions:
+In this paper, we present the system submitted by the Australian National University (ANU) team, competing under the team name \textbf{ARM Wision}, under which our results appear on the official PlantCLEF~2026 leaderboard. Our approach centres on three key design decisions:
 
 \begin{enumerate}
   \item \textbf{Partial-unfreeze BioCLIP 2.5 with taxonomic regularisation.} BioCLIP~\cite{stevens2024bioclip} is a contrastive vision-language model whose pretraining on TreeOfLife-10M aligns its feature space with the Linnaean taxonomy. Rather than fine-tuning the full backbone (which we show collapses this prior), we unfreeze only the last four transformer blocks of BioCLIP 2.5 ViT-H/14 and attach auxiliary cross-entropy heads at coarser taxonomic levels (genus and family in the final design; an earlier multi-task fine-tune additionally used order and class). The auxiliary losses carry small fixed weights, with coarser levels weighted progressively less, so that they primarily regularise the encoder rather than drive it.

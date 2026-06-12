@@ -52,7 +52,14 @@ that visual features cannot recover from the image alone (this experiment is blo
 the absence of test-site coordinates). Finally, per-class threshold calibration on a held-out
 multi-species validation set would target Macro F1 more directly than the global probability
 threshold we currently use, and could absorb residual species-frequency imbalance that our
-manifest leaves behind. Beyond these, we scoped but did not implement several further
+manifest leaves behind. Two inference-time knobs we fixed pragmatically also deserve a proper
+study: the calibration parameters ($\tau{=}0.25$, $T{=}0.03$) were chosen by following our
+public-leaderboard score progression under a limited submission budget rather than by held-out
+tuning, and the $4{\times}4$ tiling at $\{224, 336\}$ pixels was an initial trade-off we never
+ablated on the final checkpoint --- a rigorous joint hyperparameter sweep and a systematic
+grid-density/tile-size ablation (ideally with overlap and multi-scale tiling, as the phenology
+pivot already used) would confirm whether these operating points are optimal or merely adequate.
+Beyond these, we scoped but did not implement several further
 directions, recorded here for completeness: gated multi-backbone fusion with a learned
 per-image gate over BioCLIP~2.5 / DINOv3 / ConvNeXt-V2-L; offline high-resolution knowledge
 distillation from SWA-averaged teachers; a graph-neural-network head over a blended
