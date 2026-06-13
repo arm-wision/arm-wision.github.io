@@ -25,23 +25,14 @@
   \usepackage[a4paper]{geometry}  
 \fi
 
-\usepackage[backref=page]{hyperref}  % defines style of references / links
+\usepackage{hyperref}                % defines style of references / links
 \hypersetup{
 linktocpage,                         % in the table of contents, the numbers serve as links, not the entries
 colorlinks  = true,                  % the items are colored instead of colored boxes around them
 urlcolor    = cyan,                  % was written in the PDF, all of this can be changed!
-linkcolor   = red,                   
+linkcolor   = red,
 citecolor   = blue
 }
-
-% the following makes back references more appealing.
-% Taken from: https://tex.stackexchange.com/questions/183702/formatting-back-references-in-bibliography-bibtex
-\renewcommand*{\backref}[1]{}
-\renewcommand*{\backrefalt}[4]{[%
-\ifcase #1 Not cited.%
-  \or Cited on page~#2.%
-  \else Cited on pages #2.%
-\fi]}
 
 \usepackage{datetime}                                % to be able to print month & year on the title page
   \newdateformat{monthonly}{\monthname[\THEMONTH]}
@@ -102,6 +93,8 @@ citecolor   = blue
 \FloatBarrier
 
 % literature
+\setlength{\bibsep}{0pt plus 0.2ex} % tighten inter-reference spacing
+\renewcommand*{\bibfont}{\footnotesize} % set references in a smaller font
 \bibliographystyle{anuthesis} % or plainnat or whatever
 \ifLongThesisStyle
   % this page break is only shown in the long thesis style
