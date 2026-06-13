@@ -48,7 +48,7 @@ citecolor   = blue
   \newdateformat{monthyeardate}{\monthname[\THEMONTH] \THEYEAR}
 \usepackage{amssymb,amsthm,amsmath}                  % standard math packages; often used
 \usepackage{graphicx}                                % allows including graphics
-\usepackage{natbib}                                  % a specific citation style
+\usepackage[numbers,sort&compress]{natbib}           % numeric citation style, e.g. [1], [2-4]
 \usepackage{floatrow}                                % allows to place a caption next to a figure
   \floatsetup[table]{capposition=top}                 % forces table captions to appear on top.
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e} % used for depicting algorithms
@@ -102,7 +102,7 @@ citecolor   = blue
 \FloatBarrier
 
 % literature
-\bibliographystyle{anuthesis} % or plainnat or whatever
+\bibliographystyle{plainnat} % numeric, alphabetically sorted (natbib-compatible)
 \ifLongThesisStyle
   % this page break is only shown in the long thesis style
   \cleardoublepage\phantomsection
