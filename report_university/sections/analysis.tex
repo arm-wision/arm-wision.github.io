@@ -6,14 +6,7 @@ This section explains why the system behaves as it does. We first examine the we
 \section{Validation vs Leaderboard Mismatch}
 \label{sec:val_lb}
 
-Held out accuracy on the single plant distribution predicts Macro F1 on the multi species quadrat leaderboard only weakly. Across our twelve strongest runs the two metrics correlate at $r \approx 0.4$ (Figure~\ref{fig:val_vs_kaggle}), and within the unfrozen blocks sweep of \S\ref{sec:blocks_ablation} they diverge: validation top-5 accuracy rises monotonically with unfrozen capacity while leaderboard Macro F1 peaks at intermediate depth and falls at the full fine tune. This indicates that the limiting factor on this benchmark is the distribution shift between single plant and multi species images, and that model capacity on the single plant distribution is already sufficient. We therefore use validation accuracy to select checkpoints and not to rank submissions: the headline anchor does not coincide with the validation maximum, and the configurations that do (the i003 capped checkpoints and the 015 PlantCLEF24+iNaturalist mix) score lower on the leaderboard.
-
-\begin{figure}[ht]
-  \centering
-  \resizebox{0.92\linewidth}{!}{\input{figures/val_vs_kaggle}}
-  \caption{Validation top-5 accuracy on the held out single plant split versus public Macro F1 on the multi species quadrat leaderboard, across our twelve strongest runs. The headline anchor ($\star$) does not sit at the maximum validation point; the i003 capped checkpoints and the 015 mix reach higher validation accuracy but lower leaderboard score. The dashed line indicates the weak monotone trend ($r \approx 0.4$).}
-  \label{fig:val_vs_kaggle}
-\end{figure}
+Held out accuracy on the single plant distribution predicts Macro F1 on the multi species quadrat leaderboard only weakly. Across our twelve strongest runs the two metrics correlate at $r \approx 0.4$, and within the unfrozen blocks sweep of \S\ref{sec:blocks_ablation} they diverge (Figure~\ref{fig:unfreeze_sweep}): validation top-5 accuracy rises monotonically with unfrozen capacity while leaderboard Macro F1 peaks at intermediate depth and falls at the full fine tune. This indicates that the limiting factor on this benchmark is the distribution shift between single plant and multi species images, and that model capacity on the single plant distribution is already sufficient. We therefore use validation accuracy to select checkpoints and not to rank submissions: the headline anchor does not coincide with the validation maximum, and the configurations that do (the i003 capped checkpoints and the 015 PlantCLEF24+iNaturalist mix) score lower on the leaderboard.
 
 \section{Within-backbone Saturation and Orthogonality}
 \label{sec:orthogonality}
