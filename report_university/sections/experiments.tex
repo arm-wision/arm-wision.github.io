@@ -1,11 +1,11 @@
-\section{Experiments}
+\chapter{Experiments}
 \label{sec:experiments}
 
 We justify each component of the final system with leaderboard evidence. Many comparisons
 move more than one factor at once; we flag the confounds where they occur and treat this
 as a development trace rather than a single controlled ablation.
 
-\subsection{Evaluation Protocol}
+\section{Evaluation Protocol}
 \label{sec:eval_protocol}
 
 The task is scored by the macro-averaged per-quadrat F1 of \S\ref{sec:introduction} on a
@@ -19,7 +19,7 @@ single-plant validation split, but it correlates only weakly with quadrat Macro 
 ($r\approx0.4$; \S\ref{sec:val_lb}), so we use it to choose checkpoints, not to rank
 submissions.
 
-\subsection{Baselines}
+\section{Baselines}
 
 Off-the-shelf BioCLIP features go only so far on this task: zero-shot tile classification
 reaches ${\sim}0.12$ public Macro F1, a frozen-backbone linear probe $0.242$, a few-shot
@@ -27,7 +27,7 @@ support bank $0.307$, and a single-head partial fine-tune $0.222$. BioCLIP carri
 biological signal, but neither zero-shot matching nor a frozen backbone bridges the
 single-plant\,$\to$\,multi-species shift; we carry only the fine-tuning line forward.
 
-\subsection{Supervised Fine-tuning}
+\section{Supervised Fine-tuning}
 
 Partially fine-tuning BioCLIP~2.5 ViT-H/14 with the taxonomy-aware head gives the decisive
 gains. The first strong model (experiment~010: shared trunk, five levels, $1.41$M images)
@@ -37,7 +37,7 @@ single-resolution inference, before calibration and ensembling. The $010\rightar
 comparison changes training data, schedule, head topology and head count simultaneously,
 so we report i002 as the stronger configuration without isolating any single cause.
 
-\subsection{Backbone Unfreezing}
+\section{Backbone Unfreezing}
 \label{sec:blocks_ablation}
 
 The one factor we swept within a single experiment is the number of unfrozen transformer
@@ -100,7 +100,7 @@ the inference steps that take the four-block checkpoint to the headline $0.418$.
   \label{tab:blocks_i002}
 \end{table}
 
-\subsection{Tile Aggregation}
+\section{Tile Aggregation}
 \label{sec:tile_aggregation}
 
 Of the three pooling rules defined in \S\ref{sec:tile_agg_method}, softmax-mean wins. On a
@@ -111,7 +111,7 @@ max against softmax-mean: softmax-mean won on both splits ($0.41165$ vs.\ $0.375
 $0.38883$ vs.\ $0.35724$ private). We adopt softmax-mean with the adaptive probability
 threshold for the final system.
 
-\subsection{Calibration and Ensembling}
+\section{Calibration and Ensembling}
 \label{sec:infer_ablations}
 
 On the i002 four-block checkpoint we fixed the remaining inference knobs by leaderboard
@@ -181,7 +181,7 @@ operating points differ: logit-adjusted single-resolution scores $0.40590$ publi
 $0.40600$ private (the project's strongest private result), so we carry both columns
 through.
 
-\subsection{Final Submission}
+\section{Final Submission}
 \label{sec:final_results}
 
 The headline configuration (the i002 four-block checkpoint under the full recipe of
@@ -195,7 +195,7 @@ the anchor posterior with an additional signal (Table~\ref{tab:summary}):
   \setlength{\tabcolsep}{2pt}
   \begin{tabular}{@{}p{0.55\linewidth}cc@{}}
     \toprule
-    Config & Macro-F1 & $\Delta$ \\
+    Config & Macro F1 & $\Delta$ \\
     \midrule
     BC2.5 last 4 blocks, 224+336+LA, $T{=}0.03$ & \textbf{0.41826} & --- \\
     \hspace{1em}+ cRT triple, $w{=}0.3$ & 0.38195 & $-0.036$ \\

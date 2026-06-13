@@ -1,4 +1,4 @@
-\section{Method}
+\chapter{Method}
 \label{sec:method}
 
 We describe the final system top-down. It has three parts: a training corpus of
@@ -9,7 +9,7 @@ and a test-time pipeline that tiles each quadrat, pools the per-tile votes, cali
 and selects an adaptive species set (\S\ref{sec:adaptive_inference}--\S\ref{sec:final_submission}).
 All leaderboard numbers are deferred to Section~\ref{sec:experiments}.
 
-\subsection{Data and Label Construction}
+\section{Data and Label Construction}
 \label{sec:cap_extra}
 
 The training data are single-plant images from PlantCLEF~2024, each carrying one
@@ -45,7 +45,7 @@ $2.65$\,million images across $7{,}806$ species (Table~\ref{tab:i001_manifest}) 
   \label{tab:i001_manifest}
 \end{table}
 
-\subsection{BioCLIP 2.5 Fine-tuning}
+\section{BioCLIP~2.5 Fine-tuning}
 \label{sec:backbone}
 
 BioCLIP~\cite{stevens2024bioclip} is a contrastive vision-language model whose
@@ -61,7 +61,7 @@ the weights only. Both stages train in bfloat16 under cross entropy with linear 
 and cosine decay; the full hyperparameter specification is given in
 \S\ref{sec:training_config} (Table~\ref{tab:training_config}).
 
-\subsection{Taxonomy-aware Heads}
+\section{Taxonomy-aware Heads}
 \label{sec:bioclip25_010}
 
 On top of the encoder we attach a head that predicts species jointly with coarser
@@ -81,7 +81,7 @@ taxonomy labels are encoded as $-1$ and masked out of the loss. An earlier fine-
 unfrozen depth, they are not a controlled ablation, and we analyse their feature spaces
 only descriptively in \S\ref{sec:head_repr}.
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \resizebox{0.95\linewidth}{!}{\input{figures/head_design_schematic}}
   \caption{Head designs of the two supervised fine-tunes. Experiment~010 (left) uses a
@@ -91,9 +91,9 @@ only descriptively in \S\ref{sec:head_repr}.
   unfrozen BioCLIP~2.5 backbone. The two experiments are not a controlled ablation: they
   also differ in training data, schedule, unfrozen blocks, and head count.}
   \label{fig:head_design}
-\end{figure*}
+\end{figure}
 
-\subsection{Training Configuration}
+\section{Training Configuration}
 \label{sec:training_config}
 
 The two training stages of \S\ref{sec:backbone} share the same data, loss, optimiser
@@ -145,7 +145,7 @@ specification, sufficient to reproduce the i002 checkpoint.
   \label{tab:training_config}
 \end{table}
 
-\subsection{Tiled Inference}
+\section{Tiled Inference}
 \label{sec:adaptive_inference}
 
 The classifier is trained on single plants, but each test quadrat is a dense,
@@ -166,7 +166,7 @@ density or tile size on the final checkpoint, for want of submission budget, so 
 configuration as a deliberate but unverified operating point; a systematic grid-density and tile-size
 ablation is left to future work (\S\ref{sec:discussion}).
 
-\subsection{Tile Aggregation and Selection}
+\section{Tile Aggregation and Selection}
 \label{sec:tile_agg_method}
 
 The sixteen per-tile predictions are pooled by \emph{softmax-mean}: each tile is turned
@@ -177,7 +177,7 @@ rule: emit every species whose probability exceeds a threshold $T{=}0.03$, subje
 floor $k_{\min}{=}2$ and ceiling $k_{\max}{=}10$, matching the test set's empirical
 $\sim$2--3 species per quadrat.
 
-\subsection{Calibration and Ensembling}
+\section{Calibration and Ensembling}
 \label{sec:calibration}
 
 Two further steps complete inference. To counter the long-tail prior we apply class-prior
@@ -186,7 +186,7 @@ $\tau{=}0.25$, where $\tilde{\pi}_s$ is the Laplace-smoothed training prior. And
 per-tile distributions from the $224$- and $336$-pixel passes are averaged in probability
 space before selection --- a single-checkpoint resolution ensemble.
 
-\subsection{Final System}
+\section{Final System}
 \label{sec:final_submission}
 
 The final system is a single BioCLIP~2.5 ViT-H/14, last four blocks unfrozen, trained
@@ -203,7 +203,7 @@ backbone), a genus/family co-occurrence rerank, and a seasonal
 phenology prior (Section~\ref{sec:phenology}); none improved over the visual anchor
 (Section~\ref{sec:experiments}).
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \resizebox{\linewidth}{!}{\input{figures/inference_pipeline_tikz}}
   \caption{Inference pipeline for the ANU submission (public Macro~F1 $0.41826$). Each
@@ -215,4 +215,4 @@ phenology prior (Section~\ref{sec:phenology}); none improved over the visual anc
   species, and an adaptive probability threshold ($T{=}0.03$, $k_{\min}{=}2$,
   $k_{\max}{=}10$) selects the output species set.}
   \label{fig:inference_pipeline}
-\end{figure*}
+\end{figure}

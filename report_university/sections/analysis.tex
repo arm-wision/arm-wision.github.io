@@ -1,4 +1,4 @@
-\section{Analysis}
+\chapter{Analysis}
 \label{sec:analysis}
 
 The experiments fix the system; this section explains why it looks the way it does, and is
@@ -13,7 +13,7 @@ essentially one model, which both motivated the search for orthogonal evidence s
 explains its failure. Section~\ref{sec:longtail} examines why flattening the long tail hurt rather
 than helped.
 
-\subsection{Validation vs Leaderboard Mismatch}
+\section{Validation vs Leaderboard Mismatch}
 \label{sec:val_lb}
 
 A striking decoupling runs through every model-selection decision in this project: held-out
@@ -36,10 +36,10 @@ PlantCLEF24+iNaturalist mix) score lower on the leaderboard.
   \label{fig:val_vs_kaggle}
 \end{figure}
 
-\subsection{Head Design and Representation Geometry}
+\section{Head Design and Representation Geometry}
 \label{sec:head_repr}
 
-The two supervised fine tunes wire their classification heads differently
+The two supervised fine-tunes wire their classification heads differently
 (Figure~\ref{fig:head_design}): experiment~010 feeds a single shared multi layer perceptron into
 five linear heads, whereas experiment~i002 gives each of its three heads an independent
 perceptron. To understand what each design does to the feature space we ran a descriptive probe
@@ -101,7 +101,7 @@ not treat the 010 versus i002 comparison as a controlled ablation.
   \label{fig:head_taxstruct}
 \end{figure}
 
-\subsection{Within-backbone Saturation and Orthogonality}
+\section{Within-backbone Saturation and Orthogonality}
 \label{sec:orthogonality}
 
 Before pivoting to architecture-orthogonal evidence sources, we measured whether further
@@ -147,7 +147,7 @@ the leaf and flower phenotypes seen during training. The practical reading is th
 on this benchmark requires structurally stronger \emph{visual} models rather than post hoc
 reweighting with auxiliary priors (\S\ref{sec:discussion}).
 
-\subsection{Long-tail Behaviour}
+\section{Long-tail Behaviour}
 \label{sec:longtail}
 
 The cleanest near-controlled counterfactual in the project concerns the long tail. Experiment
