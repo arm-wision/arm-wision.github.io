@@ -6,21 +6,21 @@ We justify each component of the final system with leaderboard evidence. Many co
 \section{Evaluation Protocol}
 \label{sec:eval_protocol}
 
-The task is scored by the macro averaged per quadrat F1 of \S\ref{sec:introduction} on a hidden test set of $2{,}105$ vegetation quadrats. Kaggle reports a public score on a fixed subset of quadrats and a private score on the complement; the two do not always rank configurations the same way (\S\ref{sec:infer_ablations}), so we report both wherever a configuration was submitted. Repeated near identical submissions put the run to run noise floor at $\approx 0.002$ Macro F1, and we treat smaller differences as not significant. We also track held out top-1/top-5 accuracy on a $10\%$ single plant validation split, but it correlates only weakly with quadrat Macro F1 ($r\approx0.4$; \S\ref{sec:val_lb}), so we use it to choose checkpoints, not to rank submissions.
+The task is scored by the macro-averaged per-quadrat F1 of \S\ref{sec:introduction} on a hidden test set of $2{,}105$ vegetation quadrats. Kaggle reports a public score on a fixed subset of quadrats and a private score on the complement; the two do not always rank configurations the same way (\S\ref{sec:infer_ablations}), so we report both wherever a configuration was submitted. Repeated near-identical submissions put the run-to-run noise floor at $\approx 0.002$ Macro F1, and we treat smaller differences as not significant. We also track held-out top-1/top-5 accuracy on a $10\%$ single-plant validation split, but it shows only a weak, statistically non-significant association with quadrat Macro F1 ($r\approx0.4$ over 12 runs; \S\ref{sec:val_lb}), so we use it to choose checkpoints rather than to rank submissions.
 
 \section{Baselines and Supervised Fine-tuning}
 
-Off the shelf BioCLIP features are limited: zero shot tile classification reaches ${\sim}0.12$ public Macro F1, a frozen backbone linear probe $0.242$, and a few shot support bank $0.307$. A frozen backbone does not bridge the single plant to multi species shift, so we carry only the fine tuning line forward. Partial fine tuning of BioCLIP~2.5 ViT-H/14 with the taxonomy aware head produces the main gains: the first strong model (experiment~010: shared trunk, five levels, $1.41$M images) reached $0.391$ public Macro F1, and our final model (experiment~i002: per head MLPs, three levels, $2.65$M images, ten epochs) reached $0.41165$ public / $0.38132$ private at single resolution inference, before calibration and ensembling. The comparison changes data, schedule, head topology, and head count at once, so we report i002 as the stronger configuration without isolating a single cause.
+Off-the-shelf BioCLIP features are limited: zero-shot tile classification reaches ${\sim}0.12$ public Macro F1, a frozen-backbone linear probe $0.242$, and a few-shot support bank $0.307$. A frozen backbone does not bridge the single-plant to multi-species shift, so we carry only the fine-tuning line forward. Partial fine-tuning of BioCLIP~2.5 ViT-H/14 with the taxonomy-aware head produces the main gains: the first strong model (experiment~010: shared trunk, five levels, $1.41$M images) reached $0.391$ public Macro F1, and our final model (experiment~i002: per-head MLPs, three levels, $2.65$M images, 10 epochs) reached $0.412$ public at single-resolution inference, before calibration and ensembling. The comparison changes data, schedule, head topology, and head count at once, so we report i002 as the stronger configuration without isolating a single cause.
 
 \section{Backbone Unfreezing}
 \label{sec:blocks_ablation}
 
-The one factor we swept within a single experiment is the number of unfrozen transformer blocks. Within experiment~010 ($1.41$M images) public Macro F1 rises from the head only baseline ($0.362$) to a peak at eight blocks ($0.391$) and declines at twelve, while the full fine tune collapses to $0.301$ public, trading the pretrained representation for single plant fit faster than the leaderboard rewards. Validation top-5 keeps rising with depth even as the leaderboard score peaks and falls (Figure~\ref{fig:unfreeze_sweep}), the decoupling of \S\ref{sec:val_lb}. Our final model (experiment~i002) repeated this on the larger $2.65$M manifest, but the optimum is shallower: public Macro F1 peaks at four blocks (Table~\ref{tab:blocks_i002}), which we adopt as the anchor, and the bottom rows show the inference steps that take it to the headline $0.418$.
+The one factor we swept within a single experiment is the number of unfrozen transformer blocks. Within experiment~010 ($1.41$M images) public Macro F1 rises from the head-only baseline ($0.362$) to a peak at eight blocks ($0.391$) and declines at twelve, while the full fine-tune falls to $0.301$ public, losing more of the pretrained representation than the leaderboard rewards. Validation top-5 keeps rising with depth even as the leaderboard score peaks and falls (Figure~\ref{fig:unfreeze_sweep}), the validation/leaderboard decoupling of \S\ref{sec:val_lb}. Our final model (experiment~i002) repeated this on the larger $2.65$M manifest, but the optimum is shallower: public Macro F1 peaks at four blocks (Table~\ref{tab:blocks_i002}), the checkpoint we build the final system on, and the bottom rows show the inference steps that take it to the headline $0.418$.
 
 \begin{figure}[ht]
   \centering
   \resizebox{0.95\linewidth}{!}{\input{figures/unfreeze_sweep}}
-  \caption{Unfrozen blocks sweep for experiment~010 with both metrics. Held out validation top-5 (dashed, right axis) rises monotonically with unfrozen depth ($n{=}0\rightarrow12$), while leaderboard Macro F1 (solid, left axis) peaks at $n{=}8$ and declines by $n{=}12$, with the full fine tune ($n{=}32$) lower still. The disagreement between the two curves is the decoupling examined in \S\ref{sec:val_lb}.}
+  \caption{Unfrozen-blocks sweep for experiment~010 with both metrics. Held-out validation top-5 (dashed, right axis) rises monotonically with unfrozen depth ($n{=}0\rightarrow12$), while leaderboard Macro F1 (solid, left axis) peaks at $n{=}8$ and declines by $n{=}12$, with the full fine-tune ($n{=}32$) lower still. The disagreement between the two curves is the decoupling examined in \S\ref{sec:val_lb}.}
   \label{fig:unfreeze_sweep}
 \end{figure}
 
@@ -31,28 +31,28 @@ The one factor we swept within a single experiment is the number of unfrozen tra
     \toprule
     i002 stage (2.65M manifest) & Best public F1 & Best private F1 \\
     \midrule
-    head only (0 blocks)         & 0.394 & 0.388 \\
-    \textbf{4 blocks (anchor)} & \textbf{0.412} & 0.389 \\
+    head-only (0 blocks)         & 0.394 & 0.388 \\
+    \textbf{4 blocks} & \textbf{0.412} & 0.389 \\
     8 blocks                     & 0.405 & 0.375 \\
     \midrule
-    \multicolumn{3}{l}{\emph{inference enhancements on the 4-block checkpoint}}\\
+    \multicolumn{3}{l}{\emph{inference steps on the 4-block checkpoint}}\\
     \quad + logit adj.\ ($\tau{=}0.25$, $T{=}0.03$) & 0.406 & \textbf{0.406} \\
     \quad + $224{+}336$ ensemble (anchor)            & \textbf{0.418} & 0.403 \\
     \bottomrule
   \end{tabular}
-  \caption{i002 staged unfreeze sweep on the $2.65$M image manifest (ten epochs per stage). Unlike the 010 sweep, public Macro F1 peaks at four blocks, so the four block checkpoint was submitted. The bottom rows add the logit adjustment and resolution ensemble inference steps that produce the headline anchor.}
+  \caption{i002 staged unfreeze sweep on the $2.65$M-image manifest (10 epochs per stage). The top three rows give the best public and best private scores per stage; public Macro F1 peaks at four blocks, so the four-block checkpoint was selected. The bottom two rows are specific inference steps on that checkpoint: logit adjustment, then the dual-resolution ensemble that produces the anchor.}
   \label{tab:blocks_i002}
 \end{table}
 
 \section{Tile Aggregation, Calibration, and Ensembling}
 \label{sec:infer_ablations}
 
-Of the three pooling rules of \S\ref{sec:adaptive_inference}, softmax mean performs best: on the i002 four block checkpoint it exceeded max on both splits ($0.41165$ against $0.37509$ public), and plain mean was weaker on a matched 010 checkpoint ($0.258$ against $0.340$). \label{sec:tile_aggregation} We then fixed the remaining inference parameters by leaderboard sweep. A joint sweep over $\tau$ and $T$ has a clear optimum at $\tau{=}0.25$, $T{=}0.03$ ($0.40590$ public, falling to $0.36423$ at $T{=}0.05$ and $0.38440$ at $\tau{=}0.5$); at this $\tau$ the adaptive threshold also exceeds fixed top-$k$, with $k{=}2$ the closest ($0.39878$, matching the two to three species per quadrat cardinality). We selected these values by following the public leaderboard and did not tune them on a held out split, so they are a reasonable operating point that we did not optimise exhaustively. Averaging the same checkpoint at $224$ and $336$ pixels then raises public Macro F1 from $0.41165$ to $0.41826$ ($+0.0066$) and private from $0.38132$ to $0.40283$ ($+0.022$). The best public and best private operating points differ: logit adjusted single resolution scores $0.40590$ public but $0.40600$ private, the strongest private result of the project, so we report both columns.
+Of the three pooling rules of \S\ref{sec:adaptive_inference}, softmax-mean performs best: on the four-block i002 checkpoint it exceeds max ($0.412$ against $0.375$ public). \label{sec:tile_aggregation} Plain mean was weaker still ($0.258$ against $0.340$), though that comparison was run on a separate 010 checkpoint rather than on i002, so it is indicative rather than matched. We then fixed the remaining inference parameters by leaderboard sweep. A joint sweep over $\tau$ and $T$ has a clear optimum at $\tau{=}0.25$, $T{=}0.03$ ($0.406$ public, falling to $0.364$ at $T{=}0.05$ and $0.384$ at $\tau{=}0.5$); at this $\tau$ the adaptive threshold also exceeds fixed top-$k$, with $k{=}2$ the closest ($0.399$), consistent with the small per-quadrat species counts. On the four-block checkpoint, logit adjustment moves the operating point from $0.412/0.389$ to $0.406/0.406$, trading roughly $0.006$ public Macro F1 for roughly $0.017$ private, and the $224{+}336$ resolution ensemble then adds about $0.012$ public over the logit-adjusted single-resolution run ($0.406\rightarrow0.418$) while leaving private essentially unchanged ($0.406\rightarrow0.403$). Because $\tau$, $T$, the pooling rule, and the resolution pair were all chosen on the public leaderboard rather than on a held-out split, these values are fit to the public test signal; this overfitting partly explains why the public and private rankings disagree, and we treat the absolute numbers with caution. The logit-adjusted single-resolution run reaches $0.406$ private, the strongest private result of the project and above the anchor's $0.403$, so we report both columns throughout.
 
 \section{Final Submission}
 \label{sec:final_results}
 
-The headline configuration scores \textbf{0.41826} public / $0.40283$ private Macro F1, the best public result of the project. Three architecture orthogonal pivots each rerank the anchor posterior with an additional signal, and none improves it (Table~\ref{tab:summary}). The triple backbone late fusion (cRT), a feature level concatenation of frozen BioCLIP~2.5, DINOv3, and ConvNeXt-V2-L features mixed with the anchor at $w{=}0.3$, produced the largest decrease ($\Delta{=}-0.036$); a pre-submission gate had already flagged the head as structurally divergent (top one agreement $0.094$), so its predictions diverged from the anchor in ways that reduced accuracy. The genus/family co-occurrence rerank, a log prior built from the anchor's own aggregated supports, swapped $11\%$ of selections but changed the score only marginally, since a prior derived from the model's own logits carries little new information. The seasonal phenology prior, analysed in Section~\ref{sec:phenology}, was also close to neutral. We interpret this pattern in \S\ref{sec:orthogonality}.
+The anchor scores \textbf{0.418} public / $0.403$ private Macro F1, the best public result of the project. Three architecture-orthogonal variants each rerank the anchor posterior with an additional signal, and none improves it (Table~\ref{tab:summary}). The triple-backbone late-fusion variant (cRT), a feature-level concatenation of frozen BioCLIP~2.5, DINOv3, and ConvNeXt-V2-L features mixed with the anchor at $w{=}0.3$, produced the largest decrease ($\Delta{=}-0.036$); a pre-submission gate had already flagged the head as structurally divergent (top-one agreement $0.094$), so its predictions diverged from the anchor in ways that reduced accuracy. The genus/family co-occurrence rerank, a log-prior built from the anchor's own aggregated supports, swapped $11\%$ of selections but changed the score only marginally, since a prior derived from the model's own logits carries little new information. The seasonal phenology prior, analysed in Section~\ref{sec:phenology}, was also close to neutral. We interpret this pattern in \S\ref{sec:orthogonality}.
 
 \begin{table}[ht]
   \centering
@@ -62,12 +62,12 @@ The headline configuration scores \textbf{0.41826} public / $0.40283$ private Ma
     \toprule
     Config & Macro-F1 & $\Delta$ \\
     \midrule
-    BC2.5 last 4 blocks, 224+336+LA, $T{=}0.03$ & \textbf{0.41826} & --- \\
-    \hspace{1em}+ cRT triple, $w{=}0.3$ & 0.38195 & $-0.036$ \\
-    \hspace{1em}+ Genus $\alpha_g{=}0.1$ & 0.41246 & $-0.006$ \\
-    \hspace{1em}+ Pheno., $\beta{=}1.0$ & 0.41346 & $-0.005$ \\
+    BC2.5 last 4 blocks, 224+336+LA, $T{=}0.03$ & \textbf{0.418} & --- \\
+    \hspace{1em}+ cRT triple, $w{=}0.3$ & 0.382 & $-0.036$ \\
+    \hspace{1em}+ Genus $\alpha_g{=}0.1$ & 0.412 & $-0.006$ \\
+    \hspace{1em}+ Pheno., $\beta{=}1.0$ & 0.413 & $-0.005$ \\
     \bottomrule
   \end{tabular}
-  \caption{All four submitted configurations (public Macro F1). The cRT pivot is strongly negative; the genus rerank and phenology prior move the anchor by only $-0.006$ and $-0.005$, small but consistent in sign. We read this as the BioCLIP~2.5 posterior already absorbing both signals through training distribution co-occurrence (\S\ref{sec:orthogonality}).}
+  \caption{All four submitted configurations (public Macro F1). The cRT variant is strongly negative; the genus rerank and phenology prior move the anchor by only $-0.006$ and $-0.005$, small but consistent in sign. We read this as the BioCLIP~2.5 posterior already absorbing both signals through training-distribution co-occurrence (\S\ref{sec:orthogonality}).}
   \label{tab:summary}
 \end{table}

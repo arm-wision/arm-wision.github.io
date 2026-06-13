@@ -6,18 +6,17 @@
 %
 We address multi-label plant species classification in PlantCLEF 2026,
 where the goal is to predict every species present in a vegetation-quadrat
-image. The
-central challenge is a domain shift, with training images showing single
-plants while test images show dense multi-species plots, compounded by a
-long-tailed label distribution. Our system partially fine-tunes
-BioCLIP~2.5 ViT-H/14, unfreezing only the last four transformer blocks
-to preserve the Tree-of-Life prior, on an enlarged manifest that
-combines PlantCLEF~2024 with a research-grade iNaturalist pull
-(2.65~million single-plant images, 7{,}806 species) using auxiliary
-genus- and family-level heads that regularise the species head. At
-inference each quadrat is split into a $4{\times}4$ grid of sixteen
-tiles forwarded at $224$ and $336$ pixels, the per-tile softmax
+image. The central challenge is a domain shift, with training images
+showing single-plant specimens while test images show dense multi-species
+plots, compounded by a long-tailed label distribution. Our system
+partially fine-tunes BioCLIP~2.5 ViT-H/14, unfreezing only the last four
+transformer blocks to preserve its pretrained representation, on an
+enlarged manifest that combines PlantCLEF~2024 with a research-grade
+iNaturalist subset (2.65~million single-plant images, 7{,}806 species)
+using auxiliary genus- and family-level heads intended to regularise the
+species head. At inference each quadrat is split into a $4{\times}4$ grid
+of 16 tiles forwarded at $224$ and $336$ pixels, the per-tile softmax
 distributions are averaged, class-prior logit adjustment is applied, and
 an adaptive probability threshold selects the species set. Our best
-public Macro F1 is \textbf{0.41826} (\textbf{0.40283} private). Project
+public Macro F1 is \textbf{0.418} (\textbf{0.403} private). Project
 website: \url{https://arm-wision.github.io/}.
