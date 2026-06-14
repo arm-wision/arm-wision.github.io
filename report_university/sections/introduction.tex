@@ -2,6 +2,7 @@
 \label{sec:introduction}
 
 Vegetation surveys require expert botanists to identify every species within a standardised quadrat, a process that is accurate but slow and limited by the supply of trained taxonomists~\cite{lifeclef2026}. PlantCLEF 2026~\cite{plantclef2026, lifeclef2026} formulates this as an automated recognition task: given a high-resolution photograph of a quadrat, a system predicts the set of species present from a taxonomy of roughly 7,800 candidates. Submissions are scored by the Macro F1, the per-quadrat F1 over the predicted species set averaged first within and then across transects so that densely sampled sites do not dominate,
+\needspace{5\baselineskip}
 \[
   \frac{1}{N}\sum_{i=1}^{N}\frac{1}{T_i}\sum_{j=1}^{T_i}\mathrm{F1}_{j},
 \]
@@ -9,7 +10,7 @@ where $N$ is the number of transects, $T_i$ the number of quadrats in transect $
 
 The benchmark is difficult for two reasons. The training images show single specimens with one label each, whereas the test images are dense vegetation scenes in which many species occlude one another (Figure~\ref{fig:domain_shift}), so a model trained on isolated specimens transfers poorly to them. The label distribution is also heavily long-tailed, which biases standard cross-entropy training toward common species and depresses the Macro F1.
 
-\begin{figure}[t]
+\begin{figure}[ht]
   \centering
   \resizebox{\linewidth}{!}{\input{figures/train_grid}}\\[2pt]
   \resizebox{\linewidth}{!}{\input{figures/quadrat_grid}}
