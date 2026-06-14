@@ -33,7 +33,7 @@ The final system (Figure~\ref{fig:inference_pipeline}) is a single BioCLIP~2.5 V
 
 \begin{figure}[ht]
   \centering
-  \resizebox{\linewidth}{!}{\input{figures/inference_pipeline_tikz}}
-  \caption{Inference pipeline for our submission (public Macro~F1 $0.418$). Each quadrat is partitioned into a non-overlapping $4{\times}4$ grid of 16 tiles and forwarded through the partially fine-tuned BioCLIP~2.5 ViT-H/14 (lower 28 blocks frozen; last four plus LN and projection unfrozen) at $224$ and $336$ pixels. Only the species head is used. Per-tile softmax probabilities are averaged across tiles and resolutions, class-prior logit adjustment ($\tau{=}0.25$) down-weights common species, and an adaptive probability threshold ($T{=}0.03$, $k_{\min}{=}2$, $k_{\max}{=}10$) selects the output set.}
+  \includegraphics[width=\linewidth]{images/inference.png}
+  \caption{Inference pipeline for our submission (public Macro~F1 $0.418$). Each quadrat is tiled $4{\times}4$ and encoded at $224$ and $336$ pixels through the partially fine-tuned BioCLIP~2.5 ViT-H/14; per-tile softmax votes are averaged, class-prior logit-adjusted ($\tau{=}0.25$), and thresholded ($T{=}0.03$, $2\le k\le 10$) to select the species set.}
   \label{fig:inference_pipeline}
 \end{figure}
