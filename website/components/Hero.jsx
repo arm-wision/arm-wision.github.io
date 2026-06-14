@@ -35,6 +35,9 @@ export default function Hero() {
           <a className="btn" href="https://www.imageclef.org/PlantCLEF2026">
             Competition page&nbsp;<span className="arrow">↗</span>
           </a>
+          <a className="btn" href="https://github.com/arm-wision/PlantCLEF2026" target="_blank" rel="noreferrer">
+            Code&nbsp;<span className="arrow">↗</span>
+          </a>
         </div>
       </div>
 
