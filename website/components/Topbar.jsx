@@ -29,7 +29,10 @@ export default function Topbar() {
           <a href="#cite">Cite</a>
         </nav>
         <div className="nav-right">
-          <a href="https://www.imageclef.org/PlantCLEF2026" className="nav-link external">
+          <a href="https://github.com/arm-wision/PlantCLEF2026" className="nav-link external" target="_blank" rel="noreferrer">
+            Code&nbsp;<span className="ext-arrow">↗</span>
+          </a>
+          <a href="https://www.imageclef.org/PlantCLEF2026" className="nav-link external" target="_blank" rel="noreferrer">
             Competition&nbsp;<span className="ext-arrow">↗</span>
           </a>
         </div>

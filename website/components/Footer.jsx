@@ -13,6 +13,7 @@ export default function Footer() {
         </div>
         <div className="foot-links">
           <a href="https://www.imageclef.org/PlantCLEF2026">Competition page ↗</a>
+          <a href="https://github.com/arm-wision/PlantCLEF2026" target="_blank" rel="noreferrer">Code repository ↗</a>
           <a href="#cite">Cite</a>
         </div>
       </div>
