@@ -15,8 +15,11 @@ all: $(FILES)
 	$(LATEX) $(LATEX_FLAGS) $<
 	$(LATEX) $(LATEX_FLAGS) $<
 	$(LATEX) $(LATEX_FLAGS) $<
-	qpdf --linearize --newline-before-endstream $@ /tmp/$@
-	mv /tmp/$@ $@
+	@if command -v qpdf >/dev/null 2>&1; then \
+		qpdf --linearize --newline-before-endstream $@ /tmp/$@ && mv /tmp/$@ $@; \
+	else \
+		echo "qpdf not found; skipping PDF linearization (PDF is still built)"; \
+	fi
 
 clean:
 	-rm -f *.{log,toc,tac,aux,dvi,ps,bbl,blg,tmp,nav,out,snm,vrb,rel,cut,abs,xmpi,xmpdata,*~}
