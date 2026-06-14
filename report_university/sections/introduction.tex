@@ -1,7 +1,7 @@
 \chapter{Introduction}
 \label{sec:introduction}
 
-Vegetation surveys require expert botanists to identify every species within a standardised quadrat, a process that is accurate but slow and limited by the supply of trained taxonomists~\cite{lifeclef2026}. PlantCLEF 2026~\cite{plantclef2026, lifeclef2026} formulates this as an automated recognition task: given a high-resolution photograph of a quadrat, a system predicts the set of species present from a taxonomy of roughly 7,800 candidates. Submissions are scored by the Macro F1, the per-quadrat F1 over the predicted species set averaged first within and then across transects so that densely sampled sites do not dominate,
+Vegetation surveys require expert botanists to identify every species within a standardised quadrat, a process that is accurate but slow and limited by the supply of trained taxonomists~\cite{lifeclef2026}. PlantCLEF 2026~\cite{plantclef2026, lifeclef2026} formulates this as an automated recognition task. Given a high-resolution photograph of a quadrat, a system predicts the set of species present from a taxonomy of roughly 7,800 candidates. Submissions are scored by the Macro F1, the per-quadrat F1 over the predicted species set averaged first within and then across transects so that densely sampled sites do not dominate,
 \needspace{5\baselineskip}
 \[
   \frac{1}{N}\sum_{i=1}^{N}\frac{1}{T_i}\sum_{j=1}^{T_i}\mathrm{F1}_{j},
@@ -14,7 +14,7 @@ The benchmark is difficult for two reasons. The training images show single spec
   \centering
   \resizebox{\linewidth}{!}{\input{figures/train_grid}}\\[2pt]
   \resizebox{\linewidth}{!}{\input{figures/quadrat_grid}}
-  \caption{The domain shift at the centre of the task. Top: six single-plant training images from the PlantCLEF~2024 corpus, each with one species label. Bottom: six test quadrats, dense multi-species scenes labelled with the transect code above each cell. A model trained on the top distribution must predict the full species set of the bottom distribution.}
+  \caption{The domain shift at the centre of the task. The top row shows six single-plant training images from the PlantCLEF~2024 corpus, each with one species label, and the bottom row shows six test quadrats, dense multi-species scenes labelled with the transect code above each cell. A model trained on the top distribution must predict the full species set of the bottom distribution.}
   \label{fig:domain_shift}
 \end{figure}
 
